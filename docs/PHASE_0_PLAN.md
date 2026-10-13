@@ -78,6 +78,9 @@ Decision references (D-xx) point to `docs/PROJECT_DECISIONS.md`.
 **⛔ Gate 1 review — stop and wait for user approval.** _Session 14: reported; review findings in DECISION_LOG §35; awaiting the user's fix choice and approval (PROJECT_DECISIONS §9 "Session 14")._
 _Session 15: findings fixed in correction commit `8504115` (DECISION_LOG §37); build 0 errors, tests
 16/16; awaiting Gate 1 approval (merge → `develop`)._
+**✅ Gate 1 approved (Session 16, 2026-10-13):** merged into `develop` `--no-ff` (`bbee8dc`); on
+`develop`: build 0 errors (NU1903 AutoMapper only), tests 16/16, no `CseLibrary*` DB left on LocalDB
+(DECISION_LOG §39). Next: M15 design (Proposed), then Gate 2 on its own approval.
 
 ## Gate 2 — Mapping, contracts, Repository + UoW
 

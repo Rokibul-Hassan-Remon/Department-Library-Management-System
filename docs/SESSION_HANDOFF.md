@@ -1,6 +1,24 @@
 # Session Handoff
 
-## ▶ Session 15 (2026-10-13) — read first; overrides the Session 14 block where they differ
+## ▶ Session 16 (2026-10-13) — read first; overrides older blocks where they differ
+
+### State (verified 2026-10-13)
+- **Gate 1 approved and merged:** `feature/phase-0-gate-1` → `develop` `--no-ff` = **`bbee8dc`**
+  (includes `8a6df00`, the Session 15 close-out docs). `main` @ `af89144` unchanged; local only.
+- Evidence on `develop`: build 0 errors (NU1903 AutoMapper only), tests 16/16, 0 `CseLibrary*` DBs on
+  LocalDB, `.\SQLEXPRESS` untouched (DECISION_LOG §39).
+- Gate 1 docs update (this block, PHASE_0_PLAN, DECISION_LOG §39, PROJECT_DECISIONS): commit on
+  `develop` only after the user's OK (check `git log` — do not assume it was done).
+
+### Next action, in order
+1. **M15** (DECISION_LOG §33, `requirements.md` FR-M15-01..04) — archify overall target architecture
+   + DB/ER diagrams + DB design proposal (multi-copy titles, copy holder, immutable lending history,
+   derived available count vs counter). Everything **Proposed**; no code/migration. Stop for review.
+2. Gate 2 (0.6–0.8) only after explicit approval (new branch `feature/phase-0-gate-2` from `develop`).
+- Still open (PROJECT_DECISIONS §9 "Session 14"): `EF Tools` package, old `DefaultTemplate/` folder
+  deletion, UI brand text.
+
+## Session 15 (2026-10-13) — history; the Session 16 block above takes precedence
 Session 15 closed at the user's request (conversation too long) — **Session 16 starts here.**
 
 ### State (verified 2026-10-13)

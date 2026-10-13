@@ -1538,6 +1538,15 @@ flake fix; Sinks.File version claim wrong; constructor check only re-validated t
   only. **Merge to `develop` still awaits explicit approval.**
 - Session closed at the user's request (conversation too long); handoff: SESSION_HANDOFF Session 15.
 
+### 39. Session 16 — Gate 1 approved and merged
+- Session 15 close-out docs committed on the user's "ok" (`8a6df00`).
+- Asked separately for Gate 1 approval + merge; **user: "ok"** → `feature/phase-0-gate-1` merged into
+  `develop` `--no-ff` (`bbee8dc`, 9 commits). `main` unchanged; nothing pushed.
+- Evidence on `develop`: `dotnet build CseLibrary.sln` 0 errors (6 warnings, all NU1903 AutoMapper
+  12.0.1); `dotnet test CseLibrary.sln` 16/16; `sqlcmd` on LocalDB → 0 `CseLibrary*` DBs; `.\SQLEXPRESS`
+  untouched.
+- User order: update docs first, then M15 (§33). M15 output stays **Proposed**; no code/migration.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
