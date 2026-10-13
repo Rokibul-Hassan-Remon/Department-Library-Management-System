@@ -1589,6 +1589,13 @@ flake fix; Sinks.File version claim wrong; constructor check only re-validated t
   `feature/phase-0-gate-1` branch.
 - Handoff: SESSION_HANDOFF Session 16 block.
 
+### 43. Session 17 — old `DefaultTemplate/` folder deleted
+- User asked why the folder is kept. Verified: 0 tracked files; only ignored `bin/`, `obj/` (~42 MB),
+  `DefaultTemplate.csproj.user` (IIS Express debug profile) and empty source directories. The
+  original stays in Git history and in `H:/Internship Project/DLMS-Backups/received_20261013-152404/`.
+- **User: "if there is no issue then delete these and commit after deleting these"** → folder
+  deleted. The `DefaultTemplate` database on `.\SQLEXPRESS` is unrelated and untouched.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

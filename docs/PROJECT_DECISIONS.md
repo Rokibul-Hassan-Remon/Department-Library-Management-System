@@ -1496,7 +1496,7 @@ D-48 open point "`IsActive` vs `IsDeleted`".
 | ~~Gate 1 findings (§35)~~ **Resolved Session 15 (§37, `8504115`)** | Which of the 10 `/code-review` + 6 `/ponytail-review` findings to fix | One correction commit on `feature/phase-0-gate-1`: code-review 2–5, 8–10 + all ponytail items (incl. NU1510 `Configuration.Abstractions`, direct `Serilog.Sinks.File`); `Program.cs` catch-all → 0.10; stale test-DB sweep optional; Dockerfile restore layer → later Docker work |
 | `EF Tools` package | Keep `Microsoft.EntityFrameworkCore.Tools` (only for Visual Studio PMC)? | Remove if nobody uses PMC; CLI uses local `dotnet-ef`. **Session 15: kept** (not removed in `8504115`) until the user confirms nobody uses Visual Studio PMC |
 | UI brand text | `_Layout.cshtml` still shows "DefaultTemplate" (title, navbar, footer) | Change with the first UI work (visible change, not part of the 0.3 rename) |
-| Old `DefaultTemplate/` folder | Holds only ignored `bin/`, `obj/`, `*.csproj.user` | Delete (needs approval; nothing tracked) |
+| ~~Old `DefaultTemplate/` folder~~ **Resolved Session 17 (DECISION_LOG §43): deleted** | Holds only ignored `bin/`, `obj/`, `*.csproj.user` | Delete (needs approval; nothing tracked) |
 | Gate 2 start | Begin steps 0.6–0.8 (incl. D-50, D-51) on `feature/phase-0-gate-2` | **Ask at the start of Session 17** |
 | D-49 O1–O5 | Available count, `Issued` in `CopyStatus`, member subtypes, history name, loan id type (`database.md` §6) | Before the phase that builds the tables (Phase 2/3); recommendations in `database.md` |
 | Merged branch | Delete `feature/phase-0-gate-1` (merged into `develop`)? | Any time; needs the user's OK |

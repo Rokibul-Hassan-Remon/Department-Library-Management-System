@@ -46,8 +46,10 @@ Session 16 closed at the user's request (conversation too long) — **Session 17
    **D-50/D-51** (RecordStatus, interceptor for audit columns and soft delete, migration with data
    conversion). Show staged list + message before each commit; `/code-review` + `/ponytail-review`
    before the Gate 2 report; stop at the report.
-- Still open: O1–O5 (database.md), `EF Tools` package, old `DefaultTemplate/` folder deletion, UI
-  brand text, deleting the merged `feature/phase-0-gate-1` branch.
+- Still open: O1–O5 (database.md), `EF Tools` package, UI brand text, deleting the merged
+  `feature/phase-0-gate-1` branch.
+- Session 17: old `DefaultTemplate/` folder (ignored build output only) deleted on the user's
+  request (DECISION_LOG §43).
 
 ### Learned in Session 16
 - The user reviews designs **visually**. Plain archify boxes without columns were not enough; a real
