@@ -86,7 +86,8 @@ docs `346496a`, `97891e8`. M15 confirmed for after Gate 1, before Gate 2. **Gate
 still awaiting the user's explicit approval** (§38).
 **Session 16, 2026-10-13:** Gate 1 approved → merged into `develop` (`bbee8dc`; build 0 errors, tests
 16/16; DECISION_LOG §39). No decision status changed. M15 delivered as **D-49 (Proposed)** +
-`database.md` + two archify diagrams (DECISION_LOG §40); awaiting review.
+`database.md` + two archify diagrams (DECISION_LOG §40); ER diagram added; **D-50 (naming, audit
+columns) and D-51 (`RecordStatus`) Approved** by the user (§41), both implemented in Gate 2 step 0.8.
 `Archive §n` = `docs/archive/1st discussion.md` (moved from `knowledge Docs/Requirement/` in step 0.2).
 
 ---
@@ -1461,7 +1462,29 @@ Schema, derived availability, open-loan invariant and append-only lending histor
 kept in `CopyStatus`, single `Members` table, live FK in history, `bigint` loan id). Diagram:
 `docs/diagrams/database-model.html`. **Source:** M15 (DECISION_LOG §33, §40). Reuses D-35, D-48
 unchanged. **Implemented: no · Verified: no.** Tables are built in their phase migrations, not in
-Phase 0.
+Phase 0. **Session 16:** ER diagram `docs/diagrams/database-tables.html` (all columns, crow's-foot
+FK lines); naming and status follow D-50, D-51.
+
+### D-50 Naming and row audit columns — Approved (Session 16, user)
+- Primary key is `Id`; a foreign key is the singular entity name + `Id` (`BookId`, `CategoryId`);
+  two FKs to one table get a role prefix (`IssuedByUserId`).
+- Every `BaseEntity` table has `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` (template names
+  kept — user chose option A over `Modified…`); join tables only `CreatedAt`/`CreatedBy`; log
+  tables none. Values are UTC and set automatically by a `SaveChanges` interceptor from the current
+  user and `TimeProvider` — never by services. They show the last change only; full history is
+  `AuditLogs` (D-21). **Source:** user, Session 16 (DECISION_LOG §41). **Implemented: no** (Gate 2,
+  step 0.8).
+
+### D-51 Single `RecordStatus` instead of `IsActive` + `IsDeleted` — Approved (Session 16, user)
+`enum RecordStatus : byte { Active = 1, Inactive = 2, Deleted = 3 }` (0 invalid; new values appended,
+never renumbered) in Core; column `Status tinyint` + `CHECK`. Replaces `BaseEntity.IsDeleted` and
+`ApplicationUser.IsActive` (login requires `Active`). One global query filter hides `Deleted` for
+every `BaseEntity`; the interceptor turns repository `Remove()` into soft delete; unique indexes are
+filtered `WHERE Status <> 3`. Business states (`CopyStatus`, `TransactionStatus`) stay separate
+columns. User proposed HTTP-style values (200/404); accepted the assistant's 1/2/3 + `Inactive`
+instead. Template migration converts `IsDeleted = 1 → 3`, else `1`; `IsActive = 0 → 2`.
+**Source:** user, Session 16 (DECISION_LOG §41). **Implemented: no** (Gate 2, step 0.8). Resolves the
+D-48 open point "`IsActive` vs `IsDeleted`".
 
 ---
 
@@ -1474,6 +1497,9 @@ Phase 0.
 | `EF Tools` package | Keep `Microsoft.EntityFrameworkCore.Tools` (only for Visual Studio PMC)? | Remove if nobody uses PMC; CLI uses local `dotnet-ef`. **Session 15: kept** (not removed in `8504115`) until the user confirms nobody uses Visual Studio PMC |
 | UI brand text | `_Layout.cshtml` still shows "DefaultTemplate" (title, navbar, footer) | Change with the first UI work (visible change, not part of the 0.3 rename) |
 | Old `DefaultTemplate/` folder | Holds only ignored `bin/`, `obj/`, `*.csproj.user` | Delete (needs approval; nothing tracked) |
+| Gate 2 start | Begin steps 0.6–0.8 (incl. D-50, D-51) on `feature/phase-0-gate-2` | **Ask at the start of Session 17** |
+| D-49 O1–O5 | Available count, `Issued` in `CopyStatus`, member subtypes, history name, loan id type (`database.md` §6) | Before the phase that builds the tables (Phase 2/3); recommendations in `database.md` |
+| Merged branch | Delete `feature/phase-0-gate-1` (merged into `develop`)? | Any time; needs the user's OK |
 | ~~Gate 1 approval~~ **Resolved Session 16 (`bbee8dc`, DECISION_LOG §39)** | Merge `feature/phase-0-gate-1` → `develop` (`--no-ff`) | After the correction commit — **correction done Session 15 (`8504115`); ask at the start of Session 16** |
 | M15 (§33) | Overall-architecture + DB/ER `archify` diagrams; multi-copy + lending-history DB design | Before Gate 2 (user: after the Gate 1 report); design stays **Proposed** until approved |
 | M15 design point | Title "available count": stored counter vs derived from copy status | Derived (COUNT of copies with status Available) + filtered unique index "one active loan per copy" (D-35); show both with trade-offs |

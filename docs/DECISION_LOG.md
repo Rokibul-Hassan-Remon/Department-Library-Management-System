@@ -1560,6 +1560,34 @@ flake fix; Sinks.File version claim wrong; constructor check only re-validated t
   archive only in recommendation O3 (single `Members` table instead of subtype tables), which is
   flagged for a Phase 2 decision.
 - Waiting for the user's review; Gate 2 needs its own approval.
+- Committed `bdd5261` on the user's "ok".
+
+### 41. Session 16 — ER diagram, naming, audit columns, record status
+- User could not read the table design (opened the `.html` in the IDE; the archify overview has no
+  columns). Added `docs/diagrams/database-tables.html`: hand-built SVG ER diagram, every column,
+  PK/FK/UQ, FK → PK lines in crow's-foot notation, click-to-highlight, relationships in words.
+  Rendered with headless Edge and inspected.
+- **User:** PK should be plain `Id`, FK `<Table>Id`; keep Created/Modified By/At on tables for
+  first-line troubleshooting. Assistant agreed, refined: singular entity name in FKs, role prefix
+  for two FKs to one table, columns already exist in the template `BaseEntity`, set them in an
+  interceptor, log tables exempt, last-change only (full history = `AuditLogs`). Naming question
+  `Updated…` vs `Modified…` → **user: "option A" (keep `Updated…`)** → **D-50 Approved**.
+- **User:** replace `IsActive` + `IsDeleted` with one `Status` enum (e.g. Active = 200, Deleted = 404),
+  update the template Data layer accordingly, keep it extensible. Assistant recommended 1/2/3 over
+  HTTP codes (meaning, `tinyint`, 0 = unset), an `Inactive` state, separation from business statuses,
+  one global filter, central soft delete, filtered unique indexes; implementation in Gate 2.
+  **User: "I like your suggested solution. so go for it"** → **D-51 Approved**; done in step 0.8.
+  Gate 2 itself still needs explicit start approval.
+- Overview diagram (`database-model`) sublabels aligned with D-50/D-51 (no `IsActive`); re-passes
+  archify `finalize`.
+
+### 42. Session 16 close-out (user request: switch session)
+- Commits this session: `8a6df00`, `bbee8dc` (Gate 1 merge), `fe960d9`, `bdd5261` — each on the
+  user's "ok". §41 work + this close-out are **staged, not committed** (commit on the user's OK).
+- Open for Session 17: Gate 2 start approval (not given — "go for it" covered D-50/D-51 only);
+  O1–O5 in `database.md`; items in PROJECT_DECISIONS §9 "Session 14"; deleting the merged
+  `feature/phase-0-gate-1` branch.
+- Handoff: SESSION_HANDOFF Session 16 block.
 
 ## Unresolved decisions and why
 

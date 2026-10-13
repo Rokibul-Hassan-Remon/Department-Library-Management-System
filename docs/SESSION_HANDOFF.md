@@ -1,27 +1,66 @@
 # Session Handoff
 
 ## ▶ Session 16 (2026-10-13) — read first; overrides older blocks where they differ
+Session 16 closed at the user's request (conversation too long) — **Session 17 starts here.**
 
 ### State (verified 2026-10-13)
-- **Gate 1 approved and merged:** `feature/phase-0-gate-1` → `develop` `--no-ff` = **`bbee8dc`**
-  (includes `8a6df00`, the Session 15 close-out docs). `main` @ `af89144` unchanged; local only.
-- Evidence on `develop`: build 0 errors (NU1903 AutoMapper only), tests 16/16, 0 `CseLibrary*` DBs on
-  LocalDB, `.\SQLEXPRESS` untouched (DECISION_LOG §39).
-- Gate 1 docs update (this block, PHASE_0_PLAN, DECISION_LOG §39, PROJECT_DECISIONS): commit on
-  `develop` only after the user's OK (check `git log` — do not assume it was done).
+- Branch **`develop`** (local only; `main` @ `af89144` unchanged). Session 16 commits, each on the
+  user's "ok":
+  | Commit | Content | Log |
+  |---|---|---|
+  | `8a6df00` | Session 15 close-out docs (on `feature/phase-0-gate-1`) | §38 |
+  | `bbee8dc` | **Gate 1 approved → merged into `develop` `--no-ff`** | §39 |
+  | `fe960d9` | Gate 1 approval docs | §39 |
+  | `bdd5261` | M15: archify target-architecture + database-model diagrams, `database.md`, D-49 | §40 |
+  | _(staged, uncommitted)_ | ER diagram `database-tables.html`, D-50, D-51, overview sublabels, Session 16 close-out (§41–§42) | §41–§42 |
+- Evidence on `develop` after the merge: build 0 errors (NU1903 AutoMapper only), tests 16/16,
+  0 `CseLibrary*` DBs on LocalDB, `.\SQLEXPRESS` untouched. No code changed after the merge.
+- `feature/phase-0-gate-1` still exists (merged); deleting it needs the user's OK.
 
-### M15 delivered (Session 16), awaiting the user's review
-- `docs/database.md` + D-49 (Proposed), diagrams `docs/diagrams/target-architecture.html` and
-  `database-model.html` (archify finalize pass; no screenshot review). DECISION_LOG §40.
-- Commit status: check `git log`; commit only on the user's OK.
+### Decisions this session (details: PROJECT_DECISIONS)
+- **D-49 Proposed:** library DB design (`docs/database.md`) — derived available count (no counter),
+  open-loan invariant (filtered unique index + copy `RowVersion`), append-only lending history.
+  Open choices **O1–O5** (database.md §6) wait for the user, latest before the phase that builds them.
+- **D-50 Approved:** PK `Id`; FK = singular entity + `Id` (`BookId`), role prefix for two FKs to one
+  table (`IssuedByUserId`); `CreatedAt/By`, `UpdatedAt/By` on every `BaseEntity` (template names,
+  "option A"), set by a `SaveChanges` interceptor; log tables exempt.
+- **D-51 Approved:** `enum RecordStatus : byte { Active = 1, Inactive = 2, Deleted = 3 }` replaces
+  `BaseEntity.IsDeleted` and `ApplicationUser.IsActive`; one global filter; central soft delete;
+  unique indexes `WHERE Status <> 3`; `CHECK`; business statuses stay separate.
+- D-50 + D-51 are implemented in **Gate 2 step 0.8** (PHASE_0_PLAN lists every touched file).
 
-### Next action, in order
-1. ~~M15~~ delivered, see above; the user reviews O1–O5 in `database.md`. **M15** (DECISION_LOG §33, `requirements.md` FR-M15-01..04) — archify overall target architecture
-   + DB/ER diagrams + DB design proposal (multi-copy titles, copy holder, immutable lending history,
-   derived available count vs counter). Everything **Proposed**; no code/migration. Stop for review.
-2. Gate 2 (0.6–0.8) only after explicit approval (new branch `feature/phase-0-gate-2` from `develop`).
-- Still open (PROJECT_DECISIONS §9 "Session 14"): `EF Tools` package, old `DefaultTemplate/` folder
-  deletion, UI brand text.
+### Docs and diagrams (open `.html` files in a browser, not the IDE)
+- `docs/diagrams/database-tables.html` — **ER diagram** (hand-built SVG, all columns, crow's-foot
+  FK lines, click to highlight). Owns the column list; `database.md` owns the reasoning.
+- `docs/diagrams/database-model.html` — archify table overview; `target-architecture.html` — archify
+  whole-system view. Both re-pass `finalize`.
+
+### ⛔ Next action (Session 17), in order
+1. Verify read-only: `git branch --show-current` (= `develop`), `git log --oneline -6`, `git status`.
+2. If the Session 16 close-out is still staged/uncommitted: show the staged list + message, commit on
+   the user's OK. Suggested message:
+   `Add ER diagram and approve naming and record-status conventions (docs)`.
+3. Ask explicitly: **start Gate 2 (steps 0.6–0.8)** on a new `feature/phase-0-gate-2` from
+   `develop`? The user's "go for it" approved D-50/D-51 only, **not** the Gate 2 start.
+4. Gate 2 content: 0.6 remove AutoMapper, 0.7 core contracts, 0.8 repositories/UoW + D-16 fixes +
+   **D-50/D-51** (RecordStatus, interceptor for audit columns and soft delete, migration with data
+   conversion). Show staged list + message before each commit; `/code-review` + `/ponytail-review`
+   before the Gate 2 report; stop at the report.
+- Still open: O1–O5 (database.md), `EF Tools` package, old `DefaultTemplate/` folder deletion, UI
+  brand text, deleting the merged `feature/phase-0-gate-1` branch.
+
+### Learned in Session 16
+- The user reviews designs **visually**. Plain archify boxes without columns were not enough; a real
+  ER diagram (tables + columns + crow's-foot lines) was. Prefer readable pictures + a short "in
+  words" list over long prose.
+- Opening an `.html` file in VS Code shows source; open it in the browser (`Start-Process <file>`).
+- Headless Edge screenshot works for self-checking pages:
+  `msedge.exe --headless=new --disable-gpu --window-size=1900,1500 --screenshot=<png> file:///<path>`.
+- The user brings their own conventions (naming, audit columns, status enum); evaluate, refine
+  with concrete reasons (e.g. 1/2/3 instead of HTTP codes), give one recommendation, then act on
+  their answer. Record user-approved conventions as Approved decisions.
+- Bash heredocs with mixed quotes break; write data/scripts to the scratchpad with the Write tool
+  and run them with `node <file>`.
 
 ## Session 15 (2026-10-13) — history; the Session 16 block above takes precedence
 Session 15 closed at the user's request (conversation too long) — **Session 16 starts here.**

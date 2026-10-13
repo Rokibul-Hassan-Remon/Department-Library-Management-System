@@ -17,7 +17,7 @@
       "id": "authors",
       "type": "database",
       "label": "Authors",
-      "sublabel": "AuthorId, Name",
+      "sublabel": "Id, Name, Status",
       "pos": [
         40,
         40
@@ -58,7 +58,7 @@
       "id": "categories",
       "type": "database",
       "label": "Categories",
-      "sublabel": "CategoryId, Name UQ, IsActive",
+      "sublabel": "Id, Name UQ, Status",
       "pos": [
         40,
         220
@@ -78,7 +78,7 @@
       "id": "books",
       "type": "database",
       "label": "Books (title)",
-      "sublabel": "BookId, Title, ISBN, IsActive",
+      "sublabel": "Id, Title, ISBN, CategoryId",
       "pos": [
         360,
         220
@@ -239,7 +239,7 @@
       "id": "members",
       "type": "database",
       "label": "Members",
-      "sublabel": "MemberCode UQ, MemberType, IsActive",
+      "sublabel": "MemberCode UQ, MemberType, Status",
       "pos": [
         1025,
         420

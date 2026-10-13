@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSE Library ER Diagram</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--muted:#5d6676;--line:#cfd5df;--edge:#64748b;--pk:#b45309;--fk:#1d4ed8;--uq:#047857;--new:#7c3aed;--ok:#047857;
+ --g-cat:#2563eb;--g-mem:#0f766e;--g-not:#9333ea;--g-sec:#475569;--g-aud:#b45309}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11141a;--card:#1a1f28;--ink:#e6e9ef;--muted:#9aa3b2;--line:#2c3340;--edge:#8b97aa;--pk:#f59e0b;--fk:#60a5fa;--uq:#34d399;--new:#a78bfa;--ok:#34d399}}
+:root[data-theme="dark"]{--bg:#11141a;--card:#1a1f28;--ink:#e6e9ef;--muted:#9aa3b2;--line:#2c3340;--edge:#8b97aa;--pk:#f59e0b;--fk:#60a5fa;--uq:#34d399;--new:#a78bfa;--ok:#34d399}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,"Segoe UI",sans-serif}
+header,main{max-width:1500px;margin:auto;padding:0 16px}
+header{padding-top:20px}
+h1{font-size:22px;margin:0 0 4px}
+header p{margin:4px 0;color:var(--muted)}
+h2{font-size:15px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:22px 0 8px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
+button,input{padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font:inherit}
+button{cursor:pointer}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);align-items:center}
+.legend svg{vertical-align:middle}
+#erwrap{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:85vh}
+#er{display:block}
+#er.fit{width:100%;height:auto}
+#er text{font-family:ui-monospace,Consolas,monospace;font-size:12px;fill:var(--ink)}
+#er .ty{fill:var(--muted);font-size:11px}
+#er .hd{fill:#fff;font-family:system-ui,"Segoe UI",sans-serif;font-size:13.5px;font-weight:700}
+#er .st{fill:#fff;font-family:system-ui,"Segoe UI",sans-serif;font-size:10px;opacity:.9}
+#er .box{fill:var(--card);stroke:var(--line)}
+#er .rowline{stroke:var(--line)}
+#er .kpk{fill:var(--pk);font-size:10px;font-weight:700}
+#er .kfk{fill:var(--fk);font-size:10px;font-weight:700}
+#er .kuq{fill:var(--uq);font-size:10px;font-weight:700}
+#er .e path,#er .e line{stroke:var(--edge);stroke-width:1.4;fill:none}
+#er .e circle{stroke:var(--edge);stroke-width:1.4;fill:var(--card)}
+#er .e.logical path{stroke-dasharray:6 4}
+#er .elabel{font-family:system-ui,"Segoe UI",sans-serif;font-size:11px;fill:var(--muted)}
+#er.focus .t,#er.focus .e{opacity:.15}
+#er.focus .on{opacity:1}
+#er .e.on path,#er .e.on line,#er .e.on circle{stroke:var(--fk);stroke-width:2.2}
+#er .t{cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.t2{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.th{padding:9px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.badge{font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid currentColor;white-space:nowrap}
+.badge.new{color:var(--new)}.badge.ok{color:var(--ok)}
+.desc{padding:6px 12px;color:var(--muted);font-size:12.5px}
+.notes{padding:0 12px 10px;font-size:12.5px}
+.notes div{border-top:1px solid var(--line);padding:3px 0}
+.notes code{color:var(--fk)}
+.ix{padding:6px 12px 10px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+<h1>CSE Library: ER diagram</h1>
+<p><b>Proposed design (D-49, M15).</b> Only tables marked "Exists" are built today. Conventions (D-50, D-51): primary key is always <code>Id</code>; a foreign key is <code>&lt;Entity&gt;Id</code>; business tables end with <code>Status</code> (1 Active, 2 Inactive, 3 Deleted) and <code>CreatedAt/CreatedBy/UpdatedAt/UpdatedBy</code>, set automatically. Unique keys ignore Deleted rows. Reasoning, trade-offs and open choices O1–O5: <code>docs/database.md</code>.</p>
+<div class="bar">
+<button id="fit" type="button">Actual size</button>
+<span class="legend">
+ <span><svg width="58" height="16"><line x1="0" y1="8" x2="58" y2="8" stroke="currentColor"/><line x1="46" y1="2" x2="46" y2="14" stroke="currentColor"/><line x1="51" y1="2" x2="51" y2="14" stroke="currentColor"/></svg> exactly one</span>
+ <span><svg width="58" height="16"><line x1="0" y1="8" x2="58" y2="8" stroke="currentColor"/><circle cx="40" cy="8" r="4" fill="none" stroke="currentColor"/><line x1="50" y1="2" x2="50" y2="14" stroke="currentColor"/></svg> zero or one</span>
+ <span><svg width="58" height="16"><line x1="0" y1="8" x2="58" y2="8" stroke="currentColor"/><circle cx="36" cy="8" r="4" fill="none" stroke="currentColor"/><line x1="44" y1="8" x2="58" y2="2" stroke="currentColor"/><line x1="44" y1="8" x2="58" y2="14" stroke="currentColor"/></svg> zero or many</span>
+ <span><svg width="58" height="16"><line x1="0" y1="8" x2="58" y2="8" stroke="currentColor" stroke-dasharray="6 4"/></svg> logical link, no FK</span>
+ <span>Click a table to highlight its relationships.</span>
+</span>
+</div>
+</header>
+<main>
+<div id="erwrap"><svg id="er" class="fit" role="img" aria-label="Entity relationship diagram of the CSE Library database"></svg></div>
+<h2>Relationships in words</h2>
+<div class="grid" id="rel"></div>
+<h2>Table notes</h2>
+<div class="grid" id="cards"></div>
+</main>
+<script>
+// Columns: [name, type, keys, note]. keys: "PK", "UQ", "FK:Table" (references that table's PK).
+// col = diagram column; tables in one column stack top to bottom in this order.
+const G = {cat:"--g-cat", mem:"--g-mem", not:"--g-not", sec:"--g-sec", aud:"--g-aud"};
+// Every BaseEntity table ends with Status + the four audit columns (D-50, D-51); set automatically, never by hand.
+const STATUS = ["Status","tinyint","","1 Active, 2 Inactive, 3 Deleted (RecordStatus)"];
+const AUDIT = [["CreatedAt","datetime2","","UTC, set automatically"],["CreatedBy","nvarchar(450) null","","user Id, set automatically"],
+  ["UpdatedAt","datetime2 null","","UTC, set automatically"],["UpdatedBy","nvarchar(450) null","","user Id, set automatically"]];
+const STD = [STATUS, ...AUDIT];
+const T = [
+ {n:"Categories", g:"cat", col:0, s:"Phase 2", d:"Book subject list.", c:[
+  ["Id","int","PK"],["Name","nvarchar(100)","UQ"], ...STD]},
+ {n:"BookAuthors", g:"cat", col:0, s:"Phase 2", d:"Join table: which authors wrote which book.", c:[
+  ["BookId","int","PK FK:Books"],["AuthorId","int","PK FK:Authors"], AUDIT[0], AUDIT[1]]},
+ {n:"Authors", g:"cat", col:0, s:"Phase 2", d:"Author master records.", c:[
+  ["Id","int","PK"],["Name","nvarchar(150)",""], ...STD]},
+ {n:"OutboxMessages", g:"not", col:0, s:"Phase 4", d:"Emails waiting to be sent, written in the same transaction as issue/return. No FK. A log table: no Status/audit columns. Columns decided with D-36.", c:[
+  ["Id","bigint","PK"],["Type","nvarchar(100)",""],["Payload","nvarchar(max)",""],["CreatedAt","datetime2",""],["ProcessedAt","datetime2 null",""]]},
+ {n:"AuditLogs", g:"aud", col:0, s:"Phase 0 (0.11)", d:"Full change history: who changed what, old → new (D-21). No FK on purpose, so audit rows outlive any row. A log table: no Status/audit columns.", c:[
+  ["Id","bigint","PK"],["Category","tinyint","","1 Entity, 2 Security"],["EntityType","nvarchar(100)",""],["EntityId","nvarchar(100)",""],
+  ["Action","nvarchar(50)",""],["ActorUserId","nvarchar(450) null","","null = system"],["OccurredAt","datetime2","","UTC"],
+  ["CorrelationId","nvarchar(100) null",""],["Changes","nvarchar(max)","","JSON old → new"]]},
+ {n:"Books", g:"cat", col:1, s:"Phase 2", d:"A book TITLE (metadata). No copy counters: counts are calculated from BookCopies.", c:[
+  ["Id","int","PK"],["Title","nvarchar(250)",""],["ISBN","nvarchar(20) null","UQ","unique when filled"],
+  ["Publisher","nvarchar(200) null",""],["Edition","nvarchar(50) null",""],["PublicationYear","smallint null",""],
+  ["CategoryId","int null","FK:Categories"],["CoverImagePath","nvarchar(500) null",""],["Description","nvarchar(2000) null",""],
+  ["RowVersion","rowversion","","concurrency"], ...STD]},
+ {n:"LibraryPolicies", g:"mem", col:1, s:"Phase 3", d:"Borrowing rules per member type (D-48). Values are set only after your approval.", c:[
+  ["Id","int","PK"],["MemberCategory","tinyint","UQ","one row per member type"],["MaxActiveLoans","int","","CHECK ≥ 0"],
+  ["BlockIssueWhenAnyActiveLoan","bit",""],["BlockIssueWhenOverdue","bit",""],["LoanDurationDays","int","","CHECK ≥ 1"],["RowVersion","rowversion",""], ...STD]},
+ {n:"GeneralConfigs", g:"sec", col:1, s:"Exists", d:"Key/value settings from the template. IsDeleted → Status in Gate 2 (D-51).", c:[
+  ["Id","int","PK"],["Key","nvarchar","UQ"],["Value","nvarchar null",""],["Description","nvarchar null",""],["Group","nvarchar null",""], ...STD]},
+ {n:"BookCopies", g:"cat", col:2, s:"Phase 2", d:"One row per PHYSICAL copy on the shelf. CopyStatus = physical/lending state; Status = record state.", c:[
+  ["Id","int","PK"],["BookId","int","FK:Books","which title"],["AccessionNumber","nvarchar(50)","UQ","library sticker number"],
+  ["CopyStatus","tinyint","","1 Available, 2 Issued, 3 Damaged, 4 Lost, 5 Maintenance, 6 Retired"],
+  ["ShelfLocation","nvarchar(100) null",""],["AcquisitionDate","date null",""],["Notes","nvarchar(500) null",""],
+  ["RowVersion","rowversion","","stops two issues of one copy"], ...STD],
+  ix:"Index (BookId, CopyStatus): available count = copies with CopyStatus 1 and Status Active."},
+ {n:"Members", g:"mem", col:2, s:"Phase 2", d:"Students and Department Fellows in one table (open choice O3). Status Inactive = cannot borrow.", c:[
+  ["Id","int","PK"],["MemberCode","nvarchar(30)","UQ","student/staff ID"],["FullName","nvarchar(150)",""],
+  ["MemberType","tinyint","","1 Student, 2 Fellow (= policy category)"],["Email","nvarchar(254)","","for reminders"],["Phone","nvarchar(30) null",""],
+  ["UserId","nvarchar(450) null","UQ FK:AspNetUsers","portal login, at most one"],
+  ["Department","nvarchar(100)",""],["AcademicSession","nvarchar(30) null","","required for Student"],["EnrollmentDate","date null",""],
+  ["Designation","nvarchar(100) null","","required for Fellow"],["InstitutionalId","nvarchar(50) null","UQ","unique when filled"],
+  ["RowVersion","rowversion",""], ...STD]},
+ {n:"LendingTransactions", g:"mem", col:3, s:"Phase 3", d:"One row per loan = the full borrowing history. Never deleted (Deleted status not used); return fills the return columns once.", c:[
+  ["Id","bigint","PK"],["BookCopyId","int","FK:BookCopies","which physical copy"],["MemberId","int","FK:Members","who borrowed"],
+  ["IssueDateUtc","datetime2","","when issued"],["DueDate","date","","library-local date"],["ReturnDateUtc","datetime2 null","","when returned"],
+  ["TransactionStatus","tinyint","","1 Issued (open), 2 Returned"],["IssuedByUserId","nvarchar(450)","FK:AspNetUsers","staff who issued"],
+  ["ReturnedByUserId","nvarchar(450) null","FK:AspNetUsers","staff who received"],["ReturnCondition","tinyint null","","Good / Damaged"],
+  ["RowVersion","rowversion","","stops double return"], ...STD],
+  ix:"UX_Lending_ActiveBookCopy: unique (BookCopyId) where TransactionStatus = Issued → one open loan per copy = current holder. Also (MemberId, IssueDateUtc), (BookCopyId, IssueDateUtc), (DueDate) where Issued. CHECK: Returned rows must have return date, staff and condition."},
+ {n:"AspNetUsers", g:"sec", col:3, s:"Exists", d:"Login accounts for staff and members (ASP.NET Identity; other Identity columns not shown). IsActive → Status in Gate 2 (D-51): only Active can log in.", c:[
+  ["Id","nvarchar(450)","PK"],["UserName","nvarchar(256)","UQ"],["Email","nvarchar(256)",""],["FullName","nvarchar(max) null",""],
+  STATUS,["CreatedAt","datetime2",""],["UpdatedAt","datetime2 null",""]]},
+ {n:"EmailNotificationLogs", g:"not", col:4, s:"Phase 4", d:"Each reminder / return email and its delivery attempts. A log table: no Status/audit columns.", c:[
+  ["Id","bigint","PK"],["LendingTransactionId","bigint","FK:LendingTransactions"],
+  ["NotificationType","tinyint","","DueSoon, DueToday, Overdue, ReturnConfirmation"],["RecipientEmail","nvarchar(254)",""],
+  ["ScheduledAt","datetime2","","UTC"],["SentAt","datetime2 null","","UTC"],["DeliveryStatus","tinyint","","Pending, Sent, Failed"],
+  ["AttemptCount","int",""],["LastError","nvarchar(1000) null",""],["IdempotencyKey","nvarchar(100)","UQ","no duplicate reminder"]]},
+ {n:"AspNetUserRoles", g:"sec", col:4, s:"Exists", d:"Which account has which role (Identity).", c:[
+  ["UserId","nvarchar(450)","PK FK:AspNetUsers"],["RoleId","nvarchar(450)","PK FK:AspNetRoles"]]},
+ {n:"AspNetRoles", g:"sec", col:4, s:"Exists", d:"Roles: Admin, Librarian, … (Identity).", c:[["Id","nvarchar(450)","PK"],["Name","nvarchar(256)","UQ"]]},
+ {n:"RolePermissions", g:"sec", col:4, s:"Exists", d:"Which role has which permission (D-37).", c:[
+  ["RoleId","nvarchar(450)","PK FK:AspNetRoles"],["PermissionId","int","PK FK:Permissions"],["AssignedAt","datetime2",""]]},
+ {n:"Permissions", g:"sec", col:4, s:"Exists", d:"Permission names checked by [HasPermission]. IsDeleted → Status in Gate 2 (D-51).", c:[
+  ["Id","int","PK"],["Name","nvarchar","UQ"],["DisplayName","nvarchar null",""],["Module","nvarchar null",""],["Description","nvarchar null",""], ...STD]}
+];
+// Relationship sentences, keyed "Child.Column".
+const SAY = {
+ "BookAuthors.BookId":"A book has zero or many author links", "BookAuthors.AuthorId":"An author has zero or many book links",
+ "Books.CategoryId":"A category has zero or many books; a book may be uncategorized",
+ "BookCopies.BookId":"A book title has zero or many physical copies; each copy belongs to exactly one title",
+ "LendingTransactions.BookCopyId":"A copy has many loans over time, at most ONE open (Issued) at a time = its current holder",
+ "LendingTransactions.MemberId":"A member has zero or many loans (current and past)",
+ "LendingTransactions.IssuedByUserId":"Every loan records the staff account that issued it",
+ "LendingTransactions.ReturnedByUserId":"A returned loan records the staff account that received it",
+ "Members.UserId":"A member has zero or one portal login; a login belongs to at most one member",
+ "EmailNotificationLogs.LendingTransactionId":"A loan has zero or many reminder / confirmation emails",
+ "AspNetUserRoles.UserId":"An account has zero or many roles", "AspNetUserRoles.RoleId":"A role has zero or many accounts",
+ "RolePermissions.RoleId":"A role has zero or many permissions", "RolePermissions.PermissionId":"A permission is granted to zero or many roles",
+ "Members.MemberType":"Each member type has exactly one LibraryPolicies row (matched by value, no FK)"
+};
+const LOGICAL = [{from:"Members", fc:"MemberType", to:"LibraryPolicies", tc:"MemberCategory"}];
+
+const W = 300, HEAD = 34, ROW = 21, COLX = c => 40 + c * 390, GAPTOP = 40, VGAP = 46;
+const byName = {}, colY = {};
+for (const t of T) {
+  t.x = COLX(t.col); t.y = colY[t.col] ?? GAPTOP; t.h = HEAD + t.c.length * ROW;
+  colY[t.col] = t.y + t.h + VGAP; byName[t.n] = t;
+}
+const rowY = (t, col) => t.y + HEAD + t.c.findIndex(r => r[0] === col) * ROW + ROW / 2;
+const pkOf = t => t.c.find(r => r[2].split(" ").includes("PK"))[0];
+const edges = [];
+for (const t of T) for (const [col, ty, k] of t.c) for (const key of k.split(" ")) if (key.startsWith("FK:"))
+  edges.push({from:t.n, fc:col, to:key.slice(3), tc:pkOf(byName[key.slice(3)]), nullable:/null/.test(ty), unique:k.includes("UQ") && !k.includes("PK")});
+for (const l of LOGICAL) edges.push({...l, logical:true});
+
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+const lanes = {};
+const lane = gap => (lanes[gap] = (lanes[gap] ?? 0) + 1) - 1;
+// End marks drawn at (x, y) pointing outward in direction d (+1 = to the right of the table).
+const bar = (x, y) => `<line x1="${x}" y1="${y - 7}" x2="${x}" y2="${y + 7}"/>`;
+const ring = (x, y) => `<circle cx="${x}" cy="${y}" r="4"/>`;
+const many = (x, y, d) => `<line x1="${x + d * 13}" y1="${y}" x2="${x}" y2="${y - 7}"/><line x1="${x + d * 13}" y1="${y}" x2="${x}" y2="${y + 7}"/>` + ring(x + d * 19, y);
+function edgeSvg(e) {
+  const a = byName[e.from], b = byName[e.to];
+  const ay = rowY(a, e.fc), by = rowY(b, e.tc);
+  let ax, bx, da, db, mx;
+  if (a.col === b.col) {                       // same column: loop out on the right
+    ax = bx = a.x + W; da = db = 1; mx = a.x + W + 16 + lane(a.col) * 10;
+  } else if (b.col > a.col) {
+    ax = a.x + W; bx = b.x; da = 1; db = -1; mx = ax + 16 + lane(b.col - 1) * 10;
+  } else {
+    ax = a.x; bx = b.x + W; da = -1; db = 1; mx = bx + 16 + lane(a.col - 1) * 10;
+  }
+  const childEnd = e.logical ? "" : e.unique ? bar(ax + da * 10, ay) + ring(ax + da * 18, ay) : many(ax, ay, da);
+  const parentEnd = e.logical ? "" : e.nullable ? bar(bx + db * 8, by) + ring(bx + db * 16, by) : bar(bx + db * 8, by) + bar(bx + db * 13, by);
+  const label = e.logical ? `<text class="elabel" x="${mx + 4}" y="${(ay + by) / 2}">by type</text>` : "";
+  return `<g class="e${e.logical ? " logical" : ""}" data-a="${e.from}" data-b="${e.to}"><title>${esc(SAY[e.from + "." + e.fc] || "")}</title>` +
+    `<path d="M${ax},${ay} H${mx} V${by} H${bx}"/>${childEnd}${parentEnd}${label}</g>`;
+}
+function tableSvg(t) {
+  const fill = `var(${G[t.g]})`;
+  const rows = t.c.map(([c, ty, k], i) => {
+    const y = t.y + HEAD + i * ROW, mid = y + ROW / 2 + 4, ks = k.split(" ");
+    const tag = ks.includes("PK") ? `<text class="kpk" x="${t.x + 8}" y="${mid}">PK</text>` :
+      ks.some(x => x.startsWith("FK:")) ? `<text class="kfk" x="${t.x + 8}" y="${mid}">FK</text>` :
+      ks.includes("UQ") ? `<text class="kuq" x="${t.x + 8}" y="${mid}">UQ</text>` : "";
+    const fk2 = ks.includes("PK") && ks.some(x => x.startsWith("FK:")) ? `<text class="kfk" x="${t.x + 8}" y="${mid - 9}" font-size="8">FK</text>` : "";
+    return (i ? `<line class="rowline" x1="${t.x}" y1="${y}" x2="${t.x + W}" y2="${y}"/>` : "") + tag + fk2 +
+      `<text x="${t.x + 32}" y="${mid}"${ks.includes("PK") ? ' font-weight="700"' : ""}>${esc(c)}</text>` +
+      `<text class="ty" x="${t.x + W - 8}" y="${mid}" text-anchor="end">${esc(ty)}</text>`;
+  }).join("");
+  return `<g class="t" data-t="${t.n}"><title>${esc(t.d)}</title>` +
+    `<rect class="box" x="${t.x}" y="${t.y}" width="${W}" height="${t.h}" rx="6"/>` +
+    `<path d="M${t.x},${t.y + HEAD} V${t.y + 6} a6,6 0 0 1 6,-6 H${t.x + W - 6} a6,6 0 0 1 6,6 V${t.y + HEAD} Z" style="fill:${fill}"/>` +
+    `<text class="hd" x="${t.x + 10}" y="${t.y + 22}">${t.n}</text>` +
+    `<text class="st" x="${t.x + W - 8}" y="${t.y + 22}" text-anchor="end">${t.s === "Exists" ? "exists" : t.s}</text>` + rows + `</g>`;
+}
+const svg = document.getElementById("er");
+const width = Math.max(...T.map(t => t.x + W)) + 80, height = Math.max(...Object.values(colY));
+svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+svg.setAttribute("width", width); svg.setAttribute("height", height);
+svg.innerHTML = edges.map(edgeSvg).join("") + T.map(tableSvg).join("");
+
+document.getElementById("fit").onclick = e => {
+  const fit = svg.classList.toggle("fit");
+  e.target.textContent = fit ? "Actual size" : "Fit to width";
+};
+svg.addEventListener("click", ev => {
+  const g = ev.target.closest(".t");
+  svg.querySelectorAll(".on").forEach(x => x.classList.remove("on"));
+  if (!g || svg.dataset.sel === g.dataset.t) { svg.classList.remove("focus"); delete svg.dataset.sel; return; }
+  const n = g.dataset.t; svg.dataset.sel = n; svg.classList.add("focus"); g.classList.add("on");
+  svg.querySelectorAll(".e").forEach(e => {
+    if (e.dataset.a === n || e.dataset.b === n) {
+      e.classList.add("on");
+      svg.querySelector(`.t[data-t="${e.dataset.a === n ? e.dataset.b : e.dataset.a}"]`).classList.add("on");
+    }
+  });
+});
+
+const groupsSaid = {};
+for (const e of edges) (groupsSaid[e.to] ??= []).push(SAY[e.from + "." + e.fc] ? `<div><code>${e.to}</code> → <code>${e.from}.${e.fc}</code>: ${esc(SAY[e.from + "." + e.fc])}</div>` : "");
+document.getElementById("rel").innerHTML = Object.entries(groupsSaid).map(([t, items]) =>
+  `<article class="t2"><div class="th"><b>${t}</b></div><div class="notes">${items.join("")}</div></article>`).join("");
+document.getElementById("cards").innerHTML = T.map(t => `<article class="t2"><div class="th"><b>${t.n}</b><span class="badge ${t.s === "Exists" ? "ok" : "new"}">${t.s === "Exists" ? "Exists today" : "Proposed · " + t.s}</span></div>
+ <div class="desc">${esc(t.d)}</div>
+ <div class="notes">${t.c.filter(r => r[3] && !STD.includes(r)).map(r => `<div><code>${esc(r[0])}</code>: ${esc(r[3])}</div>`).join("")}</div>
+ ${t.ix ? `<div class="ix">${esc(t.ix)}</div>` : ""}</article>`).join("");
+</script>
+</body>
+</html>

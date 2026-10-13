@@ -8,7 +8,8 @@ schema for the library tables. The binding rules it builds on live in
 [requirements.md](requirements.md). Tables are added in their phase migrations (catalog Phase 2,
 members Phase 2, lending Phase 3, notifications Phase 4), never in Phase 0.
 
-Diagram: [diagrams/database-model.html](diagrams/database-model.html) (overall system:
+Diagrams: ER diagram [diagrams/database-tables.html](diagrams/database-tables.html); table overview
+[diagrams/database-model.html](diagrams/database-model.html) (overall system:
 [diagrams/target-architecture.html](diagrams/target-architecture.html)).
 
 ## 1. Core idea: title, copy, loan
@@ -22,24 +23,52 @@ Diagram: [diagrams/database-model.html](diagrams/database-model.html) (overall s
 
 ## 2. Tables
 
-Keys are `int` identity unless noted (HiLo is the D-29 candidate for audited tables and is decided
-separately). Timestamps are UTC `datetime2`; `DueDate` is a library-local `date` (`Asia/Dhaka`).
-"Audit" = `IAuditable` + per-property `.Audited()` (D-21–D-23).
+**ER diagram (open in a browser): [diagrams/database-tables.html](diagrams/database-tables.html)**:
+every table with all columns, types and PK/FK/UQ keys, FK → PK lines in crow's-foot notation
+(click a table to highlight its relationships), each relationship in words, and per-column
+notes. That page owns the column list; this file owns the reasoning.
 
-| Table | Key columns and constraints | Notes |
-|---|---|---|
-| `Categories` | `CategoryId`, `Name` UQ, `IsActive` | Book subject list |
-| `Authors` | `AuthorId`, `Name` | |
-| `BookAuthors` | PK (`BookId`, `AuthorId`), both FK | Many-to-many |
-| `Books` | `BookId`, `Title` (250) required, `ISBN` (20) filtered UQ when not null, `CategoryId` FK, `IsActive`, `RowVersion` | Title metadata only; no copy counters. Audit |
-| `BookCopies` | `BookCopyId`, `BookId` FK, `AccessionNumber` (50) UQ, `CopyStatus` tinyint + `CHECK` (1–6), `ShelfLocation`, `AcquisitionDate`, `RowVersion` | One row per physical copy. Index (`BookId`, `CopyStatus`). Audit |
-| `Members` | `MemberId`, `MemberCode` (30) UQ, `FullName`, `MemberType` tinyint (Student/Fellow) + `CHECK`, `Email`, `Phone`, `IsActive`, `IdentityUserId` FK filtered UQ when not null, `RowVersion` | `MemberType` is the D-48 policy category. Audit (email/phone included, D-23) |
-| `Students` / `DepartmentFellows` | PK = FK `MemberId`, type-specific columns | Archive subtype tables; see open choice O3 |
-| `LibraryPolicies` | per D-48 §1 (`MemberCategory` UQ, limits, `LoanDurationDays`, `CHECK`s) | Unchanged from D-48 |
-| `LendingTransactions` | `LendingTransactionId` bigint, `BookCopyId` FK, `MemberId` FK, `IssueDateUtc`, `DueDate`, `ReturnDateUtc` null, `TransactionStatus` tinyint (1 Issued, 2 Returned), `IssuedByUserId` FK, `ReturnedByUserId` FK null, `ReturnCondition` null, `RowVersion` | Business history (D-20, D-26). Audit |
-| `EmailNotificationLogs`, `OutboxMessages` | archive §7.2, `IdempotencyKey` UQ | Phase 4 (D-36) |
-| `AuditLogs` | per D-21 | No FK (`EntityType`, `EntityId`) so it outlives any row |
-| Template tables | `AspNet*` (Identity), `Permissions`, `RolePermissions`, `GeneralConfigs` | Kept as they are |
+### Conventions (Approved, Session 16: D-50, D-51)
+
+| Rule | Example |
+|---|---|
+| Primary key is always `Id` (`int` identity unless noted; HiLo is the D-29 candidate, decided separately) | `Books.Id`, `BookCopies.Id` |
+| Foreign key is the **singular entity name + `Id`** | `BookCopies.BookId`, `Books.CategoryId`, `Members.UserId` |
+| Two FKs to the same table get a role prefix | `LendingTransactions.IssuedByUserId`, `ReturnedByUserId` |
+| Every business table (`BaseEntity`) has `Status` + `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` | template names kept (option A); join tables only `CreatedAt`/`CreatedBy` |
+| Those five columns are **set automatically** by a `SaveChanges` interceptor (user from the current login, time from `TimeProvider`, UTC); services never set them | — |
+| Log tables have none of them | `AuditLogs`, `EmailNotificationLogs`, `OutboxMessages` |
+| Timestamps are UTC `datetime2`; `DueDate` is a library-local `date` (`Asia/Dhaka`) | — |
+
+The four audit columns show only the **last** change, for quick troubleshooting. The full history
+(who, when, old → new) is `AuditLogs` (D-21): catalog, member and lending tables are `IAuditable`
+with per-property `.Audited()` (D-21–D-23).
+
+### Record status (D-51)
+
+One column replaces both `IsActive` and `IsDeleted`:
+
+```csharp
+public enum RecordStatus : byte { Active = 1, Inactive = 2, Deleted = 3 }   // 0 is never valid
+```
+
+- `Active`: normal. `Inactive`: visible but blocked (a member cannot borrow, a user cannot log in).
+  `Deleted`: soft-deleted, hidden everywhere.
+- Stored as `tinyint` with `CHECK (Status IN (1,2,3))`. New states are appended (`4`, `5`, …) with
+  a migration that widens the `CHECK`; existing numbers never change.
+- **One global query filter** in `ApplicationDbContext` hides `Deleted` rows for every
+  `BaseEntity`; per-table filters are removed.
+- **Delete = soft delete, centrally:** the interceptor turns a repository `Remove()` of a
+  `BaseEntity` into `Status = Deleted`; services do not set it by hand.
+- **Unique indexes ignore deleted rows:** `WHERE Status <> 3`, so a deleted name can be reused.
+- `RecordStatus` is the row's lifecycle only. Business states stay separate: `CopyStatus`
+  (Available, Issued, …) and `TransactionStatus` (Issued, Returned). `LendingTransactions` is
+  never deleted, so it never uses `Deleted`.
+- Applies to the template too (`BaseEntity.IsDeleted`, `ApplicationUser.IsActive`): implemented in
+  Gate 2, step 0.8 (PHASE_0_PLAN).
+
+`Members` is shown as one table (open choice O3). Template tables (`AspNet*`, `Permissions`,
+`RolePermissions`, `GeneralConfigs`) keep their structure apart from D-50/D-51.
 
 ## 3. Available count: derived, not stored
 
@@ -85,7 +114,7 @@ This also matches the archive ("calculate from `BookCopies` rather than editable
   second return (D-35).
 - **No delete operation** in the repository or the UI. Foreign keys to `BookCopies`, `Members`
   and `AspNetUsers` use `ON DELETE NO ACTION`. A copy or member with history cannot be deleted; it
-  is deactivated (`IsActive = 0`) or retired (`CopyStatus = Retired`) instead (BR-13).
+  is set `Inactive` (`Status = 2`) or retired (`CopyStatus = Retired`) instead (BR-13).
 - **`CHECK` constraints** make a bad row impossible:
   - `(TransactionStatus = 1 AND ReturnDateUtc IS NULL AND ReturnedByUserId IS NULL AND ReturnCondition IS NULL)`
     `OR (TransactionStatus = 2 AND ReturnDateUtc IS NOT NULL AND ReturnedByUserId IS NOT NULL AND ReturnCondition IS NOT NULL)`
@@ -106,6 +135,6 @@ This also matches the archive ("calculate from `BookCopies` rather than editable
 | O2 | `Issued` inside `CopyStatus` | (a) keep `Issued` (archive), changed in the same transaction as the loan; (b) `CopyStatus` = physical state only, "issued" read from the open loan | **(a)**: one `RowVersion` on the copy serializes issue against lost/damaged changes, counts are one `GROUP BY`, and the filtered unique index still backs it up. (b) removes the duplicate but needs a lock or extra check to stop "mark lost" during a concurrent issue |
 | O3 | Member subtypes | (a) archive: `Members` + `Students` + `DepartmentFellows` (1:1); (b) one `Members` table with nullable type columns + `CHECK` per `MemberType` | **(b)**: only 3–4 columns differ, no joins, and D-48 locks a single member row. (a) is cleaner if the subtypes grow. Decide in Phase 2 |
 | O4 | Member name in history | Live FK (history shows the current name) / snapshot name columns on the loan | **Live FK**; name changes are in `AuditLogs` |
-| O5 | `LendingTransactionId` type | `bigint` (archive) / `int` | **`bigint`**: costs 4 bytes per row and never runs out |
+| O5 | `LendingTransactions.Id` type | `bigint` (archive) / `int` | **`bigint`**: costs 4 bytes per row and never runs out |
 
 Nothing here changes an Approved decision. D-35 and D-48 are reused unchanged.
