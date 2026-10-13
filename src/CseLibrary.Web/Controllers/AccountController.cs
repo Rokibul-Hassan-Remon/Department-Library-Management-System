@@ -35,7 +35,7 @@ public class AccountController : Controller
         if (!ModelState.IsValid) return View(model);
 
         var user = await _userManager.FindByEmailAsync(model.Email);
-        if (user == null || !user.IsActive)
+        if (user == null || user.Status != RecordStatus.Active)
         {
             ModelState.AddModelError(string.Empty, "Invalid login attempt.");
             return View(model);

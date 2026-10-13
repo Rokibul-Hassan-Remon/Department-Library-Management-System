@@ -14,7 +14,6 @@ public class PermissionConfiguration : IEntityTypeConfiguration<Permission>
         builder.Property(p => p.DisplayName).HasMaxLength(200);
         builder.Property(p => p.Module).HasMaxLength(100);
         builder.Property(p => p.Description).HasMaxLength(500);
-        builder.HasIndex(p => p.Name).IsUnique();
-        builder.HasQueryFilter(p => !p.IsDeleted);
+        builder.HasIndex(p => p.Name).IsUnique().HasFilter(ApplicationDbContext.NotDeletedFilter);
     }
 }

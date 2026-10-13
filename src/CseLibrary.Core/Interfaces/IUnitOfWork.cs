@@ -1,12 +1,32 @@
-using CseLibrary.Core.Entities;
+using CseLibrary.Core.Interfaces.Repositories;
+using CseLibrary.Core.Results;
 
 namespace CseLibrary.Core.Interfaces;
 
-public interface IUnitOfWork : IDisposable
+/// <summary>
+/// One scoped context behind typed repositories (D-12). Owns SaveChanges and transactions (D-14);
+/// throws <see cref="Exceptions.ConcurrencyConflictException"/> / <see cref="Exceptions.DuplicateKeyException"/>.
+/// </summary>
+public interface IUnitOfWork
 {
-    IRepository<Permission> Permissions { get; }
-    IRepository<RolePermission> RolePermissions { get; }
-    IRepository<GeneralConfig> GeneralConfigs { get; }
-    IRepository<TEntity> Repository<TEntity>() where TEntity : class;
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    IGeneralConfigRepository GeneralConfigs { get; }
+    IPermissionRepository Permissions { get; }
+    IRoleReadRepository Roles { get; }
+    IRolePermissionRepository RolePermissions { get; }
+    IUserReadRepository Users { get; }
+
+    Task<int> SaveChangesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Runs <paramref name="work"/> in one transaction under the retry strategy. Pending changes are saved
+    /// and committed when the result succeeds; a failed result rolls back. <paramref name="work"/> may run
+    /// more than once, so it must load everything it needs itself and have no outside side effects.
+    /// Nested calls throw <see cref="InvalidOperationException"/>.
+    /// <paramref name="verifySucceeded"/> answers "did the last commit reach the database?" when the commit
+    /// fails ambiguously; true returns that attempt's result instead of re-running <paramref name="work"/>.
+    /// </summary>
+    Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> work,
+        Func<CancellationToken, Task<bool>>? verifySucceeded = null,
+        CancellationToken ct = default) where TResult : Result;
 }

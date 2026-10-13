@@ -1595,6 +1595,142 @@ flake fix; Sinks.File version claim wrong; constructor check only re-validated t
   original stays in Git history and in `H:/Internship Project/DLMS-Backups/received_20261013-152404/`.
 - **User: "if there is no issue then delete these and commit after deleting these"** → folder
   deleted. The `DefaultTemplate` database on `.\SQLEXPRESS` is unrelated and untouched.
+- Committed `371c43b` (docs) on the user's request.
+
+### 44. Session 17 — Gate 2 started; step 0.6 (AutoMapper removed)
+- Assistant asked explicitly for the Gate 2 start (and separately for deleting the merged
+  `feature/phase-0-gate-1` branch). **User: "ok"** → per the Session 15 rule ("one ok = one
+  approval") taken as the **Gate 2 start only**; branch deletion **not** approved, still open.
+- Branch `feature/phase-0-gate-2` created from `develop` (`371c43b`).
+- 0.6: AutoMapper packages + `MappingProfile` removed; explicit `ToDto()` extensions (D-17). Build 0
+  errors / 0 warnings (NU1903 gone), no vulnerable or transitive AutoMapper package, tests 16/16.
+  Staged list + message shown → **user "ok"** → commit `51e189a`.
+- Lesson: Git Bash `sed -i` rewrites CRLF files as LF (the repo stores bytes as-is, `* -text`); after
+  every scripted edit restore CRLF on files that had it, and check `git diff --stat` for whole-file
+  rewrites.
+
+### 45. Session 17 — step 0.7 signatures approved; contracts added
+- Assistant showed exact signatures (Result/Result<T>, ErrorCodes, PageRequest/PagedResult,
+  ConcurrencyConflictException/DuplicateKeyException, slim `IRepository<T>`, feature repositories,
+  `IUnitOfWork` with one generic `ExecuteInTransactionAsync<TResult> where TResult : Result`) and five
+  points to approve: (1) `Result` shape (D-34), (2) page size default 20 / max 100, admin tables
+  unpaged (D-15 details), (3) read-only `Roles` + write-side `RolePermissions`, user permission lookup
+  on `Permissions`, (4) one generic transaction method, (5) commit split so every commit builds.
+  **User: "ok"** → all five Approved.
+- While implementing: all repository interfaces and the new `IUnitOfWork` moved to 0.8 (the new
+  `IRepository<T>` cannot coexist with the old one of the same name); 0.7 = Result, ErrorCodes,
+  paging, exceptions + 9 unit tests (D2 clamp). Build 0/0, tests 25/25. **User "ok"** → `48a9acf`.
+
+### 46. Session 17 — step 0.8 implemented and committed
+- Repositories with DTO projections; `Repository<T>` write base (`GetForUpdateAsync`, `AddAsync`,
+  `Remove`); `UnitOfWork` with lazily created typed repositories, no `IDisposable`, no
+  `Repository<T>()`; `SaveChangesAsync` translates concurrency → `ConcurrencyConflictException`,
+  SQL 2601/2627 → `DuplicateKeyException`; `ExecuteInTransactionAsync` inside the execution strategy
+  (ChangeTracker.Clear per attempt, nested call → `InvalidOperationException`, failed Result →
+  rollback + clear, **success → pending changes saved automatically, then commit**).
+- Services inject only `IUnitOfWork` (+ `UserManager`/`RoleManager`); no EF queries; Services project
+  references only Core + `Microsoft.Extensions.Identity.Core` (D-10). Service APIs return
+  `Result`/`Result<T>` (tuples gone); user/role create and update run in one transaction (D-14, Q8).
+- D-16: Users list = count + one page query with roles joined (Q1, no `PasswordHash`), Users index
+  paged (20, Previous/Next); roles projected (Q2); user permission lookup = one join (Q3); edit pages
+  read projections (Q7); UoW no longer disposes the DbContext (Q9). Q4 (claims on login) stays 0.9.
+- D-50/D-51: `RecordStatus` enum; `BaseEntity.Status` + `ApplicationUser.Status` replace `IsDeleted`
+  / `IsActive`; one global `Status <> Deleted` filter for every `BaseEntity`; `CHECK (Status IN (1,2,3))`
+  incl. `AspNetUsers`; unique indexes filtered `[Status] <> 3`; `AuditColumnsInterceptor` sets
+  `CreatedAt/By`, `UpdatedAt/By` (users/roles: `CreatedAt`, users `UpdatedAt`) and turns `Remove()`
+  into soft delete; login requires `Active`. `RolePermissions.AssignedAt` kept (ER diagram: template
+  table structure unchanged).
+- `ICurrentUser { string? UserId }` (Core) + `HttpCurrentUser` (Web) added now because D-50 needs the
+  current user; the wider D-21 design of `ICurrentUser` stays Proposed. `TimeProvider.System` registered.
+- Removed as unused: `IRoleService.GetPermissionNamesForRoleAsync`, `IUserService.SetActiveAsync`,
+  `IRoleReadRepository.GetPermissionNamesAsync` (from the approved signature), `DtoMappings`.
+- Migration `20261013142332_RecordStatusAndAuditColumns`, **hand-edited**: the scaffold dropped
+  `IsDeleted`/`IsActive` before reading them and added `Status` default 0 (violates the CHECK). Now:
+  add nullable `Status` → convert (`IsDeleted=1 → 3` else 1; `IsActive=0 → 2` else 1) → NOT NULL +
+  CHECK → drop old columns → filtered unique indexes; Down converts back.
+- Tests (44): D1 (same SQL command count for N and N+45 users; roles; page boundaries), D3 (1 command),
+  D4 (no `PasswordHash`/`SecurityStamp` in SQL), E1/E3/E4 (architecture, assemblies + csproj),
+  E2 (one context for UoW and Identity stores), F1 (exception after Identity saved → nothing left),
+  F2 (simulated transient failure → re-run from fresh state, one row), F3, F4, G1 (duplicate +
+  concurrency), soft delete + audit columns through HTTP, inactive login denied, migration up/down
+  on pre-existing rows in its own `CseLibrary_Test_*` DB. The template N+1 characterization test was
+  replaced by D1.
+- Evidence: build 0 errors / 0 warnings; tests 44/44 twice; `has-pending-model-changes` = none; no
+  vulnerable packages; 0 `CseLibrary*` DBs left on LocalDB; `.\SQLEXPRESS` untouched.
+  **User "ok"** → commit `0d01e4e`.
+
+### 47. Session 17 — Gate 2 reviews (`develop..HEAD`) — fixed in Session 18 (§48)
+`/code-review` (9 findings, no verify pass) and `/ponytail-review` ran on the gate diff.
+| # | Finding | Assessment | Recommendation |
+|---|---|---|---|
+| CR1 | `ExecuteInTransactionAsync` re-runs work after an ambiguous commit (connection lost after commit) → role/user create reports "name already taken" although it succeeded | Real; the D-14 rule 3 risk | Fix now: `verifySucceeded`-style check for role/user create |
+| CR2 | Deactivated user keeps access with an existing cookie; permission lookup ignores `Status` | Real, from the template | Cookie part = step 0.9 (D-32/D-37); filter `Status = Active` in the permission lookup now |
+| CR3 | Concurrent duplicate role/user name → `DuplicateKeyException` uncaught → HTTP 500 | Real | Fix now with the shared helper (CR8) |
+| CR4 | Role create/update accepts deleted or non-existent permission ids (FK 547 untranslated → 500) | Real | Fix now: keep only existing permission ids |
+| CR5 | Interceptor sets a deleted entry `Unchanged` → other pending edits lost; tracked cascade dependents hard-deleted | Partly; no current code path hits it | Fix now: keep the entry `Modified`, change only `Status` |
+| CR6 | `ApplicationUser.UpdatedAt` also changes on Identity-internal writes (failed login, lockout) | Design question; D-50 says "last change" | Keep; document |
+| CR7 | Page number above `TotalPages` shows an empty page | Real, minor | Fix now: clamp to the last page |
+| CR8 | Duplicate-catch `SaveAsync` copied in two services; missing in Role/User services | Same as ponytail P2 | Fix now: one shared helper |
+| CR9 | Seeder never restores a soft-deleted built-in permission | Real, from the template | Fix now: seeder re-activates it |
+| P1 | `ErrorCodes.Concurrency` unused | — | Delete |
+| P2 | `SaveAsync` duplicated (= CR8) | — | Shared helper |
+| P3 | `ArchitectureTests` L46 generic-type ternary | — | Shrink |
+Assistant recommendation: one correction commit for CR1, CR3, CR4, CR5, CR7, CR8, CR9, the
+permission-lookup part of CR2 and P1–P3; CR2 cookie part → 0.9; CR6 kept. Then docs + the D-14
+per-use-case duplicate-operation assessment + Gate 2 report. **Not yet answered** — the user asked to
+switch sessions (conversation too long); this log, the handoff and the plan were updated (Session 17
+close-out, not committed).
+
+### 48. Session 18 — review fixes committed; D-14 rule 3 use-case assessment
+- Close-out docs: **user "ok"** → commit `6470649`.
+- User answered "choose 2" = the §47 recommendation as proposed. **User "ok"** → commit `8cd5f53`
+  (16 files):
+  - CR1: `ExecuteInTransactionAsync(work, verifySucceeded = null, ct)` — optional callback (EF's
+    `verifySucceeded`); after a failed commit it is asked only for the attempt whose commit was sent,
+    true returns that attempt's result instead of re-running. Role/user create pass "row with the
+    generated id exists". Signature change of the approved 0.7 method (one optional parameter, still
+    one method).
+  - CR3/CR8/P2: `Services/DuplicateKeyExtensions.cs` — `Task<Result>.OnDuplicate(failure)` +
+    `IUnitOfWork.SaveAsync`; used by GeneralConfig/Permission create+update, Role create+update, User
+    create. A duplicate past the pre-check is `ErrorCodes.Duplicate`, not HTTP 500.
+  - CR4: `IPermissionRepository.GetExistingIdsAsync` — role create/update keep only existing,
+    non-deleted ids (update therefore also drops links to deleted permissions).
+  - CR5: soft delete sets the entry `Modified` (other pending edits kept). Cascade part **not** changed:
+    a tracked non-`BaseEntity` dependent of a soft-deleted principal is still hard-deleted; no current
+    code path does this.
+  - CR7: `PageRequest.ClampTo(total)` — past-the-end page shows the last page.
+  - CR9: seeder restores the latest deleted built-in permission when no live row has the name.
+  - CR2 (part): `GetNamesForUserAsync` returns nothing for a user who is not `Active`; cookie part → 0.9.
+  - P1 `ErrorCodes.Concurrency` deleted; P3 ternary removed. CR6 kept: `ApplicationUser.UpdatedAt`
+    means "last write of the row", including Identity-internal writes (failed login, lockout).
+  - Tests 44 → 49: ambiguous commit verified not re-run (mutation-checked: with `verifySucceeded`
+    returning false the old duplicate error comes back), duplicate role name past the pre-check,
+    unknown/deleted permission ids dropped, soft delete keeps pending edit, seeder restores permission;
+    CR7 and CR2 asserted in existing tests.
+  - Evidence: build 0 errors / 0 warnings; tests 49/49 twice; `has-pending-model-changes` = none;
+    0 `CseLibrary*` DBs on LocalDB; `.\SQLEXPRESS` untouched.
+
+**D-14 rule 3 — duplicate-operation assessment (Phase 0 admin use cases).** Situation: the commit
+reaches SQL Server but the answer is lost, and EF's retry strategy runs the operation again. A single
+`SaveChanges` is re-sent as is; `ExecuteInTransactionAsync` re-runs the whole delegate.
+
+| Use case | Write path | Risk if repeated | Protection | Test | Remaining limitation |
+|---|---|---|---|---|---|
+| Config create | 1 SaveChanges | Second INSERT | Filtered unique index `Key` | G1, soft-delete/key-reuse test | User may see "Key already exists" although the row was created |
+| Config update | 1 SaveChanges | Same UPDATE again | Idempotent (absolute values, no concurrency token) | — (analysis) | None known |
+| Config delete | 1 SaveChanges (soft) | `Status = 3` again | Idempotent | soft-delete test | None known |
+| Permission create / update / delete | same as Config | same | Filtered unique index `Name`; idempotent update/delete | CR3 helper shared; G1 | Same misleading-message risk on create |
+| Role create | Transaction (RoleManager + RolePermissions) | Delegate re-run → "name taken" | `verifySucceeded` (role id exists) + unique `RoleNameIndex` | Ambiguous-commit test at UoW level | Role/user wiring of the callback is not separately fault-injected |
+| Role update | Transaction | Delegate re-run | Idempotent: role reloaded and desired permission set recomputed inside the delegate | F-tests (rollback/retry) | None known |
+| Role delete | 1 SaveChanges (RoleManager, `ConcurrencyStamp`) | DELETE matches 0 rows | Data correct (row already gone) | — (analysis) | User may see Identity "optimistic concurrency failure" although deleted |
+| User create | Transaction (UserManager + roles) | Delegate re-run → "name taken" | `verifySucceeded` (user id exists) + unique `UserNameIndex` | as Role create | Email has no DB unique index (`RequireUniqueEmail` is app-level): two simultaneous creates with one email can both succeed |
+| User update | Transaction | Delegate re-run | Idempotent: user reloaded inside the delegate | F1 | None known |
+| User delete / reset password | 1 SaveChanges (UserManager, `ConcurrencyStamp`) | UPDATE/DELETE matches 0 rows | Data correct | — (analysis) | User may see a concurrency failure although it succeeded |
+
+Not claimed: that every ambiguous-commit case is proven. Only the transaction path is
+fault-injected; single-SaveChanges rows are analysis. The worst remaining outcome is a misleading
+error message, not wrong data, except duplicate email (a race, not a retry), which needs a
+filtered unique index on `NormalizedEmail` — a schema decision for the user (proposal, not done).
 
 ## Unresolved decisions and why
 

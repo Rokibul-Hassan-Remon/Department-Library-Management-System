@@ -1,6 +1,81 @@
 # Session Handoff
 
-## ▶ Session 16 (2026-10-13) — read first; overrides older blocks where they differ
+## ▶ Session 18 (2026-10-13) — read first; overrides older blocks where they differ
+
+### State (verified 2026-10-13)
+- Branch **`feature/phase-0-gate-2`**, `develop..HEAD` = 0.6 `51e189a`, 0.7 `48a9acf`, 0.8 `0d01e4e`,
+  close-out docs `6470649`, review fixes `8cd5f53` (each on the user's "ok").
+- Evidence after `8cd5f53`: build 0 errors / 0 warnings; tests **49/49** twice; no pending model
+  changes; 0 `CseLibrary*` DBs on LocalDB; `.\SQLEXPRESS` untouched.
+- Review fixes + **D-14 rule 3 assessment**: DECISION_LOG §48. Gate 2 report given to the user.
+- _(uncommitted)_ Session 18 docs: this block, DECISION_LOG §47 title + §48, PHASE_0_PLAN Gate 2,
+  PROJECT_DECISIONS D-14 note.
+
+### ⛔ Next action
+1. Wait for the user's **Gate 2 approval**. Do not start Gate 3 (0.9–0.12) without it.
+2. Docs commit (staged list + message, user's OK): `Record Gate 2 review fixes and D-14 assessment (docs)`.
+3. On approval: merge `feature/phase-0-gate-2` → `develop` `--no-ff` — needs its **own** OK.
+- Open proposal (not done): filtered unique index on `AspNetUsers.NormalizedEmail` (duplicate-email
+  race, §48). Still open: O1–O5, `EF Tools` package, UI brand text, deleting `feature/phase-0-gate-1`,
+  `UsersController` role list via `RoleManager.Roles` (0.9), CR2 cookie part (0.9), CR5 cascade part.
+
+## Session 17 (2026-10-13) — superseded by the Session 18 block above where they differ
+Session 17 closed at the user's request (conversation too long) — **Session 18 starts here.**
+
+### State (verified 2026-10-13)
+- Branch **`feature/phase-0-gate-2`** (from `develop` @ `371c43b`; local only). Commits, each on the
+  user's "ok" after the staged list + message were shown:
+  | Commit | Content | Log |
+  |---|---|---|
+  | `371c43b` (on `develop`) | Old `DefaultTemplate/` folder deleted (ignored files only) — docs record | §43 |
+  | `51e189a` | 0.6 Remove AutoMapper | §44 |
+  | `48a9acf` | 0.7 Result, ErrorCodes, paging, exceptions + unit tests | §45 |
+  | `0d01e4e` | 0.8 Repositories, UoW, Result services, D-16 fixes, D-50/D-51, migration, 44 tests | §46 |
+  | _(uncommitted)_ | Session 17 close-out: this block, DECISION_LOG §44–§47, PHASE_0_PLAN Gate 2, PROJECT_DECISIONS | — |
+- Evidence after `0d01e4e`: build 0 errors / 0 warnings; tests **44/44** (run twice); EF
+  `has-pending-model-changes` = none; no vulnerable packages; 0 `CseLibrary*` DBs left on LocalDB;
+  `.\SQLEXPRESS` untouched.
+- `/code-review` + `/ponytail-review` ran on `develop..HEAD`: findings **CR1–CR9, P1–P3** in
+  DECISION_LOG §47 (table with assessment + recommendation). **Not fixed yet.**
+
+### Decisions this session (details: PROJECT_DECISIONS / DECISION_LOG)
+- Gate 2 start approved (§44). Branch deletion of `feature/phase-0-gate-1` **not** approved (one ok =
+  one approval).
+- 0.7 signatures + 5 points Approved (§45): **D-34 `Result` type Approved**, **D-15 page size 20 / max
+  100** Approved, Roles read + RolePermissions write repositories, one generic transaction method.
+- Implementation choices recorded in §46: `ExecuteInTransactionAsync` saves pending changes on
+  success; `ICurrentUser` (UserId only) added for D-50; three unused service/repository methods
+  removed; `RolePermissions.AssignedAt` kept; migration hand-edited for the data conversion.
+
+### ⛔ Next action (Session 18), in order
+1. Verify read-only: `git branch --show-current` (= `feature/phase-0-gate-2`), `git log --oneline
+   develop..HEAD` (3 commits), `git status` (close-out docs uncommitted unless already committed).
+2. If the close-out docs are uncommitted: show the staged list + message, commit on the user's OK.
+   Suggested message: `Record Session 17 Gate 2 progress and review findings (docs)`.
+3. Ask the user which review findings to fix (DECISION_LOG §47). Recommendation: one correction
+   commit — CR1 (ambiguous-commit check for role/user create), CR3 + CR8 + P2 (one shared
+   duplicate-key helper, also in Role/User services), CR4 (only existing permission ids), CR5
+   (soft delete keeps the entry `Modified`, changes only `Status`), CR7 (clamp page to last page),
+   CR9 (seeder re-activates deleted built-in permissions), CR2 permission lookup filtered by
+   `Status = Active`, P1 (delete `ErrorCodes.Concurrency`), P3; CR2 cookie part → 0.9; CR6 keep.
+4. After the fix commit: write the D-14 rule 3 per-use-case duplicate-operation assessment (create /
+   update / delete for GeneralConfig, Permission, Role, User; protection, tests, limitations), update
+   docs, build + test, then the **Gate 2 report** and **stop**. Merge → `develop` needs its own approval.
+- Still open: O1–O5 (database.md), `EF Tools` package, UI brand text, deleting
+  `feature/phase-0-gate-1`, `UsersController` role list still reads `RoleManager.Roles` (0.9).
+
+### Learned in Session 17
+- **Git Bash `sed -i` turns CRLF files into LF.** The repo stores bytes as-is (`* -text`), so a
+  one-line change shows as a whole-file rewrite. After scripted edits, restore CRLF on files that
+  had it in `HEAD` and check `git diff --stat`. Prefer the Edit/Write tools; new files are LF.
+- Python is not installed; long multi-heredoc bash commands can fail to parse — write files with the
+  Write tool instead.
+- EF scaffolding of a column replacement drops the old column before the new one is filled; always
+  hand-edit such migrations and test them on pre-existing rows (`MigrationTests`).
+- `UserStore`/`RoleStore` generic arity changed in .NET 10 Identity; read `Context` via reflection in
+  tests instead of casting to a specific generic type.
+
+## ▶ Session 16 (2026-10-13) — superseded by the Session 17 block above where they differ
 Session 16 closed at the user's request (conversation too long) — **Session 17 starts here.**
 
 ### State (verified 2026-10-13)

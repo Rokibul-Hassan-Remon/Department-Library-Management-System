@@ -14,7 +14,6 @@ public class GeneralConfigConfiguration : IEntityTypeConfiguration<GeneralConfig
         builder.Property(c => c.Value).HasMaxLength(2000);
         builder.Property(c => c.Description).HasMaxLength(500);
         builder.Property(c => c.Group).HasMaxLength(100);
-        builder.HasIndex(c => c.Key).IsUnique();
-        builder.HasQueryFilter(c => !c.IsDeleted);
+        builder.HasIndex(c => c.Key).IsUnique().HasFilter(ApplicationDbContext.NotDeletedFilter);
     }
 }

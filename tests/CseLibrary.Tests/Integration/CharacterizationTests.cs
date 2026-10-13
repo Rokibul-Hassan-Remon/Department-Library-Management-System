@@ -91,25 +91,6 @@ public class CharacterizationTests(AppFactory app)
         Assert.Null(await GetConfig(key));
     }
 
-    [Fact] // defect (D-15/D-16, fixed in 0.8): Users list issues one roles query per user (N+1)
-    public async Task Users_list_shows_users_and_costs_one_extra_query_per_user()
-    {
-        var client = await app.LoggedInClient(AppFactory.AdminEmail, AppFactory.AdminPassword);
-        await client.GetAsync("/Users"); // warm-up
-
-        app.Commands.Reset();
-        var page = await client.GetStringAsync("/Users");
-        var before = app.Commands.Count;
-        Assert.Contains(AppFactory.AdminEmail, page);
-
-        for (var i = 0; i < 3; i++) await CreateUserWithPermissions();
-
-        app.Commands.Reset();
-        await client.GetStringAsync("/Users");
-        // At least one per user: an exact count would flake on retries or a security-stamp check.
-        Assert.True(app.Commands.Count >= before + 3, $"expected >= {before + 3} commands, got {app.Commands.Count}");
-    }
-
     // defect (D-37, fixed in 0.9 by tests A7/A9). Login builds the cookie from AspNetUserClaims *before*
     // rewriting them, and RefreshSignInAsync is a no-op inside the login request (.NET 8+), so each
     // cookie carries the permissions written by the *previous* login. A revoked permission is denied
@@ -154,8 +135,8 @@ public class CharacterizationTests(AppFactory app)
         {
             var ids = await PermissionIds(sp, permissions);
             var role = await sp.GetRequiredService<IRoleService>().CreateAsync(new CreateRoleDto { Name = "Role_" + suffix, PermissionIds = ids });
-            Assert.True(role.Success, role.Error);
-            return role.Role!.Id;
+            Assert.True(role.Succeeded, role.Error);
+            return role.Value!;
         });
 
         var email = $"user_{suffix}@test.local";
@@ -163,7 +144,7 @@ public class CharacterizationTests(AppFactory app)
         {
             UserName = email, Email = email, Password = UserPassword, Roles = ["Role_" + suffix]
         }));
-        Assert.True(user.Success, user.Error);
+        Assert.True(user.Succeeded, user.Error);
         return (email, roleId);
     }
 
@@ -176,7 +157,7 @@ public class CharacterizationTests(AppFactory app)
             {
                 Id = role.Id, Name = role.Name, Description = role.Description, PermissionIds = await PermissionIds(sp, permissions)
             });
-            Assert.True(result.Success, result.Error);
+            Assert.True(result.Succeeded, result.Error);
         });
 
     private static async Task<IList<int>> PermissionIds(IServiceProvider sp, string[] names) =>

@@ -1,6 +1,8 @@
+using CseLibrary.Core.Interfaces;
 using CseLibrary.Data;
 using CseLibrary.Data.Data;
 using CseLibrary.Tests.Infrastructure;
+using CseLibrary.Web.Infrastructure;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -29,7 +31,8 @@ public class StartupAndGuardTests(AppFactory app)
         {
             ["ConnectionStrings:DefaultConnection"] = @"Server=.\SQLEXPRESS;Database=CseLibrary;Trusted_Connection=True"
         }).Build();
-        var services = new ServiceCollection().AddLogging().AddRepositoryLayer(config);
+        var services = new ServiceCollection().AddLogging().AddHttpContextAccessor()
+            .AddScoped<ICurrentUser, HttpCurrentUser>().AddRepositoryLayer(config); // as Program.cs registers them
         AppFactory.GuardDbContext(services);
 
         using var scope = services.BuildServiceProvider().CreateScope();

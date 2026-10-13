@@ -46,7 +46,7 @@ public class RolesController : Controller
             PermissionIds = model.SelectedPermissionIds
         };
         var result = await _roleService.CreateAsync(dto);
-        if (!result.Success)
+        if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error ?? "Failed to create role.");
             model.AvailablePermissions = (await _permissionService.GetAllAsync()).ToList();
@@ -88,7 +88,7 @@ public class RolesController : Controller
             PermissionIds = model.SelectedPermissionIds
         };
         var result = await _roleService.UpdateAsync(dto);
-        if (!result.Success)
+        if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error ?? "Failed to update role.");
             model.AvailablePermissions = (await _permissionService.GetAllAsync()).ToList();
@@ -110,7 +110,7 @@ public class RolesController : Controller
     public async Task<IActionResult> DeleteConfirmed(string id)
     {
         var result = await _roleService.DeleteAsync(id);
-        if (!result.Success) TempData["Error"] = result.Error;
+        if (!result.Succeeded) TempData["Error"] = result.Error;
         else TempData["Success"] = "Role deleted.";
         return RedirectToAction(nameof(Index));
     }
