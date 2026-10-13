@@ -1404,6 +1404,47 @@ Git Bash tools).
   `Database=DefaultTemplate` (step 0.4). `dotnet ef migrations list` **not** run (would connect to
   the configured DB) — deferred to 0.5 against `CseLibrary_Test_*`.
 - `dotnet build CseLibrary.sln`: succeeded, 0 errors, 2 warnings (NU1903 AutoMapper — step 0.6).
+  User: "ok" → commit **`3c8d98a`**.
+
+### 32. Step 0.4 — connection strings and .NET 10 (in progress, not committed)
+- `dotnet user-secrets list` → none; no `ConnectionStrings*` environment variables. Base
+  `appsettings.json` and `appsettings.Development.json` → `Database=CseLibrary` on `.\SQLEXPRESS`.
+- Read-only `sys.databases` on `.\SQLEXPRESS`: only the 4 system databases — **no `DefaultTemplate`,
+  no `CseLibrary`**; first start creates `CseLibrary` (D-40 Approved).
+- net8.0 → net10.0 (4 projects); EF Core / Identity / Configuration.Abstractions 10.0.12;
+  Serilog.AspNetCore 10.0.0; **compatibility:** Serilog.AspNetCore 10 requires
+  Serilog.Sinks.File ≥ 7 (NU1605 downgrade error) → Sinks.File 6.0.0 → 7.0.0. Dockerfile images
+  10.0. Build: 0 errors; warnings NU1903 (AutoMapper, 0.6) and **NU1510** (Data references
+  `Microsoft.Extensions.Configuration.Abstractions`, now part of the shared framework — removal
+  suggested, not done: reported first).
+- `dotnet ef migrations has-pending-model-changes` (no DB connection): "No changes have been made
+  to the model since the last migration" → EF 10 will not throw `PendingModelChangesWarning` at
+  `MigrateAsync`. Side observation: `Program.cs` catch-all logs EF design-time `HostAbortedException`
+  as Fatal (template defect; step 0.10).
+- **Open:** app start against `CseLibrary` needs the seed admin password in user-secrets (D-40:
+  user-secrets, never committed) — set by the user.
+
+### 33. M15 — new user requirements (Session 14) — recorded, not yet designed
+User asked (Bangla, summarized):
+1. An `archify` diagram of the **overall project architecture** (target system, not only the
+   template) so docs can be understood visually.
+2. An `archify` **database model / table-relationship** diagram, to be seen and understood
+   **before** implementation.
+3. A title can have **multiple physical copies**; issuing one copy reduces the title's available
+   count by 1, and the database records **who holds that copy**.
+4. Full lending history: who borrowed which copy, when, and when it was returned.
+5. DB design quality "from a 20-year senior architect's perspective".
+Assessment: 3–4 agree with the archive spec (FR-03, Book/BookCopy, accession number, BR-03/04/16,
+D-35 filtered unique index) — no conflict. Design proposal (Proposed, needs approval) and diagrams
+pending.
+**User choices (Session 14):** M15 work starts **after the Gate 1 report**.
+**Seed password (Session 14, user):** "no DB username/password — just connect to SQL Server simply."
+The connection already uses Windows authentication (`Trusted_Connection=True`, no SQL login). The
+seed password is the *app* admin login, which `DbSeeder` requires; the user does not want to set
+one now. → 0.4 is committed on build + offline evidence; the **app-start check moves to step 0.5**,
+where `WebApplicationFactory` supplies a test-only seed password in memory against LocalDB
+`CseLibrary_Test_*` (no secret on disk, `.\SQLEXPRESS` untouched). Nothing is created on
+`.\SQLEXPRESS` in Gate 1.
 
 ## Unresolved decisions and why
 

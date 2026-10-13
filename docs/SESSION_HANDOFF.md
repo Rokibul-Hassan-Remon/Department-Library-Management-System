@@ -5,9 +5,14 @@
   matched before commit; post-commit checks PASS — DECISION_LOG §30).
 - **Step 0.2 Verified:** commit `9cf511a` (docs, README, architecture + archify diagram, archive
   moved with SHA-256 unchanged).
-- **Step 0.3 staged, not committed:** rename to `src/CseLibrary.*` + root `CseLibrary.sln`,
-  `global.json`, local `dotnet-ef` 10.0.12; build 0 errors (DECISION_LOG §31). Waiting for the
-  user's OK. Old `DefaultTemplate/` folder holds only ignored `bin/`/`obj/`/`.user` — delete only
+- **Step 0.3 Verified:** commit `3c8d98a` (DECISION_LOG §31).
+- **Step 0.4 in progress, uncommitted** (§32): connection strings → `CseLibrary`, net10.0, packages
+  10.0.12, Sinks.File 7.0.0, Docker 10.0; build 0 errors; no pending model changes. Staged,
+  waiting for commit OK. User sets **no** seed password → app-start check runs in 0.5 against
+  `CseLibrary_Test_*` with an in-memory test password (§33).
+- **M15 (§33):** archify overall-architecture + DB/ER diagrams, multi-copy + lending-history DB
+  design (Proposed) — **after the Gate 1 report** (user choice).
+- Old `DefaultTemplate/` folder holds only ignored `bin/`/`obj/`/`.user` — delete only
   with approval. **Watch out:** VS Code C# Dev Kit edits `.csproj` files during moves; Git Bash
   `sed -i` strips CR — use `sed -b`.
 - **Next action:** on OK → commit 0.3 → 0.4 (connection strings base + Development → `CseLibrary`,
