@@ -6,10 +6,11 @@
 - **Step 0.2 Verified:** commit `9cf511a` (docs, README, architecture + archify diagram, archive
   moved with SHA-256 unchanged).
 - **Step 0.3 Verified:** commit `3c8d98a` (DECISION_LOG §31).
-- **Step 0.4 in progress, uncommitted** (§32): connection strings → `CseLibrary`, net10.0, packages
-  10.0.12, Sinks.File 7.0.0, Docker 10.0; build 0 errors; no pending model changes. Staged,
-  waiting for commit OK. User sets **no** seed password → app-start check runs in 0.5 against
-  `CseLibrary_Test_*` with an in-memory test password (§33).
+- **Step 0.4 Verified:** commit `468a82c` (§32–§33). User sets **no** seed password; the app-start
+  check runs in the test suite against `CseLibrary_Test_*`.
+- **Step 0.5 staged, not committed** (§34): test project, DB guard, 15 tests green. Next: commit
+  on OK → `/code-review` + `/ponytail-review` on the Gate 1 diff (`main..feature/phase-0-gate-1`)
+  → Gate 1 report → **stop**.
 - **M15 (§33):** archify overall-architecture + DB/ER diagrams, multi-copy + lending-history DB
   design (Proposed) — **after the Gate 1 report** (user choice).
 - Old `DefaultTemplate/` folder holds only ignored `bin/`/`obj/`/`.user` — delete only

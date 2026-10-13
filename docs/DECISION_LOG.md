@@ -1445,6 +1445,32 @@ one now. → 0.4 is committed on build + offline evidence; the **app-start check
 where `WebApplicationFactory` supplies a test-only seed password in memory against LocalDB
 `CseLibrary_Test_*` (no secret on disk, `.\SQLEXPRESS` untouched). Nothing is created on
 `.\SQLEXPRESS` in Gate 1.
+User: "ok" → step 0.4 commit **`468a82c`**.
+
+### 34. Step 0.5 — test harness and characterization tests
+- `tests/CseLibrary.Tests` (net10.0; xUnit 2.9.3, runner 4.0.1, Test.Sdk 18.10.1,
+  Mvc.Testing 10.0.12), added to `CseLibrary.sln` (`dotnet sln add` also rewrote the solution's
+  configuration list and added solution folders — harmless). `Program.cs`: `public partial class Program;`.
+- `TestDatabase` (D-40): LocalDB `CseLibrary_Test_{guid}`; `EnsureSafe` requires server
+  `(localdb)\MSSQLLocalDB` **and** the prefix (case-sensitive), checked before startup migration and
+  before drop; drop targets only the generated name (`QUOTENAME`, parameterized).
+- `AppFactory`: one shared host per run (Serilog bootstrap logger freezes once per process, D-43
+  risk); connection string + test seed password via **process environment variables** (override
+  every appsettings file) and `UseSetting`; `SqlCommandCounter` via EF `ConfigureDbContext`.
+- Tests (15): app starts on the test DB with all migrations applied and migration ID
+  `20260508164255_InitialCreate` intact (the 0.4 start check and the 0.3 migration check); H1 guard
+  (5 refusals + generated-name accept/drop); login ok / wrong password; anonymous → Login;
+  GeneralConfig create/edit/delete; Users list **+1 SQL command per user** (N+1, D-16);
+  login writes permission claims to `AspNetUserClaims` (D-37 defect); permission granted → works on
+  the next request; revoke behaviour (below).
+- **Finding (corrects the 0.5 plan wording "stale-claim defect"):** `RefreshSignInAsync` is a no-op
+  inside the login request on .NET 8+ (user not yet authenticated), and the cookie principal is
+  built from `AspNetUserClaims` *before* login rewrites them. So each cookie carries the
+  permissions written by the **previous** login: a revoked permission is denied on the current
+  cookie (handler's DB fallback), **allowed again after the next login**, denied after the one
+  after. Characterized as such; fixed by D-37 in 0.9 (tests A7, A9).
+- `dotnet test`: 15/15 passed twice; LocalDB holds no `CseLibrary*` DB afterwards; `.\SQLEXPRESS`
+  still only the 4 system DBs. Build warnings: NU1903 (AutoMapper, 0.6), NU1510 (§32).
 
 ## Unresolved decisions and why
 

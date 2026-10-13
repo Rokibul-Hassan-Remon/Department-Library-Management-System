@@ -34,15 +34,19 @@ Phase 0 (foundation) in progress — see [docs/PHASE_0_PLAN.md](docs/PHASE_0_PLA
 
 ## Quick start
 
-Not runnable yet as a library app. Do **not** run the template before step 0.4: its
-`appsettings.json` still points at the `DefaultTemplate` database, and startup applies migrations.
+No library features yet (Phase 0). The app connects to `CseLibrary` on `.\SQLEXPRESS` with Windows
+authentication and migrates it on startup; running it needs a seed admin password
+(`dotnet user-secrets set "Seed:Admin:Password" "<pw>" --project src/CseLibrary.Web`). Tests need
+neither.
 
 ```
 dotnet tool restore
 dotnet build CseLibrary.sln
 ```
 
-Run/test commands follow once steps 0.4–0.5 land.
+```
+dotnet test CseLibrary.sln   # LocalDB test databases only (CseLibrary_Test_*), dropped after the run
+```
 
 ## License
 

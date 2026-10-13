@@ -75,3 +75,6 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+// Exposes the entry point to WebApplicationFactory<Program> in tests (step 0.5).
+public partial class Program;

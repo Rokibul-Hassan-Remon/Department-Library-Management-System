@@ -60,6 +60,6 @@ Created only when they have content: `docs/database.md`, `docs/development.md`, 
 ## Commands (from repo root)
 
 - Tools: `dotnet tool restore` (local `dotnet-ef`) · Build: `dotnet build CseLibrary.sln` ·
-  Test: `dotnet test` (once 0.5 lands)
+  Test: `dotnet test CseLibrary.sln` (LocalDB `CseLibrary_Test_*` only)
 - Migrations: `dotnet ef migrations add <Name> --project src/CseLibrary.Data --startup-project src/CseLibrary.Web`
   — never run `dotnet ef database update` / the app against a non-test DB without approval.
