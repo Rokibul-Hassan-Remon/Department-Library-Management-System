@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Received template: layers and dependencies",
+    "output": "docs/diagrams/template-architecture.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/Rokibul-Hassan-Remon/Department-Library-Management-System.git",
+      "link_mode": "local-only",
+      "revision": "1fdbe5ec16861ee47584dca448aa6f9dfbc61e33"
+    }
+  },
+  "components": [
+    { "id": "browser", "type": "external", "label": "Browser", "sublabel": "staff / admin", "pos": [40, 190], "size": [130, 60] },
+    { "id": "web", "type": "frontend", "label": "Web (MVC)", "sublabel": "DefaultTemplate project", "pos": [240, 190], "size": [170, 60],
+      "sources": [ { "path": "DefaultTemplate/DefaultTemplate/Program.cs", "line": 23, "end_line": 24, "label": "composition root" },
+                   { "path": "DefaultTemplate/DefaultTemplate/Controllers/GeneralConfigController.cs", "line": 11, "end_line": 15, "label": "controller → service" } ] },
+    { "id": "authz", "type": "security", "label": "Permission policy", "sublabel": "authorization handler", "pos": [240, 20], "size": [170, 60],
+      "sources": [ { "path": "DefaultTemplate/DefaultTemplate/Program.cs", "line": 35, "end_line": 36 },
+                   { "path": "DefaultTemplate/DefaultTemplate/Authorization/PermissionAuthorizationHandler.cs", "line": 32 } ] },
+    { "id": "services", "type": "backend", "label": "Services", "sublabel": "Default.service + AutoMapper", "pos": [510, 190], "size": [170, 60],
+      "sources": [ { "path": "DefaultTemplate/Default.service/DependencyInjection.cs", "line": 12, "end_line": 17 } ] },
+    { "id": "identity", "type": "security", "label": "ASP.NET Identity", "sublabel": "UserManager / RoleManager", "pos": [510, 360], "size": [170, 60],
+      "sources": [ { "path": "DefaultTemplate/Default.repository/DependencyInjection.cs", "line": 22, "end_line": 33 },
+                   { "path": "DefaultTemplate/Default.service/Services/UserService.cs", "line": 22, "end_line": 27, "label": "Users list (N+1)" } ] },
+    { "id": "uow", "type": "backend", "label": "UoW + Repository<T>", "sublabel": "Default.repository", "pos": [850, 190], "size": [170, 60],
+      "sources": [ { "path": "DefaultTemplate/Default.repository/Repositories/UnitOfWork.cs", "line": 8, "end_line": 32 },
+                   { "path": "DefaultTemplate/Default.core/Interfaces/IRepository.cs", "line": 10, "label": "Query() leaks IQueryable" } ] },
+    { "id": "dbctx", "type": "backend", "label": "ApplicationDbContext", "sublabel": "EF Core 8 IdentityDbContext", "pos": [1110, 190], "size": [170, 60],
+      "sources": [ { "path": "DefaultTemplate/Default.repository/Data/ApplicationDbContext.cs", "line": 7 },
+                   { "path": "DefaultTemplate/Default.repository/DependencyInjection.cs", "line": 16, "end_line": 20 } ] },
+    { "id": "seeder", "type": "backend", "label": "Startup seeder", "sublabel": "DbSeeder at app start", "pos": [1110, 20], "size": [170, 60],
+      "sources": [ { "path": "DefaultTemplate/DefaultTemplate/Program.cs", "line": 47 },
+                   { "path": "DefaultTemplate/Default.repository/Data/DbSeeder.cs", "line": 34 } ] },
+    { "id": "sql", "type": "database", "label": "SQL Server", "sublabel": "DefaultTemplate DB", "pos": [1380, 190], "size": [150, 60],
+      "sources": [ { "path": "DefaultTemplate/DefaultTemplate/appsettings.json", "line": 3, "label": "connection string" } ] }
+  ],
+  "connections": [
+    { "id": "browser-web", "from": "browser", "to": "web", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "web-authz", "from": "web", "to": "authz", "label": "[HasPermission]", "variant": "security" },
+    { "id": "authz-services", "from": "authz", "to": "services", "label": "permissions lookup", "variant": "security" },
+    { "id": "web-services", "from": "web", "to": "services", "label": "I*Service" },
+    { "id": "services-uow", "from": "services", "to": "uow", "label": "IUnitOfWork + Query()" },
+    { "id": "services-identity", "from": "services", "to": "identity", "label": "user/role writes" },
+    { "id": "identity-dbctx", "from": "identity", "to": "dbctx", "label": "EF stores" },
+    { "id": "uow-dbctx", "from": "uow", "to": "dbctx", "label": "DbSet<T>" },
+    { "id": "seeder-dbctx", "from": "seeder", "to": "dbctx", "label": "MigrateAsync", "variant": "dashed" },
+    { "id": "dbctx-sql", "from": "dbctx", "to": "sql", "label": "SQL, retry" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Project references (csproj)", "items": ["Web → Core, repository, service", "service → Core, repository; ASP.NET Core framework", "repository → Core; EF Core SqlServer, Identity EF", "Core → Identity.Stores, ASP.NET Core framework"] },
+    { "dot": "rose", "title": "Gaps vs approved target", "items": ["Services run EF queries via Query()/Include (D-10, D-13)", "Generic Repository<T>() accessor (D-12)", "AutoMapper still present (D-17)", "UoW disposes the DI-owned DbContext (D-13)"] }
+  ]
+}
