@@ -1,13 +1,43 @@
 # Session Handoff
 
 ## ▶ Session 15 (2026-10-13) — read first; overrides the Session 14 block where they differ
-- Branch `feature/phase-0-gate-1`: Session 14 commits + `346496a` (close-out docs) + `8504115`
-  (Gate 1 review-finding correction, DECISION_LOG §37).
-- Evidence: build 0 errors (NU1903 AutoMapper only); tests 16/16; no `CseLibrary*` DB on LocalDB.
-- **Next:** user's Gate 1 approval → merge `feature/phase-0-gate-1` → `develop` `--no-ff` (separate
-  OK). Then M15 (architecture + DB/ER diagrams, DB design — Proposed only), then Gate 2 on approval.
-- Still open (PROJECT_DECISIONS §9 "Session 14"): `EF Tools` package (kept for now), old
+Session 15 closed at the user's request (conversation too long) — **Session 16 starts here.**
+
+### State (verified 2026-10-13)
+- Branch **`feature/phase-0-gate-1`** (local only), 8 commits ahead of `develop` (`develop` = `main`):
+  the 5 Gate 1 step commits (Session 14 block below) + Session 15:
+  | Commit | Content | Log |
+  |---|---|---|
+  | `346496a` | Session 14 close-out docs (+ README net8.0 → .NET 10, finding 9) | §36 |
+  | `8504115` | Gate 1 review-finding correction (test harness, `.sln`, 2 package refs) | §37 |
+  | `97891e8` | Gate 1 correction evidence in docs | §37 |
+  | _(uncommitted)_ | Session 15 close-out docs (this block, §38) — commit on the user's OK | §38 |
+- Evidence: `dotnet build CseLibrary.sln` 0 errors (warnings: NU1903 AutoMapper only; NU1510 gone);
+  `dotnet test CseLibrary.sln` 16/16; 0 `CseLibrary*` DBs on LocalDB; `.\SQLEXPRESS` untouched.
+
+### ⛔ Gate 1 corrected — STOPPED, approval not yet given. Next action (Session 16), in order
+1. Verify read-only: branch, `git log --oneline develop..HEAD` (8–9 commits), `git status`.
+2. If the close-out docs are still uncommitted: show staged list + message, commit on OK.
+3. Ask the user explicitly: **approve Gate 1 and merge `feature/phase-0-gate-1` → `develop`
+   `--no-ff`?** The user's last "ok" (Session 15) covered only the doc commit `97891e8` — do not treat
+   it as merge approval. After merge: build + test on `develop`, report.
+4. Then **M15** (DECISION_LOG §33, `requirements.md` FR-M15-01..04) before Gate 2 — archify overall
+   architecture + DB/ER diagrams + DB design proposal; everything **Proposed**, no code/migration.
+5. Gate 2 (0.6–0.8) only after explicit approval.
+- Still open (PROJECT_DECISIONS §9 "Session 14"): `EF Tools` package (kept — VS PMC), old
   `DefaultTemplate/` folder deletion, UI brand text.
+
+### Learned in Session 15
+- The user may paste advice from another assistant (e.g. a findings-handling table); treat it as
+  input to evaluate, give one consolidated recommendation, then act on the user's own "YES/ok".
+- One "ok" = one approval: when a message asks for two approvals (commit + merge), a bare "ok"
+  approves only the first; re-ask for the gate merge.
+- Verify review/ponytail suggestions before applying: e.g. removing the sync interceptor overrides
+  would have hidden `UserService`'s sync `Users.ToList()` from the N+1 counter.
+- Mutation check for a safety test: comment out the guard line, run the single test (must fail),
+  restore the file, rerun the full suite.
+- `sqlcmd -S "(localdb)\MSSQLLocalDB" -Q "SELECT name FROM sys.databases WHERE name LIKE 'CseLibrary%'"`
+  works for the leftover-test-DB check.
 
 ## ▶ Session 14 (2026-10-13) — read first; overrides older blocks where they differ
 Session 14 closed at the user's request (conversation too long) — **Session 15 starts here.**

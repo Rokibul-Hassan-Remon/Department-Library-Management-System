@@ -1525,6 +1525,19 @@ flake fix; Sinks.File version claim wrong; constructor check only re-validated t
 **Evidence:** `dotnet build CseLibrary.sln` 0 errors (warnings: NU1903 AutoMapper only);
 `dotnet test CseLibrary.sln` 16/16; 0 `CseLibrary*` DBs left on LocalDB; `.\SQLEXPRESS` untouched.
 
+### 38. Session 15 discussion and close-out
+- **Input:** the user pasted another assistant's recommendation — fix findings 1(guard)/3/4/5/10 now,
+  verify-then-remove `UseSetting` and packages, `Program.cs` catch-all → 0.10, Dockerfile/README with
+  their own work, M15 after the Gate 1 correction and before Gate 2. Assistant agreed, adding finding 8
+  (one-line `.sln` fix) and noting 9 was already fixed and 6 is optional. **User: "YES".**
+- **Order agreed and executed:** commit Session 14 docs (`346496a`, OK) → correction + build/test →
+  `/code-review` + `/ponytail-review` on the correction diff → commit (`8504115`, OK) → evidence docs
+  (`97891e8`, OK). Details and evidence: §37.
+- **M15 timing (confirmed):** after Gate 1 correction/approval, before Gate 2.
+- **Gate 1 merge:** asked as a separate approval; the user's final "ok" was applied to the doc commit
+  only. **Merge to `develop` still awaits explicit approval.**
+- Session closed at the user's request (conversation too long); handoff: SESSION_HANDOFF Session 15.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

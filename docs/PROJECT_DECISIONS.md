@@ -81,6 +81,9 @@ password (app-start check moved into tests, D-40 note); **M15** new requirements
 architecture + DB/ER `archify` diagrams, multi-copy titles with holder, full lending history,
 senior-quality DB design) to be designed **after the Gate 1 report** (§33). D-37 finding corrected
 by test evidence. Open items: §9 "Session 14" table.
+**Session 15, 2026-10-13:** Gate 1 review findings fixed — `8504115` (DECISION_LOG §37, tests 16/16);
+docs `346496a`, `97891e8`. M15 confirmed for after Gate 1, before Gate 2. **Gate 1 merge → `develop`
+still awaiting the user's explicit approval** (§38).
 `Archive §n` = `docs/archive/1st discussion.md` (moved from `knowledge Docs/Requirement/` in step 0.2).
 
 ---
@@ -1457,11 +1460,10 @@ audited), D-35 (reused, unchanged), D-37 (new permission), D-02 (scope unchanged
 | Item | Question | Recommendation |
 |---|---|---|
 | ~~Gate 1 findings (§35)~~ **Resolved Session 15 (§37, `8504115`)** | Which of the 10 `/code-review` + 6 `/ponytail-review` findings to fix | One correction commit on `feature/phase-0-gate-1`: code-review 2–5, 8–10 + all ponytail items (incl. NU1510 `Configuration.Abstractions`, direct `Serilog.Sinks.File`); `Program.cs` catch-all → 0.10; stale test-DB sweep optional; Dockerfile restore layer → later Docker work |
-| `EF Tools` package | Keep `Microsoft.EntityFrameworkCore.Tools` (only for Visual Studio PMC)? | Remove if nobody uses PMC; CLI uses local `dotnet-ef` |
+| `EF Tools` package | Keep `Microsoft.EntityFrameworkCore.Tools` (only for Visual Studio PMC)? | Remove if nobody uses PMC; CLI uses local `dotnet-ef`. **Session 15: kept** (not removed in `8504115`) until the user confirms nobody uses Visual Studio PMC |
 | UI brand text | `_Layout.cshtml` still shows "DefaultTemplate" (title, navbar, footer) | Change with the first UI work (visible change, not part of the 0.3 rename) |
 | Old `DefaultTemplate/` folder | Holds only ignored `bin/`, `obj/`, `*.csproj.user` | Delete (needs approval; nothing tracked) |
-| Gate 1 approval | Merge `feature/phase-0-gate-1` → `develop` (`--no-ff`) | After the correction commit |
-| M15 (§33) | Overall-architecture + DB/ER `archify` diagrams; multi-copy + lending-history DB design | Before Gate 2 (user: after the Gate 1 report); design stays **Proposed** until approved |
+| Gate 1 approval | Merge `feature/phase-0-gate-1` → `develop` (`--no-ff`) | After the correction commit — **correction done Session 15 (`8504115`); ask at the start of Session 16** || M15 (§33) | Overall-architecture + DB/ER `archify` diagrams; multi-copy + lending-history DB design | Before Gate 2 (user: after the Gate 1 report); design stays **Proposed** until approved |
 | M15 design point | Title "available count": stored counter vs derived from copy status | Derived (COUNT of copies with status Available) + filtered unique index "one active loan per copy" (D-35); show both with trade-offs |
 
 **Resolved in Session 13 (DECISION_LOG §29) — the rows below are kept as history:** D-07 (v7
