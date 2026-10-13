@@ -1,4 +1,4 @@
-@model IEnumerable<UserDto>
+@model CseLibrary.Core.Paging.PagedResult<UserDto>
 @{ ViewData["Title"] = "Users"; }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -18,7 +18,7 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var u in Model)
+        @foreach (var u in Model.Items)
         {
             <tr>
                 <td>@u.UserName</td>
@@ -35,3 +35,18 @@
         }
     </tbody>
 </table>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Users pages" class="d-flex justify-content-between align-items-center">
+        <span>Page @Model.Page of @Model.TotalPages (@Model.TotalCount users)</span>
+        <ul class="pagination mb-0">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page - 1)">Previous</a>
+            </li>
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+}

@@ -91,8 +91,7 @@ public static class DbSeeder
                 UserName = options.Email,
                 Email = options.Email,
                 EmailConfirmed = true,
-                FullName = options.FullName,
-                IsActive = true
+                FullName = options.FullName
             };
             var result = await userManager.CreateAsync(user, options.Password!);
             if (!result.Succeeded)

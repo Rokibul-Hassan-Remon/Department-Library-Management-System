@@ -1,18 +1,15 @@
-using System.Linq.Expressions;
+using CseLibrary.Core.Entities;
 
 namespace CseLibrary.Core.Interfaces;
 
-public interface IRepository<T> where T : class
+/// <summary>Write side only (D-13). Reads are purpose-specific projections on each feature repository.</summary>
+public interface IRepository<T> where T : BaseEntity
 {
-    Task<T?> GetByIdAsync(object id);
-    Task<IEnumerable<T>> GetAllAsync();
-    Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
-    IQueryable<T> Query();
-    Task AddAsync(T entity);
-    Task AddRangeAsync(IEnumerable<T> entities);
-    void Update(T entity);
+    /// <summary>Tracked load for an update or delete.</summary>
+    Task<T?> GetForUpdateAsync(int id, CancellationToken ct = default);
+
+    Task AddAsync(T entity, CancellationToken ct = default);
+
+    /// <summary>Soft delete: the SaveChanges interceptor sets <see cref="RecordStatus.Deleted"/> (D-51).</summary>
     void Remove(T entity);
-    void RemoveRange(IEnumerable<T> entities);
-    Task<bool> AnyAsync(Expression<Func<T, bool>> predicate);
-    Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null);
 }

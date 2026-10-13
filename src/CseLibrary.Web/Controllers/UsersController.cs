@@ -2,6 +2,7 @@ using CseLibrary.Core.Constants;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces.Services;
+using CseLibrary.Core.Paging;
 using CseLibrary.Web.Authorization;
 using CseLibrary.Web.ViewModels;
 using Microsoft.AspNetCore.Identity;
@@ -21,7 +22,7 @@ public class UsersController : Controller
     }
 
     [HasPermission(Permissions.Users.View)]
-    public async Task<IActionResult> Index() => View(await _userService.GetAllAsync());
+    public async Task<IActionResult> Index(int page = 1) => View(await _userService.GetPageAsync(new PageRequest(page)));
 
     [HttpGet, HasPermission(Permissions.Users.Create)]
     public IActionResult Create()
@@ -50,7 +51,7 @@ public class UsersController : Controller
             Roles = model.SelectedRoles
         };
         var result = await _userService.CreateAsync(dto);
-        if (!result.Success)
+        if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error ?? "Failed to create user.");
             model.AvailableRoles = _roleManager.Roles.Select(r => r.Name!).ToList();
@@ -96,7 +97,7 @@ public class UsersController : Controller
             Roles = model.SelectedRoles
         };
         var result = await _userService.UpdateAsync(dto);
-        if (!result.Success)
+        if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error ?? "Failed to update user.");
             model.AvailableRoles = _roleManager.Roles.Select(r => r.Name!).ToList();
@@ -118,7 +119,7 @@ public class UsersController : Controller
     public async Task<IActionResult> DeleteConfirmed(string id)
     {
         var result = await _userService.DeleteAsync(id);
-        if (!result.Success) TempData["Error"] = result.Error;
+        if (!result.Succeeded) TempData["Error"] = result.Error;
         else TempData["Success"] = "User deleted.";
         return RedirectToAction(nameof(Index));
     }
@@ -136,7 +137,7 @@ public class UsersController : Controller
     {
         if (!ModelState.IsValid) return View(model);
         var result = await _userService.ResetPasswordAsync(model.Id, model.NewPassword);
-        if (!result.Success)
+        if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error ?? "Failed to reset password.");
             return View(model);

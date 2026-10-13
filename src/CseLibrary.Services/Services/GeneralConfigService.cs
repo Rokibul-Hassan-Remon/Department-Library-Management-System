@@ -1,76 +1,71 @@
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
+using CseLibrary.Core.Exceptions;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
-using CseLibrary.Services.Mapping;
-using Microsoft.EntityFrameworkCore;
+using CseLibrary.Core.Results;
 
 namespace CseLibrary.Services.Services;
 
-public class GeneralConfigService : IGeneralConfigService
+public class GeneralConfigService(IUnitOfWork uow) : IGeneralConfigService
 {
-    private readonly IUnitOfWork _uow;
+    public Task<IReadOnlyList<GeneralConfigDto>> GetAllAsync(CancellationToken ct = default) =>
+        uow.GeneralConfigs.GetListAsync(ct);
 
-    public GeneralConfigService(IUnitOfWork uow)
+    public Task<GeneralConfigDto?> GetByIdAsync(int id, CancellationToken ct = default) =>
+        uow.GeneralConfigs.GetDetailsAsync(id, ct);
+
+    public Task<GeneralConfigDto?> GetByKeyAsync(string key, CancellationToken ct = default) =>
+        uow.GeneralConfigs.GetByKeyAsync(key, ct);
+
+    public async Task<Result> CreateAsync(CreateGeneralConfigDto dto, CancellationToken ct = default)
     {
-        _uow = uow;
+        if (await uow.GeneralConfigs.KeyExistsAsync(dto.Key, null, ct)) return KeyExists();
+
+        await uow.GeneralConfigs.AddAsync(new GeneralConfig
+        {
+            Key = dto.Key, Value = dto.Value, Description = dto.Description, Group = dto.Group
+        }, ct);
+        return await SaveAsync(ct);
     }
 
-    public async Task<IEnumerable<GeneralConfigDto>> GetAllAsync()
+    public async Task<Result> UpdateAsync(UpdateGeneralConfigDto dto, CancellationToken ct = default)
     {
-        var list = await _uow.GeneralConfigs.Query().AsNoTracking().OrderBy(c => c.Group).ThenBy(c => c.Key).ToListAsync();
-        return list.Select(c => c.ToDto());
-    }
-
-    public async Task<GeneralConfigDto?> GetByIdAsync(int id)
-    {
-        var entity = await _uow.GeneralConfigs.GetByIdAsync(id);
-        return entity?.ToDto();
-    }
-
-    public async Task<GeneralConfigDto?> GetByKeyAsync(string key)
-    {
-        var entity = await _uow.GeneralConfigs.Query().AsNoTracking().FirstOrDefaultAsync(c => c.Key == key);
-        return entity?.ToDto();
-    }
-
-    public async Task<(bool Success, string? Error, GeneralConfigDto? Config)> CreateAsync(CreateGeneralConfigDto dto)
-    {
-        if (await _uow.GeneralConfigs.AnyAsync(c => c.Key == dto.Key))
-            return (false, "Key already exists", null);
-
-        var entity = new GeneralConfig { Key = dto.Key, Value = dto.Value, Description = dto.Description, Group = dto.Group };
-        await _uow.GeneralConfigs.AddAsync(entity);
-        await _uow.SaveChangesAsync();
-        return (true, null, entity.ToDto());
-    }
-
-    public async Task<(bool Success, string? Error)> UpdateAsync(UpdateGeneralConfigDto dto)
-    {
-        var entity = await _uow.GeneralConfigs.GetByIdAsync(dto.Id);
-        if (entity == null) return (false, "Config not found");
-
-        if (entity.Key != dto.Key && await _uow.GeneralConfigs.AnyAsync(c => c.Key == dto.Key))
-            return (false, "Key already exists");
+        var entity = await uow.GeneralConfigs.GetForUpdateAsync(dto.Id, ct);
+        if (entity == null) return NotFound();
+        if (await uow.GeneralConfigs.KeyExistsAsync(dto.Key, dto.Id, ct)) return KeyExists();
 
         entity.Key = dto.Key;
         entity.Value = dto.Value;
         entity.Description = dto.Description;
         entity.Group = dto.Group;
-        entity.UpdatedAt = DateTime.UtcNow;
-        _uow.GeneralConfigs.Update(entity);
-        await _uow.SaveChangesAsync();
-        return (true, null);
+        return await SaveAsync(ct);
     }
 
-    public async Task<(bool Success, string? Error)> DeleteAsync(int id)
+    public async Task<Result> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var entity = await _uow.GeneralConfigs.GetByIdAsync(id);
-        if (entity == null) return (false, "Config not found");
-        entity.IsDeleted = true;
-        entity.UpdatedAt = DateTime.UtcNow;
-        _uow.GeneralConfigs.Update(entity);
-        await _uow.SaveChangesAsync();
-        return (true, null);
+        var entity = await uow.GeneralConfigs.GetForUpdateAsync(id, ct);
+        if (entity == null) return NotFound();
+
+        uow.GeneralConfigs.Remove(entity);
+        await uow.SaveChangesAsync(ct);
+        return Result.Success();
     }
+
+    // The pre-check gives the friendly message; the filtered unique index catches a concurrent duplicate.
+    private async Task<Result> SaveAsync(CancellationToken ct)
+    {
+        try
+        {
+            await uow.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DuplicateKeyException)
+        {
+            return KeyExists();
+        }
+    }
+
+    private static Result KeyExists() => Result.Failure(ErrorCodes.Duplicate, "Key already exists");
+    private static Result NotFound() => Result.Failure(ErrorCodes.NotFound, "Config not found");
 }

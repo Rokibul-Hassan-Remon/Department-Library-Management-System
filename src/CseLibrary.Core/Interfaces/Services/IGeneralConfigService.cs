@@ -1,13 +1,14 @@
 using CseLibrary.Core.DTOs;
+using CseLibrary.Core.Results;
 
 namespace CseLibrary.Core.Interfaces.Services;
 
 public interface IGeneralConfigService
 {
-    Task<IEnumerable<GeneralConfigDto>> GetAllAsync();
-    Task<GeneralConfigDto?> GetByIdAsync(int id);
-    Task<GeneralConfigDto?> GetByKeyAsync(string key);
-    Task<(bool Success, string? Error, GeneralConfigDto? Config)> CreateAsync(CreateGeneralConfigDto dto);
-    Task<(bool Success, string? Error)> UpdateAsync(UpdateGeneralConfigDto dto);
-    Task<(bool Success, string? Error)> DeleteAsync(int id);
+    Task<IReadOnlyList<GeneralConfigDto>> GetAllAsync(CancellationToken ct = default);
+    Task<GeneralConfigDto?> GetByIdAsync(int id, CancellationToken ct = default);
+    Task<GeneralConfigDto?> GetByKeyAsync(string key, CancellationToken ct = default);
+    Task<Result> CreateAsync(CreateGeneralConfigDto dto, CancellationToken ct = default);
+    Task<Result> UpdateAsync(UpdateGeneralConfigDto dto, CancellationToken ct = default);
+    Task<Result> DeleteAsync(int id, CancellationToken ct = default);
 }

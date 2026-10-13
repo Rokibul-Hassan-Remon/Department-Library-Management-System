@@ -120,28 +120,32 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
     }
 }
 
-/// <summary>Counts SQL commands sent by EF Core (N+1 checks, D-43).</summary>
+/// <summary>Counts and keeps the SQL commands sent by EF Core (N+1 and projection checks, D-43).</summary>
 public class SqlCommandCounter : DbCommandInterceptor
 {
     private int _count;
     public int Count => Volatile.Read(ref _count);
-    public void Reset() => Interlocked.Exchange(ref _count, 0);
+    public IReadOnlyCollection<string> Texts => _texts;
+    public void Reset() { Interlocked.Exchange(ref _count, 0); _texts.Clear(); }
+
+    private readonly System.Collections.Concurrent.ConcurrentQueue<string> _texts = new();
+    private void Record(DbCommand c) { Interlocked.Increment(ref _count); _texts.Enqueue(c.CommandText); }
 
     public override InterceptionResult<DbDataReader> ReaderExecuting(DbCommand c, CommandEventData e, InterceptionResult<DbDataReader> r)
-    { Interlocked.Increment(ref _count); return r; }
+    { Record(c); return r; }
 
     public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand c, CommandEventData e, InterceptionResult<DbDataReader> r, CancellationToken ct = default)
-    { Interlocked.Increment(ref _count); return ValueTask.FromResult(r); }
+    { Record(c); return ValueTask.FromResult(r); }
 
     public override InterceptionResult<int> NonQueryExecuting(DbCommand c, CommandEventData e, InterceptionResult<int> r)
-    { Interlocked.Increment(ref _count); return r; }
+    { Record(c); return r; }
 
     public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(DbCommand c, CommandEventData e, InterceptionResult<int> r, CancellationToken ct = default)
-    { Interlocked.Increment(ref _count); return ValueTask.FromResult(r); }
+    { Record(c); return ValueTask.FromResult(r); }
 
     public override InterceptionResult<object> ScalarExecuting(DbCommand c, CommandEventData e, InterceptionResult<object> r)
-    { Interlocked.Increment(ref _count); return r; }
+    { Record(c); return r; }
 
     public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(DbCommand c, CommandEventData e, InterceptionResult<object> r, CancellationToken ct = default)
-    { Interlocked.Increment(ref _count); return ValueTask.FromResult(r); }
+    { Record(c); return ValueTask.FromResult(r); }
 }

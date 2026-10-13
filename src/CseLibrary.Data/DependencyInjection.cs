@@ -1,23 +1,29 @@
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Data.Data;
+using CseLibrary.Data.Data.Interceptors;
 using CseLibrary.Data.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CseLibrary.Data;
 
 public static class DependencyInjection
 {
+    /// <summary>Needs an <see cref="ICurrentUser"/> registration from the host.</summary>
     public static IServiceCollection AddRepositoryLayer(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<AuditColumnsInterceptor>();
+        services.AddDbContext<ApplicationDbContext>((sp, options) => options
+            .UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure())
+            .AddInterceptors(sp.GetRequiredService<AuditColumnsInterceptor>()));
 
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {
@@ -32,7 +38,6 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

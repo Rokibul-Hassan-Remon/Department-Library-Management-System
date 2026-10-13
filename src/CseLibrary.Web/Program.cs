@@ -1,8 +1,10 @@
 using CseLibrary.Core.Entities;
+using CseLibrary.Core.Interfaces;
 using CseLibrary.Data;
 using CseLibrary.Data.Data;
 using CseLibrary.Services;
 using CseLibrary.Web.Authorization;
+using CseLibrary.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
@@ -32,6 +34,7 @@ try
     });
 
     builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
     builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
     builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 

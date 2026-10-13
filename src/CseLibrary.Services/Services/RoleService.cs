@@ -2,100 +2,53 @@ using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
-using CseLibrary.Services.Mapping;
+using CseLibrary.Core.Results;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace CseLibrary.Services.Services;
 
-public class RoleService : IRoleService
+public class RoleService(RoleManager<ApplicationRole> roleManager, IUnitOfWork uow) : IRoleService
 {
-    private readonly RoleManager<ApplicationRole> _roleManager;
-    private readonly IUnitOfWork _uow;
+    public Task<IReadOnlyList<RoleDto>> GetAllAsync(CancellationToken ct = default) => uow.Roles.GetListAsync(ct);
 
-    public RoleService(RoleManager<ApplicationRole> roleManager, IUnitOfWork uow)
-    {
-        _roleManager = roleManager;
-        _uow = uow;
-    }
+    public Task<RoleDto?> GetByIdAsync(string id, CancellationToken ct = default) => uow.Roles.GetDetailsAsync(id, ct);
 
-    public async Task<IEnumerable<RoleDto>> GetAllAsync()
-    {
-        var roles = await _roleManager.Roles
-            .Include(r => r.RolePermissions)
-            .ToListAsync();
-        return roles.Select(r => r.ToDto());
-    }
-
-    public async Task<RoleDto?> GetByIdAsync(string id)
-    {
-        var role = await _roleManager.Roles
-            .Include(r => r.RolePermissions)
-            .FirstOrDefaultAsync(r => r.Id == id);
-        return role?.ToDto();
-    }
-
-    public async Task<(bool Success, string? Error, RoleDto? Role)> CreateAsync(CreateRoleDto dto)
-    {
-        var role = new ApplicationRole { Name = dto.Name, Description = dto.Description };
-        var create = await _roleManager.CreateAsync(role);
-        if (!create.Succeeded)
-            return (false, string.Join("; ", create.Errors.Select(e => e.Description)), null);
-
-        if (dto.PermissionIds.Any())
+    // RoleManager saves on its own; the transaction makes role + permissions one change (D-14).
+    public Task<Result<string>> CreateAsync(CreateRoleDto dto, CancellationToken ct = default) =>
+        uow.ExecuteInTransactionAsync(async attemptCt =>
         {
-            foreach (var pid in dto.PermissionIds.Distinct())
-                await _uow.RolePermissions.AddAsync(new RolePermission { RoleId = role.Id, PermissionId = pid });
-            await _uow.SaveChangesAsync();
-        }
+            var role = new ApplicationRole { Name = dto.Name, Description = dto.Description };
+            var create = (await roleManager.CreateAsync(role)).ToResult();
+            if (!create.Succeeded) return Result<string>.Failure(create.ErrorCode!, create.Error!);
 
-        var roleDto = role.ToDto();
-        roleDto.PermissionIds = dto.PermissionIds;
-        return (true, null, roleDto);
-    }
+            await uow.RolePermissions.AddRangeAsync(dto.PermissionIds.Distinct()
+                .Select(pid => new RolePermission { RoleId = role.Id, PermissionId = pid }), attemptCt);
+            return Result<string>.Success(role.Id);
+        }, ct);
 
-    public async Task<(bool Success, string? Error)> UpdateAsync(UpdateRoleDto dto)
+    public Task<Result> UpdateAsync(UpdateRoleDto dto, CancellationToken ct = default) =>
+        uow.ExecuteInTransactionAsync(async attemptCt =>
+        {
+            var role = await roleManager.FindByIdAsync(dto.Id);
+            if (role == null) return Result.Failure(ErrorCodes.NotFound, "Role not found");
+
+            role.Name = dto.Name;
+            role.Description = dto.Description;
+            var update = (await roleManager.UpdateAsync(role)).ToResult();
+            if (!update.Succeeded) return update;
+
+            var current = await uow.RolePermissions.GetForRoleForUpdateAsync(role.Id, attemptCt);
+            var desired = dto.PermissionIds.ToHashSet();
+            uow.RolePermissions.RemoveRange(current.Where(rp => !desired.Contains(rp.PermissionId)));
+            await uow.RolePermissions.AddRangeAsync(desired.Except(current.Select(rp => rp.PermissionId))
+                .Select(pid => new RolePermission { RoleId = role.Id, PermissionId = pid }), attemptCt);
+            return Result.Success();
+        }, ct);
+
+    public async Task<Result> DeleteAsync(string id, CancellationToken ct = default)
     {
-        var role = await _roleManager.Roles
-            .Include(r => r.RolePermissions)
-            .FirstOrDefaultAsync(r => r.Id == dto.Id);
-        if (role == null) return (false, "Role not found");
-
-        role.Name = dto.Name;
-        role.Description = dto.Description;
-        var update = await _roleManager.UpdateAsync(role);
-        if (!update.Succeeded)
-            return (false, string.Join("; ", update.Errors.Select(e => e.Description)));
-
-        var currentIds = role.RolePermissions.Select(rp => rp.PermissionId).ToHashSet();
-        var desiredIds = dto.PermissionIds.ToHashSet();
-
-        var toRemove = role.RolePermissions.Where(rp => !desiredIds.Contains(rp.PermissionId)).ToList();
-        var toAdd = desiredIds.Except(currentIds)
-            .Select(pid => new RolePermission { RoleId = role.Id, PermissionId = pid })
-            .ToList();
-
-        if (toRemove.Any()) _uow.RolePermissions.RemoveRange(toRemove);
-        if (toAdd.Any()) await _uow.RolePermissions.AddRangeAsync(toAdd);
-        await _uow.SaveChangesAsync();
-        return (true, null);
-    }
-
-    public async Task<(bool Success, string? Error)> DeleteAsync(string id)
-    {
-        var role = await _roleManager.FindByIdAsync(id);
-        if (role == null) return (false, "Role not found");
-        var result = await _roleManager.DeleteAsync(role);
-        return result.Succeeded
-            ? (true, null)
-            : (false, string.Join("; ", result.Errors.Select(e => e.Description)));
-    }
-
-    public async Task<IEnumerable<string>> GetPermissionNamesForRoleAsync(string roleId)
-    {
-        return await _uow.RolePermissions.Query()
-            .Where(rp => rp.RoleId == roleId)
-            .Select(rp => rp.Permission.Name)
-            .ToListAsync();
+        var role = await roleManager.FindByIdAsync(id);
+        if (role == null) return Result.Failure(ErrorCodes.NotFound, "Role not found");
+        return (await roleManager.DeleteAsync(role)).ToResult();
     }
 }

@@ -17,7 +17,7 @@ namespace CseLibrary.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -82,9 +82,6 @@ namespace CseLibrary.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
@@ -111,6 +108,9 @@ namespace CseLibrary.Data.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
 
@@ -131,7 +131,10 @@ namespace CseLibrary.Data.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("AspNetUsers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AspNetUsers_Status", "[Status] IN (1, 2, 3)");
+                        });
                 });
 
             modelBuilder.Entity("CseLibrary.Core.Entities.GeneralConfig", b =>
@@ -156,13 +159,13 @@ namespace CseLibrary.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -177,9 +180,13 @@ namespace CseLibrary.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Key")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Status] <> 3");
 
-                    b.ToTable("GeneralConfigs", (string)null);
+                    b.ToTable("GeneralConfigs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_GeneralConfigs_Status", "[Status] IN (1, 2, 3)");
+                        });
                 });
 
             modelBuilder.Entity("CseLibrary.Core.Entities.Permission", b =>
@@ -204,9 +211,6 @@ namespace CseLibrary.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Module")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -215,6 +219,9 @@ namespace CseLibrary.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -225,9 +232,13 @@ namespace CseLibrary.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Status] <> 3");
 
-                    b.ToTable("Permissions", (string)null);
+                    b.ToTable("Permissions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Permissions_Status", "[Status] IN (1, 2, 3)");
+                        });
                 });
 
             modelBuilder.Entity("CseLibrary.Core.Entities.RolePermission", b =>

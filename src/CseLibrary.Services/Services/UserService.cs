@@ -1,132 +1,73 @@
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
+using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
-using CseLibrary.Services.Mapping;
+using CseLibrary.Core.Paging;
+using CseLibrary.Core.Results;
 using Microsoft.AspNetCore.Identity;
 
 namespace CseLibrary.Services.Services;
 
-public class UserService : IUserService
+public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork uow) : IUserService
 {
-    private readonly UserManager<ApplicationUser> _userManager;
+    public Task<PagedResult<UserDto>> GetPageAsync(PageRequest page, CancellationToken ct = default) =>
+        uow.Users.GetPageAsync(page, ct);
 
-    public UserService(UserManager<ApplicationUser> userManager)
-    {
-        _userManager = userManager;
-    }
+    public Task<UserDto?> GetByIdAsync(string id, CancellationToken ct = default) => uow.Users.GetDetailsAsync(id, ct);
 
-    public async Task<IEnumerable<UserDto>> GetAllAsync()
-    {
-        var users = _userManager.Users.ToList();
-        var result = new List<UserDto>();
-        foreach (var u in users)
+    // UserManager saves on its own; the transaction makes user + roles one change (D-14).
+    public Task<Result> CreateAsync(CreateUserDto dto, CancellationToken ct = default) =>
+        uow.ExecuteInTransactionAsync(async _ =>
         {
-            var dto = u.ToDto();
-            dto.Roles = await _userManager.GetRolesAsync(u);
-            result.Add(dto);
-        }
-        return result;
-    }
+            var user = new ApplicationUser
+            {
+                UserName = dto.UserName,
+                Email = dto.Email,
+                FullName = dto.FullName,
+                EmailConfirmed = true
+            };
+            var create = (await userManager.CreateAsync(user, dto.Password)).ToResult();
+            if (!create.Succeeded || dto.Roles.Count == 0) return create;
+            return (await userManager.AddToRolesAsync(user, dto.Roles)).ToResult();
+        }, ct);
 
-    public async Task<UserDto?> GetByIdAsync(string id)
-    {
-        var user = await _userManager.FindByIdAsync(id);
-        if (user == null) return null;
-        var dto = user.ToDto();
-        dto.Roles = await _userManager.GetRolesAsync(user);
-        return dto;
-    }
-
-    public async Task<(bool Success, string? Error, UserDto? User)> CreateAsync(CreateUserDto dto)
-    {
-        var user = new ApplicationUser
+    public Task<Result> UpdateAsync(UpdateUserDto dto, CancellationToken ct = default) =>
+        uow.ExecuteInTransactionAsync(async _ =>
         {
-            UserName = dto.UserName,
-            Email = dto.Email,
-            FullName = dto.FullName,
-            EmailConfirmed = true,
-            IsActive = true
-        };
+            var user = await userManager.FindByIdAsync(dto.Id);
+            if (user == null) return NotFound();
 
-        var create = await _userManager.CreateAsync(user, dto.Password);
-        if (!create.Succeeded)
-            return (false, string.Join("; ", create.Errors.Select(e => e.Description)), null);
+            user.Email = dto.Email;
+            user.FullName = dto.FullName;
+            user.Status = dto.IsActive ? RecordStatus.Active : RecordStatus.Inactive;
+            var update = (await userManager.UpdateAsync(user)).ToResult();
+            if (!update.Succeeded) return update;
 
-        if (dto.Roles.Any())
-        {
-            var addRoles = await _userManager.AddToRolesAsync(user, dto.Roles);
-            if (!addRoles.Succeeded)
-                return (false, string.Join("; ", addRoles.Errors.Select(e => e.Description)), null);
-        }
+            var current = await userManager.GetRolesAsync(user);
+            var toRemove = current.Except(dto.Roles).ToList();
+            var toAdd = dto.Roles.Except(current).ToList();
+            if (toRemove.Count > 0)
+            {
+                var removed = (await userManager.RemoveFromRolesAsync(user, toRemove)).ToResult();
+                if (!removed.Succeeded) return removed;
+            }
+            return toAdd.Count > 0 ? (await userManager.AddToRolesAsync(user, toAdd)).ToResult() : Result.Success();
+        }, ct);
 
-        var result = user.ToDto();
-        result.Roles = await _userManager.GetRolesAsync(user);
-        return (true, null, result);
-    }
-
-    public async Task<(bool Success, string? Error)> UpdateAsync(UpdateUserDto dto)
+    public async Task<Result> DeleteAsync(string id, CancellationToken ct = default)
     {
-        var user = await _userManager.FindByIdAsync(dto.Id);
-        if (user == null) return (false, "User not found");
-
-        user.Email = dto.Email;
-        user.FullName = dto.FullName;
-        user.IsActive = dto.IsActive;
-        user.UpdatedAt = DateTime.UtcNow;
-
-        var update = await _userManager.UpdateAsync(user);
-        if (!update.Succeeded)
-            return (false, string.Join("; ", update.Errors.Select(e => e.Description)));
-
-        var currentRoles = await _userManager.GetRolesAsync(user);
-        var toRemove = currentRoles.Except(dto.Roles).ToList();
-        var toAdd = dto.Roles.Except(currentRoles).ToList();
-
-        if (toRemove.Any())
-        {
-            var removeResult = await _userManager.RemoveFromRolesAsync(user, toRemove);
-            if (!removeResult.Succeeded)
-                return (false, string.Join("; ", removeResult.Errors.Select(e => e.Description)));
-        }
-        if (toAdd.Any())
-        {
-            var addResult = await _userManager.AddToRolesAsync(user, toAdd);
-            if (!addResult.Succeeded)
-                return (false, string.Join("; ", addResult.Errors.Select(e => e.Description)));
-        }
-        return (true, null);
+        var user = await userManager.FindByIdAsync(id);
+        if (user == null) return NotFound();
+        return (await userManager.DeleteAsync(user)).ToResult();
     }
 
-    public async Task<(bool Success, string? Error)> DeleteAsync(string id)
+    public async Task<Result> ResetPasswordAsync(string id, string newPassword, CancellationToken ct = default)
     {
-        var user = await _userManager.FindByIdAsync(id);
-        if (user == null) return (false, "User not found");
-        var result = await _userManager.DeleteAsync(user);
-        return result.Succeeded
-            ? (true, null)
-            : (false, string.Join("; ", result.Errors.Select(e => e.Description)));
+        var user = await userManager.FindByIdAsync(id);
+        if (user == null) return NotFound();
+        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        return (await userManager.ResetPasswordAsync(user, token, newPassword)).ToResult();
     }
 
-    public async Task<(bool Success, string? Error)> SetActiveAsync(string id, bool isActive)
-    {
-        var user = await _userManager.FindByIdAsync(id);
-        if (user == null) return (false, "User not found");
-        user.IsActive = isActive;
-        user.UpdatedAt = DateTime.UtcNow;
-        var result = await _userManager.UpdateAsync(user);
-        return result.Succeeded
-            ? (true, null)
-            : (false, string.Join("; ", result.Errors.Select(e => e.Description)));
-    }
-
-    public async Task<(bool Success, string? Error)> ResetPasswordAsync(string id, string newPassword)
-    {
-        var user = await _userManager.FindByIdAsync(id);
-        if (user == null) return (false, "User not found");
-        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
-        return result.Succeeded
-            ? (true, null)
-            : (false, string.Join("; ", result.Errors.Select(e => e.Description)));
-    }
+    private static Result NotFound() => Result.Failure(ErrorCodes.NotFound, "User not found");
 }

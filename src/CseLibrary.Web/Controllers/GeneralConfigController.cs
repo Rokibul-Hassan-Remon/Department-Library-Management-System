@@ -22,7 +22,7 @@ public class GeneralConfigController : Controller
     {
         if (!ModelState.IsValid) return View(dto);
         var result = await _service.CreateAsync(dto);
-        if (!result.Success)
+        if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error ?? "Failed to create.");
             return View(dto);
@@ -51,7 +51,7 @@ public class GeneralConfigController : Controller
     {
         if (!ModelState.IsValid) return View(dto);
         var result = await _service.UpdateAsync(dto);
-        if (!result.Success)
+        if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error ?? "Failed to update.");
             return View(dto);
@@ -72,7 +72,7 @@ public class GeneralConfigController : Controller
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
         var result = await _service.DeleteAsync(id);
-        if (!result.Success) TempData["Error"] = result.Error;
+        if (!result.Succeeded) TempData["Error"] = result.Error;
         else TempData["Success"] = "Config deleted.";
         return RedirectToAction(nameof(Index));
     }

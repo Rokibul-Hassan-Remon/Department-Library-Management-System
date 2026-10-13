@@ -1,87 +1,71 @@
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
+using CseLibrary.Core.Exceptions;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
-using CseLibrary.Services.Mapping;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using CseLibrary.Core.Results;
 
 namespace CseLibrary.Services.Services;
 
-public class PermissionService : IPermissionService
+public class PermissionService(IUnitOfWork uow) : IPermissionService
 {
-    private readonly IUnitOfWork _uow;
-    private readonly UserManager<ApplicationUser> _userManager;
+    public Task<IReadOnlyList<PermissionDto>> GetAllAsync(CancellationToken ct = default) =>
+        uow.Permissions.GetListAsync(ct);
 
-    public PermissionService(IUnitOfWork uow, UserManager<ApplicationUser> userManager)
+    public Task<PermissionDto?> GetByIdAsync(int id, CancellationToken ct = default) =>
+        uow.Permissions.GetDetailsAsync(id, ct);
+
+    public async Task<Result> CreateAsync(CreatePermissionDto dto, CancellationToken ct = default)
     {
-        _uow = uow;
-        _userManager = userManager;
+        if (await uow.Permissions.NameExistsAsync(dto.Name, null, ct)) return NameExists();
+
+        await uow.Permissions.AddAsync(new Permission
+        {
+            Name = dto.Name, DisplayName = dto.DisplayName, Module = dto.Module, Description = dto.Description
+        }, ct);
+        return await SaveAsync(ct);
     }
 
-    public async Task<IEnumerable<PermissionDto>> GetAllAsync()
+    public async Task<Result> UpdateAsync(UpdatePermissionDto dto, CancellationToken ct = default)
     {
-        var items = await _uow.Permissions.Query().AsNoTracking().OrderBy(p => p.Module).ThenBy(p => p.Name).ToListAsync();
-        return items.Select(p => p.ToDto());
-    }
-
-    public async Task<PermissionDto?> GetByIdAsync(int id)
-    {
-        var item = await _uow.Permissions.GetByIdAsync(id);
-        return item?.ToDto();
-    }
-
-    public async Task<(bool Success, string? Error, PermissionDto? Permission)> CreateAsync(CreatePermissionDto dto)
-    {
-        if (await _uow.Permissions.AnyAsync(p => p.Name == dto.Name))
-            return (false, "Permission name already exists", null);
-
-        var entity = new Permission { Name = dto.Name, DisplayName = dto.DisplayName, Module = dto.Module, Description = dto.Description };
-        await _uow.Permissions.AddAsync(entity);
-        await _uow.SaveChangesAsync();
-        return (true, null, entity.ToDto());
-    }
-
-    public async Task<(bool Success, string? Error)> UpdateAsync(UpdatePermissionDto dto)
-    {
-        var entity = await _uow.Permissions.GetByIdAsync(dto.Id);
-        if (entity == null) return (false, "Permission not found");
-
-        if (entity.Name != dto.Name && await _uow.Permissions.AnyAsync(p => p.Name == dto.Name))
-            return (false, "Permission name already exists");
+        var entity = await uow.Permissions.GetForUpdateAsync(dto.Id, ct);
+        if (entity == null) return NotFound();
+        if (await uow.Permissions.NameExistsAsync(dto.Name, dto.Id, ct)) return NameExists();
 
         entity.Name = dto.Name;
         entity.DisplayName = dto.DisplayName;
         entity.Module = dto.Module;
         entity.Description = dto.Description;
-        entity.UpdatedAt = DateTime.UtcNow;
-        _uow.Permissions.Update(entity);
-        await _uow.SaveChangesAsync();
-        return (true, null);
+        return await SaveAsync(ct);
     }
 
-    public async Task<(bool Success, string? Error)> DeleteAsync(int id)
+    public async Task<Result> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var entity = await _uow.Permissions.GetByIdAsync(id);
-        if (entity == null) return (false, "Permission not found");
-        entity.IsDeleted = true;
-        entity.UpdatedAt = DateTime.UtcNow;
-        _uow.Permissions.Update(entity);
-        await _uow.SaveChangesAsync();
-        return (true, null);
+        var entity = await uow.Permissions.GetForUpdateAsync(id, ct);
+        if (entity == null) return NotFound();
+
+        uow.Permissions.Remove(entity);
+        await uow.SaveChangesAsync(ct);
+        return Result.Success();
     }
 
-    public async Task<IEnumerable<string>> GetPermissionsForUserAsync(string userId)
+    public Task<IReadOnlyList<string>> GetPermissionsForUserAsync(string userId, CancellationToken ct = default) =>
+        uow.Permissions.GetNamesForUserAsync(userId, ct);
+
+    // The pre-check gives the friendly message; the filtered unique index catches a concurrent duplicate.
+    private async Task<Result> SaveAsync(CancellationToken ct)
     {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user == null) return Enumerable.Empty<string>();
-        var roleNames = await _userManager.GetRolesAsync(user);
-        if (roleNames.Count == 0) return Enumerable.Empty<string>();
-
-        return await _uow.RolePermissions.Query()
-            .Where(rp => roleNames.Contains(rp.Role.Name!))
-            .Select(rp => rp.Permission.Name)
-            .Distinct()
-            .ToListAsync();
+        try
+        {
+            await uow.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DuplicateKeyException)
+        {
+            return NameExists();
+        }
     }
+
+    private static Result NameExists() => Result.Failure(ErrorCodes.Duplicate, "Permission name already exists");
+    private static Result NotFound() => Result.Failure(ErrorCodes.NotFound, "Permission not found");
 }
