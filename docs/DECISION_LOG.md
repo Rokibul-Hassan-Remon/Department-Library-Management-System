@@ -1383,6 +1383,27 @@ Git Bash tools).
   `docs/diagrams/template-architecture.{json,html}` from code at `1fdbe5e` (finalize: validate,
   deliver, check, browser-check all pass); `CLAUDE.md` doc map paths. No new decisions.
 - Per D-07 v7 the step 0.2 commit waits for the user's OK on the staged list + message.
+  User: "ok" → commit **`9cf511a`**.
+
+### 31. Step 0.3 — rename to `CseLibrary.*` (no behaviour change)
+- Directory `git mv` failed ("Permission denied": VS Code C# Dev Kit holds the folders) → tracked
+  files moved one by one with `git mv`; ignored `bin/`, `obj/`, `*.csproj.user` stay in the old
+  `DefaultTemplate/` folder (not deleted — needs user approval).
+- **Incident:** while project folders were half-moved, C# Dev Kit **rewrote two `.csproj` files on
+  its own** (removed `ProjectReference`s it saw as missing). Detected in `git diff`, restored from
+  the index. Lesson: after moves, always diff `.csproj` files before staging.
+- **Incident:** Git Bash `sed -i` stripped CR from CRLF files (1551-line diff) → reverted from index,
+  redone with `sed -b` on matching files only (177 lines). Byte-level line endings preserved.
+- Done: 4 projects → `src/CseLibrary.{Web,Services,Data,Core}`, `.csproj` names, namespaces/usings
+  (incl. migrations, Views `@using`), `CseLibrary.sln` at root with `src\` paths (project GUIDs
+  kept), `.dockerignore` → root, Dockerfile paths/entry DLL, `_Layout` `~/CseLibrary.Web.styles.css`
+  (CSS isolation bundle follows the assembly name), template README → `docs/archive/`.
+  `UserSecretsId` kept. `global.json` (`10.0.100`, `latestFeature`); `.config/dotnet-tools.json`
+  with `dotnet-ef` 10.0.12 (SDK 10 created the manifest at the root — moved to `.config/`).
+- Not changed: visible "DefaultTemplate" brand text in `_Layout` (UI change, not 0.3);
+  `Database=DefaultTemplate` (step 0.4). `dotnet ef migrations list` **not** run (would connect to
+  the configured DB) — deferred to 0.5 against `CseLibrary_Test_*`.
+- `dotnet build CseLibrary.sln`: succeeded, 0 errors, 2 warnings (NU1903 AutoMapper — step 0.6).
 
 ## Unresolved decisions and why
 

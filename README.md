@@ -9,17 +9,21 @@ and due-date / overdue email reminders (no fines in v1).
 ## Status
 
 Phase 0 (foundation) in progress — see [docs/PHASE_0_PLAN.md](docs/PHASE_0_PLAN.md) and
-[docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md). The code is still the received starter in
-`DefaultTemplate/` (net8.0); step 0.3 renames it to `src/CseLibrary.*` + `tests/CseLibrary.Tests`
-and step 0.4 moves it to .NET 10.
+[docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md). The code is the received starter, renamed to
+`CseLibrary.*` (step 0.3), still on net8.0 until step 0.4.
 
 ## Repository layout
 
 | Path | Contents |
 |---|---|
-| `DefaultTemplate/` | Received 4-project starter (Web, service, repository, core) — renamed in step 0.3 |
+| `CseLibrary.sln` | Solution |
+| `src/CseLibrary.Web` | MVC controllers, views, authorization, composition root (`Program.cs`) |
+| `src/CseLibrary.Services` | Business services |
+| `src/CseLibrary.Data` | `ApplicationDbContext`, repositories, Unit of Work, migrations |
+| `src/CseLibrary.Core` | Entities, DTOs, interfaces |
+| `global.json`, `.config/dotnet-tools.json` | SDK pin (10.0, latest feature band); local `dotnet-ef` |
 | `docs/` | Requirements, business rules, decisions, architecture, phase plans |
-| `docs/archive/` | Original requirements discussion (byte-identical, historical) |
+| `docs/archive/` | Original requirements discussion (byte-identical) and the template's README |
 | `CLAUDE.md` | Instructions for AI-assisted sessions |
 
 ## Documentation
@@ -32,7 +36,13 @@ and step 0.4 moves it to .NET 10.
 
 Not runnable yet as a library app. Do **not** run the template before step 0.4: its
 `appsettings.json` still points at the `DefaultTemplate` database, and startup applies migrations.
-Build/run/test commands will be documented here once steps 0.3–0.5 land.
+
+```
+dotnet tool restore
+dotnet build CseLibrary.sln
+```
+
+Run/test commands follow once steps 0.4–0.5 land.
 
 ## License
 

@@ -57,7 +57,9 @@ ASP.NET Core Identity, Razor/Bootstrap, xUnit. Built from the `DefaultTemplate/`
 
 Created only when they have content: `docs/database.md`, `docs/development.md`, `docs/status.md`.
 
-## Commands (once Phase 0 lands; verify paths first)
+## Commands (from repo root)
 
-- Build: `dotnet build` · Test: `dotnet test` · Migrations: `dotnet ef migrations add <Name>`
-  (project/startup paths: see `README.md` / phase plan).
+- Tools: `dotnet tool restore` (local `dotnet-ef`) · Build: `dotnet build CseLibrary.sln` ·
+  Test: `dotnet test` (once 0.5 lands)
+- Migrations: `dotnet ef migrations add <Name> --project src/CseLibrary.Data --startup-project src/CseLibrary.Web`
+  — never run `dotnet ef database update` / the app against a non-test DB without approval.

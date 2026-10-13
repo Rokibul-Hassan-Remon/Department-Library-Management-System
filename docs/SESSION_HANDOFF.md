@@ -3,12 +3,15 @@
 ## ▶ Session 14 (2026-10-13) — read first; overrides the Session 13 block where they differ
 - **Step 0.1 Verified:** commit `1fdbe5e` on `feature/phase-0-gate-1` (tree `b48a82b6…a3b7`
   matched before commit; post-commit checks PASS — DECISION_LOG §30).
-- **Step 0.2 staged, not committed:** archive `git mv` → `docs/archive/1st discussion.md`
-  (SHA-256 `6826f819…a86b` unchanged; `knowledge Docs/` gone), `README.md`, `docs/architecture.md`,
-  `docs/diagrams/template-architecture.{json,html}` (archify, all gates pass), `CLAUDE.md` doc
-  map, plus all session docs. Waiting for the user's OK on staged list + message (D-07 v7).
-- **Next action:** on OK → commit 0.2 → step 0.3 (rename `CseLibrary.*`, `src/`+`tests/`,
-  `global.json`, local `dotnet-ef`) → 0.4 → 0.5, each commit after the user's OK; then
+- **Step 0.2 Verified:** commit `9cf511a` (docs, README, architecture + archify diagram, archive
+  moved with SHA-256 unchanged).
+- **Step 0.3 staged, not committed:** rename to `src/CseLibrary.*` + root `CseLibrary.sln`,
+  `global.json`, local `dotnet-ef` 10.0.12; build 0 errors (DECISION_LOG §31). Waiting for the
+  user's OK. Old `DefaultTemplate/` folder holds only ignored `bin/`/`obj/`/`.user` — delete only
+  with approval. **Watch out:** VS Code C# Dev Kit edits `.csproj` files during moves; Git Bash
+  `sed -i` strips CR — use `sed -b`.
+- **Next action:** on OK → commit 0.3 → 0.4 (connection strings base + Development → `CseLibrary`,
+  verify user-secrets, then net10.0) → 0.5, each commit after the user's OK; then
   `/code-review` + `/ponytail-review` on the gate diff, Gate 1 report, **stop**.
 - Still: **do not run the app** before step 0.4 fixes both `appsettings` connection strings.
 

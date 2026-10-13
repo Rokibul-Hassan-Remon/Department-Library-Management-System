@@ -30,7 +30,11 @@ Binding rules:
 Interactive diagram generated from the code:
 [diagrams/template-architecture.html](diagrams/template-architecture.html)
 (source: [diagrams/template-architecture.json](diagrams/template-architecture.json), every node
-cites file/line evidence).
+cites file/line evidence at `1fdbe5e`).
+
+Step 0.3 renamed the projects without changing behaviour: `DefaultTemplate` → `src/CseLibrary.Web`,
+`Default.service` → `src/CseLibrary.Services`, `Default.repository` → `src/CseLibrary.Data`,
+`Default.core` → `src/CseLibrary.Core`. The diagram and the gap table below use the received names.
 
 ```
 Browser ─HTTPS─► Web (DefaultTemplate) ─I*Service─► Services (Default.service)
