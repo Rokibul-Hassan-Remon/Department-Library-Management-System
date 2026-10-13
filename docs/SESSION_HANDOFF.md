@@ -1,25 +1,61 @@
 # Session Handoff
 
-## ▶ Session 14 (2026-10-13) — read first; overrides the Session 13 block where they differ
-- **Step 0.1 Verified:** commit `1fdbe5e` on `feature/phase-0-gate-1` (tree `b48a82b6…a3b7`
-  matched before commit; post-commit checks PASS — DECISION_LOG §30).
-- **Step 0.2 Verified:** commit `9cf511a` (docs, README, architecture + archify diagram, archive
-  moved with SHA-256 unchanged).
-- **Step 0.3 Verified:** commit `3c8d98a` (DECISION_LOG §31).
-- **Step 0.4 Verified:** commit `468a82c` (§32–§33). User sets **no** seed password; the app-start
-  check runs in the test suite against `CseLibrary_Test_*`.
-- **Step 0.5 staged, not committed** (§34): test project, DB guard, 15 tests green. Next: commit
-  on OK → `/code-review` + `/ponytail-review` on the Gate 1 diff (`main..feature/phase-0-gate-1`)
-  → Gate 1 report → **stop**.
-- **M15 (§33):** archify overall-architecture + DB/ER diagrams, multi-copy + lending-history DB
-  design (Proposed) — **after the Gate 1 report** (user choice).
-- Old `DefaultTemplate/` folder holds only ignored `bin/`/`obj/`/`.user` — delete only
-  with approval. **Watch out:** VS Code C# Dev Kit edits `.csproj` files during moves; Git Bash
-  `sed -i` strips CR — use `sed -b`.
-- **Next action:** on OK → commit 0.3 → 0.4 (connection strings base + Development → `CseLibrary`,
-  verify user-secrets, then net10.0) → 0.5, each commit after the user's OK; then
-  `/code-review` + `/ponytail-review` on the gate diff, Gate 1 report, **stop**.
-- Still: **do not run the app** before step 0.4 fixes both `appsettings` connection strings.
+## ▶ Session 14 (2026-10-13) — read first; overrides older blocks where they differ
+Session 14 closed at the user's request (conversation too long) — **Session 15 starts here.**
+
+### State (verified 2026-10-13)
+- Branch **`feature/phase-0-gate-1`** (local only; `main` @ `af89144`, `develop` = `main`).
+- Gate 1 commits, each after the user's OK:
+  | Step | Commit | Content | Log |
+  |---|---|---|---|
+  | 0.1 | `1fdbe5e` | received template + requirements byte-identical (151/151 SHA-256) | §30 |
+  | 0.2 | `9cf511a` | docs, README, `architecture.md`, archify diagram, archive → `docs/archive/` | §30 |
+  | 0.3 | `3c8d98a` | rename → `src/CseLibrary.*`, root `CseLibrary.sln`, `global.json`, local `dotnet-ef` 10.0.12 | §31 |
+  | 0.4 | `468a82c` | connection strings → `CseLibrary` (Windows auth), net10.0, EF/Identity 10.0.12 | §32–§33 |
+  | 0.5 | `22d27ae` | `tests/CseLibrary.Tests`: LocalDB guard, shared factory, SQL counter, 15 tests | §34 |
+- Evidence: `dotnet build CseLibrary.sln` 0 errors (warnings NU1903 AutoMapper, NU1510);
+  `dotnet test CseLibrary.sln` 15/15 (twice); no `CseLibrary*` DB left on LocalDB; `.\SQLEXPRESS`
+  holds only the 4 system DBs (nothing created there).
+- **Uncommitted:** Session 14 close-out doc updates (`docs/DECISION_LOG.md` §33–§35,
+  `PROJECT_DECISIONS.md` (header, D-37, D-40, D-41, D-42, D-43, §9 Session 14 table),
+  `PHASE_0_PLAN.md`, `requirements.md` (FR-M15-01..04), `README.md`, `CLAUDE.md`, this file).
+  Show the staged list + message and commit only on the user's OK (D-07 v7).
+
+### ⛔ Gate 1 reported — STOPPED. Next action (Session 15), in order
+1. Verify read-only: branch, `git log --oneline main..HEAD` (5 commits above), `git status`.
+2. Ask the user (open table: `PROJECT_DECISIONS.md` §9 "Session 14"):
+   a. which Gate 1 review findings to fix (DECISION_LOG §35; recommendation: one correction commit
+      — code-review 2–5, 8–10 + all ponytail items; `Program.cs` catch-all → 0.10);
+   b. Gate 1 approval → merge `feature/phase-0-gate-1` → `develop` `--no-ff` (separate approval);
+   c. delete the old `DefaultTemplate/` folder (only ignored `bin/`, `obj/`, `*.csproj.user`)?
+3. Then **M15** (DECISION_LOG §33, `requirements.md` FR-M15-01..04) **before Gate 2**:
+   archify overall target-architecture diagram + DB/ER model diagram + DB design proposal
+   (multi-copy titles, copy holder, immutable lending history; derived available count vs counter
+   with trade-offs). Everything **Proposed** until the user approves; no code/migration.
+4. Gate 2 (0.6–0.8) only after explicit approval.
+
+### User preferences learned in Session 14
+- No DB username/password (Windows auth) and **no seed admin password** set; app-start check lives
+  in the tests. Running the app on `.\SQLEXPRESS` would need `Seed:Admin:Password` in user-secrets.
+- Wants visual (archify) architecture and DB diagrams to understand the project before code.
+- Commits one step at a time with "ok"; review tools + report at every gate.
+
+### Environment gotchas (Session 14)
+- **VS Code C# Dev Kit** locks project folders (directory `git mv` → "Permission denied") and
+  **rewrites `.csproj` files** when referenced projects look missing → move files individually,
+  always `git diff` `.csproj` before staging.
+- **Git Bash `sed -i` strips CR** from CRLF files → use `sed -b -i`, only on matching files; the
+  Edit tool preserves line endings. Python is not installed.
+- `dotnet sln add` rewrites the solution (x64/x86 configs, solution folders; left an empty `src`
+  folder — review finding 8). SDK 10 `dotnet new tool-manifest` writes `dotnet-tools.json` at the
+  root → move it to `.config/`.
+- `dotnet ef` design-time logs `HostAbortedException` as Fatal via the `Program.cs` catch-all —
+  harmless now, fixed in 0.10. `dotnet ef migrations list`/`database update` would connect to the
+  configured DB — do not run against `.\SQLEXPRESS` without approval.
+- archify: `node C:/Users/Remon/.claude/skills/archify/bin/archify.mjs finalize architecture <json>
+  <html> --repo-root . --quality showcase --out-dir <scratch> --json` from the repo root; evidence
+  must cite a **committed** revision. archify has no ER type → model tables as `database` nodes with
+  labelled "1 — N" relationships (architecture type).
 
 ## Session 13 (2026-10-13) — history; the Session 14 block above takes precedence
 - **R1 backup verified** (read-only, DECISION_LOG §29): `received_20261013-152404/` is the

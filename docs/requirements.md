@@ -42,6 +42,22 @@ are **Superseded by FR-M10-01** and kept below unchanged for history (DECISION_L
 
 ---
 
+## FR-M15-01..04 Multi-copy inventory, copy holder, lending history, visual design docs — [Confirmed] requirement; design [Proposed]/pending
+Source: user message M15, Session 14, 2026-10-13 (DECISION_LOG §33). Status: **Implemented: no ·
+Verified: no**. Design work starts after the Gate 1 report, before Gate 2 (user choice).
+| ID | Requirement [Confirmed] | Relation to archive |
+|---|---|---|
+| FR-M15-01 | A book title can have **multiple physical copies**; the design must model title and copy separately. | Same as archive FR-03 / spec v1.1 "Book identity" (Book vs BookCopy, unique accession number) — no conflict |
+| FR-M15-02 | Issuing one copy reduces the title's **available count by 1**; the database shows **who currently holds each copy**. | Archive "Available/Issued Book (N)", BR-03/04/16 (one active loan per copy), D-35 filtered unique index |
+| FR-M15-03 | Every loan is kept as history: **who** borrowed **which copy**, **when** issued, **when** returned (never overwritten). | Archive Lending Transaction; D-20/D-26: `LendingTransactions` is the authoritative business history |
+| FR-M15-04 | Before implementation, `archify` diagrams of (a) the **overall target architecture** and (b) the **database model / table relationships**, so the design can be understood visually and reviewed. | D-07 v7 review tooling; extends `docs/architecture.md` |
+Quality bar [Confirmed]: DB design "from a 20-year senior architect's perspective".
+[Proposed] (assistant, to be shown with trade-offs, not approved): available count **derived** from
+copy status (no stored counter that can drift) + filtered unique index "one active loan per copy";
+loan rows immutable except the return fields; holder = the active loan's member.
+
+---
+
 ## FR-M10-01 Configurable borrowing policy by member category — [Confirmed] requirement; settings and details [Proposed]/[Open]
 Supersedes FR-M9-01 and FR-M9-02. Design: D-48 (Proposed). Rules: `business-rules.md`
 BR-M10-01..14. Revised in M11 (independent settings, values vs logic, no defaults) and M12

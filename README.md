@@ -10,7 +10,7 @@ and due-date / overdue email reminders (no fines in v1).
 
 Phase 0 (foundation) in progress — see [docs/PHASE_0_PLAN.md](docs/PHASE_0_PLAN.md) and
 [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md). The code is the received starter, renamed to
-`CseLibrary.*` (step 0.3), still on net8.0 until step 0.4.
+`CseLibrary.*` (step 0.3) and running on .NET 10 (step 0.4).
 
 ## Repository layout
 

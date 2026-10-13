@@ -74,7 +74,14 @@ executed (DECISION_LOG §28).
 tooling, D-40 connection-string location + base `appsettings.json` fix, Q-M9-8/10/11 answered,
 step 0.2 slimmed, D-14 `ReadCommitted` deferred to Phase 3, D-16 Approved. Review tooling added
 to the gate checklist (D-07 v7). Step 0.1 authorized by the same approval.
-`Archive §n` = `knowledge Docs/Requirement/1st discussion.md`.
+**Session 14, 2026-10-13:** Gate 1 executed — commits `1fdbe5e` (0.1), `9cf511a` (0.2), `3c8d98a`
+(0.3), `468a82c` (0.4), `22d27ae` (0.5), each after the user's OK; Gate 1 review findings reported
+(DECISION_LOG §35), **Gate 1 awaiting approval**. User decisions: no DB username/password and no seed
+password (app-start check moved into tests, D-40 note); **M15** new requirements (overall
+architecture + DB/ER `archify` diagrams, multi-copy titles with holder, full lending history,
+senior-quality DB design) to be designed **after the Gate 1 report** (§33). D-37 finding corrected
+by test evidence. Open items: §9 "Session 14" table.
+`Archive §n` = `docs/archive/1st discussion.md` (moved from `knowledge Docs/Requirement/` in step 0.2).
 
 ---
 
@@ -1070,6 +1077,12 @@ claims to `AspNetUserClaims` at login; `PermissionAuthorizationHandler` succeeds
 the claim and only otherwise queries the DB. Grants therefore apply immediately, but **revocations
 do not** — a stale cookie claim keeps granting access. Authorization in the template is
 permission-only (no role checks).
+**Correction (Session 14, test-verified on .NET 10, DECISION_LOG §34):** `RefreshSignInAsync` is a
+no-op inside the login request, and the cookie is built from `AspNetUserClaims` *before* login
+rewrites them — so each cookie carries the permissions written by the **previous** login. A revoked
+permission is denied on the current cookie (DB fallback), **comes back for exactly one later login**,
+then is denied. Pinned by `Revoked_permission_comes_back_for_one_login_from_stale_claim_rows`.
+The design below fixes both variants.
 **Security rationale:** authorization must reflect the *current* database state. A permission
 revocation, role removal or deactivation must take effect on the user's next request, not when
 the cookie expires or the security stamp is refreshed; cookie-held permission claims cannot
@@ -1141,6 +1154,13 @@ Therefore the app must **not be started** until the connection string resolves t
 connection string in `appsettings.Development.json` **and** the base `appsettings.json` changed
 from `DefaultTemplate` to `CseLibrary`, so no environment can ever resolve to the template DB;
 seed admin password in user-secrets (never in a committed file).
+**Session 14 (§32–§34):** read-only check — `.\SQLEXPRESS` holds only the 4 system DBs (no
+`DefaultTemplate`, no `CseLibrary`); no user-secrets, no env overrides. The user wants **no** DB
+username/password (Windows auth already) and set **no** seed password; the app-start check runs in
+the test suite instead (env-var connection string + in-memory test password, LocalDB
+`CseLibrary_Test_*`). Running the app on `.\SQLEXPRESS` still needs `Seed:Admin:Password` in
+user-secrets; nothing has been created there yet. Guard implemented in
+`tests/CseLibrary.Tests/Infrastructure/TestDatabase.cs` (server **and** prefix, test H1).
 
 ### D-41 Rename to `CseLibrary.*` with `src/` + `tests/` layout — Approved (M6 B)
 `src/CseLibrary.{Core,Data,Services,Web}`, `tests/CseLibrary.Tests`, solution at repo root.
@@ -1153,12 +1173,19 @@ until then.
 **Resolved (Session 13, §29):** `CseLibrary.*` kept (D-47 Rejected); `global.json` (SDK 10.0,
 `rollForward: latestFeature`) and `.config/dotnet-tools.json` (local `dotnet-ef`) **Approved**
 for step 0.3. Step 0.3 unblocked.
+**Executed (Session 14, commit `3c8d98a`, §31):** `src/CseLibrary.{Web,Services,Data,Core}`,
+`CseLibrary.sln` at root, `global.json` 10.0.100/`latestFeature`, `.config/dotnet-tools.json`
+(`dotnet-ef` 10.0.12); `tests/CseLibrary.Tests` added in 0.5 (`22d27ae`). `UserSecretsId` and
+migration ID kept (verified by test).
 
 ### D-42 Upgrade .NET 8 → .NET 10 LTS — Approved (M6 B), subject to compatibility checks
 Reasons: .NET 8 support ends 10 Nov 2026; this machine has only .NET 10 runtimes (10.0.7), so
 the net8.0 template builds but cannot run here. Condition: package, build and runtime
 compatibility verified in step 0.4 (EF Core / Identity / Serilog versions, Dockerfile images);
 any incompatibility is reported before working around it.
+**Executed (Session 14, commit `468a82c`, DECISION_LOG §32):** net10.0; EF Core / Identity 10.0.12;
+Serilog.AspNetCore 10.0.0 forced Serilog.Sinks.File 6 → 7 (NU1605); Docker images 10.0; EF reports
+no pending model changes. Open: NU1510 (`Configuration.Abstractions` now in the shared framework).
 
 ### D-43 Test strategy — Approved (M6 B)
 Order: characterization tests first (step 0.5), then unit, architecture, integration, security
@@ -1169,6 +1196,10 @@ One xUnit project (`Unit/`, `Integration/` folders), `Microsoft.AspNetCore.Mvc.T
 indexes), SQL command-counting interceptor for N+1 tests, `TimeProvider` for time-dependent
 tests. Unverified risk: Serilog bootstrap logger with `WebApplicationFactory`
 ("logger already frozen").
+**Executed (Session 14, `22d27ae`, §34):** risk handled by **one shared host per test run**
+(`AppFactory` collection fixture); xUnit 2.9.3; 15 characterization tests green. Gate 1 review
+(§35) found test-harness weaknesses (resolved-connection guard, env-var restore, weak drop test,
+exact N+1 count) — fix decision open (§9).
 
 ---
 
@@ -1421,6 +1452,17 @@ audited), D-35 (reused, unchanged), D-37 (new permission), D-02 (scope unchanged
 ---
 
 ## 9. Open decisions
+
+**Session 14 (2026-10-13, DECISION_LOG §30–§35) — open now, ask at the start of Session 15:**
+| Item | Question | Recommendation |
+|---|---|---|
+| Gate 1 findings (§35) | Which of the 10 `/code-review` + 6 `/ponytail-review` findings to fix | One correction commit on `feature/phase-0-gate-1`: code-review 2–5, 8–10 + all ponytail items (incl. NU1510 `Configuration.Abstractions`, direct `Serilog.Sinks.File`); `Program.cs` catch-all → 0.10; stale test-DB sweep optional; Dockerfile restore layer → later Docker work |
+| `EF Tools` package | Keep `Microsoft.EntityFrameworkCore.Tools` (only for Visual Studio PMC)? | Remove if nobody uses PMC; CLI uses local `dotnet-ef` |
+| UI brand text | `_Layout.cshtml` still shows "DefaultTemplate" (title, navbar, footer) | Change with the first UI work (visible change, not part of the 0.3 rename) |
+| Old `DefaultTemplate/` folder | Holds only ignored `bin/`, `obj/`, `*.csproj.user` | Delete (needs approval; nothing tracked) |
+| Gate 1 approval | Merge `feature/phase-0-gate-1` → `develop` (`--no-ff`) | After the correction commit |
+| M15 (§33) | Overall-architecture + DB/ER `archify` diagrams; multi-copy + lending-history DB design | Before Gate 2 (user: after the Gate 1 report); design stays **Proposed** until approved |
+| M15 design point | Title "available count": stored counter vs derived from copy status | Derived (COUNT of copies with status Available) + filtered unique index "one active loan per copy" (D-35); show both with trade-offs |
 
 **Resolved in Session 13 (DECISION_LOG §29) — the rows below are kept as history:** D-07 (v7
 Approved), D-07 T1 scope (`.gitattributes` + hash check), D-07 T1-EOL (LF), D-07 T4 (replaced by

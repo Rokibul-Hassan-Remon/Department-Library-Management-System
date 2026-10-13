@@ -1471,6 +1471,38 @@ User: "ok" → step 0.4 commit **`468a82c`**.
   after. Characterized as such; fixed by D-37 in 0.9 (tests A7, A9).
 - `dotnet test`: 15/15 passed twice; LocalDB holds no `CseLibrary*` DB afterwards; `.\SQLEXPRESS`
   still only the 4 system DBs. Build warnings: NU1903 (AutoMapper, 0.6), NU1510 (§32).
+  User: "ok" → commit **`22d27ae`**.
+
+### 35. Gate 1 review (D-07 v7 tooling) — findings reported, nothing fixed
+Diff reviewed: `1fdbe5e..HEAD` (authored changes; the received baseline is excluded).
+**`/code-review` (medium), 10 findings:**
+1. `Program.cs` catch-all swallows startup exceptions (exit code 0; EF `HostAbortedException` logged
+   Fatal; test host loses the real cause) — fix `when (ex is not HostAbortedException)` + rethrow (0.10).
+2. Test guard validates only the generated string, not the connection string the app resolves before
+   `MigrateAsync` — move the check to the resolved DbContext options before seeding.
+3. Process env vars set by `AppFactory` are never restored.
+4. `UseSetting` connection string reportedly ineffective (eager config read) — dead second path.
+5. `Guard_accepts_the_generated_name_and_drop_targets_only_it` asserts nothing meaningful about Drop.
+6. No sweep of `CseLibrary_Test_*` databases left by aborted runs.
+7. Dockerfile restores before copying the referenced csproj files (template pattern, kept in 0.3).
+8. `CseLibrary.sln` has an empty `src` solution folder (added by `dotnet sln add`).
+9. README status still says net8.0.
+10. N+1 test asserts an exact command count — may flake (retry, stamp validation).
+**`/ponytail-review`:** delete `UseSetting` line; drop the sync `WithService`; keep only async
+interceptor overrides; remove `Configuration.Abstractions` (NU1510) and direct `Serilog.Sinks.File`;
+`EF Tools` package only needed for VS PMC — net −21 lines possible.
+Proposed handling (needs the user's choice): fix 2, 3, 4, 5, 8, 9, 10 and the ponytail items as one
+correction commit on the gate branch (D-07 v7 allows it); 1 → step 0.10; 6 → optional; 7 → with
+the Docker work, not Phase 0.
+
+### 36. Session 14 close-out (user request: switch session)
+User: "this tab has too much discussion — write down the decisions, discussion and findings in the
+existing docs." Updated (uncommitted, awaiting OK): `SESSION_HANDOFF.md` (Session 14 block rewritten
+as the Session 15 start: state, next actions, user preferences, environment gotchas),
+`PROJECT_DECISIONS.md` (header Session 14 line, archive path, D-37 correction, D-40/D-41/D-42/D-43
+execution notes, §9 "Session 14" open table), `requirements.md` (FR-M15-01..04), `PHASE_0_PLAN.md`
+(0.5 [x], Gate 1 status), `README.md` (finding 9: net8.0 → .NET 10 — doc-only fix), this log.
+No code changed after `22d27ae`.
 
 ## Unresolved decisions and why
 
