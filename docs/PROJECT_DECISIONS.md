@@ -806,6 +806,13 @@ in DI.
   N+1). User writes stay on `UserManager`.
 Phase 0 UoW properties: `GeneralConfigs`, `Permissions`, `RolePermissions` (or a Roles read
 repository), `Users`. Phase 1+ adds `Books`, `BookCopies`, `Members`, `LendingTransactions`.
+**Session 17 — exact signatures Approved by the user (DECISION_LOG §45); implemented `0d01e4e`
+(§46):** `IRepository<T> where T : BaseEntity` (`GetForUpdateAsync`, `AddAsync`, `Remove` = soft
+delete); `IGeneralConfigRepository`, `IPermissionRepository` (incl. `GetNamesForUserAsync`, one
+join), read-only `IRoleReadRepository` + write-side `IRolePermissionRepository` (composite key),
+read-only `IUserReadRepository` (`GetPageAsync`); UoW properties `GeneralConfigs`, `Permissions`,
+`Roles`, `RolePermissions`, `Users`; one `ExecuteInTransactionAsync<TResult> where TResult : Result`.
+Deviation: `IRoleReadRepository.GetPermissionNamesAsync` dropped (no caller).
 
 ### D-14 UoW transactions — Approved in principle (M5 §5, M6 A5); correctness must be proven by tests
 Approved (M3 item 1, M5 §1 rule 9): UoW coordinates persistence and transactions; no duplicate or
@@ -858,6 +865,8 @@ Testing rule (M5 §7): important screens get tests for pagination, projection an
 For the Users list the target is a **bounded** count-and-page pattern whose SQL command count does
 not grow with the number of users (no N+1 role queries); correctness is never sacrificed to hit a
 specific command count.
+**Session 17 (DECISION_LOG §45): page size default 20 / max 100 (clamped, never rejected) and the
+unpaged bounded admin tables are Approved by the user; implemented `48a9acf`/`0d01e4e`.**
 Proposed details: `PageRequest`/`PagedResult<T>` in Core, page size clamped to max 100; bounded
 admin tables (`Permissions`, `GeneralConfigs`, < ~100 rows) may skip paging (documented
 exception); `AsNoTracking()` only for entity reads (projections are untracked anyway); EF SQL
@@ -910,6 +919,8 @@ Remove AutoMapper (12.0.1 has advisory NU1903 / GHSA-rvv3-g6hj-g44x; newer versi
 commercially licensed). Use explicit manual mapping (repositories project to DTOs; Web maps
 ViewModel↔DTO with small static extension methods when non-trivial). No replacement mapping
 library without explicit approval. **Source:** M3 item 5.
+**Implemented + verified Session 17:** `51e189a` (DECISION_LOG §44); the interim `ToDto()` helpers
+were replaced by repository projections in `0d01e4e`.
 
 ---
 
@@ -1107,7 +1118,12 @@ Cost: one small query per authorized request — acceptable for this application
 **Done only when tests pass:** A4, A7, A8, A9 (grant, revoke, role change, deactivation,
 old-cookie behavior), using real SQL and the real authorization pipeline.
 
-### D-34 Error handling — Approved (standard); `Result` type Proposed
+### D-34 Error handling — Approved (standard); `Result` type Approved (Session 17)
+**Session 17 (DECISION_LOG §45):** user approved `Result { Succeeded, ErrorCode, Error }` /
+`Result<T> { Value }` with factories `Success()` / `Failure(code, safeMessage)` and `ErrorCodes`
+constants (`COMMON.NOT_FOUND`, `COMMON.DUPLICATE`, `IDENTITY.FAILED`). All four template services
+were migrated from tuples in `0d01e4e`. The remaining Proposed items below (exception handler,
+status pages, Error view, TraceId) belong to step 0.10.
 Approved (M2 Standards §3): centralized exception handling; no blanket try/catch; local catch only
 for recovery/translation/retry/cleanup; expected business failures separate from unexpected
 exceptions; never expose stack traces/SQL/paths/secrets; unexpected errors show a **Reference
@@ -1472,8 +1488,11 @@ FK lines); naming and status follow D-50, D-51.
   kept — user chose option A over `Modified…`); join tables only `CreatedAt`/`CreatedBy`; log
   tables none. Values are UTC and set automatically by a `SaveChanges` interceptor from the current
   user and `TimeProvider` — never by services. They show the last change only; full history is
-  `AuditLogs` (D-21). **Source:** user, Session 16 (DECISION_LOG §41). **Implemented: no** (Gate 2,
-  step 0.8).
+  `AuditLogs` (D-21). **Source:** user, Session 16 (DECISION_LOG §41). **Implemented: yes —
+  `0d01e4e` (Session 17, §46)** via `AuditColumnsInterceptor` + `ICurrentUser` (Core, `UserId` only;
+  `HttpCurrentUser` in Web) + `TimeProvider`. `AspNetUsers`: `CreatedAt`/`UpdatedAt`, `AspNetRoles`:
+  `CreatedAt` (per ER diagram); `RolePermissions` keeps `AssignedAt`. Open: review CR6 (Identity's own
+  writes also bump `UpdatedAt`) — recommendation keep (§47).
 
 ### D-51 Single `RecordStatus` instead of `IsActive` + `IsDeleted` — Approved (Session 16, user)
 `enum RecordStatus : byte { Active = 1, Inactive = 2, Deleted = 3 }` (0 invalid; new values appended,
@@ -1483,7 +1502,10 @@ every `BaseEntity`; the interceptor turns repository `Remove()` into soft delete
 filtered `WHERE Status <> 3`. Business states (`CopyStatus`, `TransactionStatus`) stay separate
 columns. User proposed HTTP-style values (200/404); accepted the assistant's 1/2/3 + `Inactive`
 instead. Template migration converts `IsDeleted = 1 → 3`, else `1`; `IsActive = 0 → 2`.
-**Source:** user, Session 16 (DECISION_LOG §41). **Implemented: no** (Gate 2, step 0.8). Resolves the
+**Source:** user, Session 16 (DECISION_LOG §41). **Implemented: yes — `0d01e4e` (Session 17, §46)**;
+migration `RecordStatusAndAuditColumns` hand-edited for the data conversion and tested up/down on
+existing rows. `AspNetUsers` has the `CHECK` but no query filter (users are deleted by
+`UserManager`). Open: review CR5, CR9 (§47). Resolves the
 D-48 open point "`IsActive` vs `IsDeleted`".
 
 ---
@@ -1497,9 +1519,11 @@ D-48 open point "`IsActive` vs `IsDeleted`".
 | `EF Tools` package | Keep `Microsoft.EntityFrameworkCore.Tools` (only for Visual Studio PMC)? | Remove if nobody uses PMC; CLI uses local `dotnet-ef`. **Session 15: kept** (not removed in `8504115`) until the user confirms nobody uses Visual Studio PMC |
 | UI brand text | `_Layout.cshtml` still shows "DefaultTemplate" (title, navbar, footer) | Change with the first UI work (visible change, not part of the 0.3 rename) |
 | ~~Old `DefaultTemplate/` folder~~ **Resolved Session 17 (DECISION_LOG §43): deleted** | Holds only ignored `bin/`, `obj/`, `*.csproj.user` | Delete (needs approval; nothing tracked) |
-| Gate 2 start | Begin steps 0.6–0.8 (incl. D-50, D-51) on `feature/phase-0-gate-2` | **Ask at the start of Session 17** |
+| ~~Gate 2 start~~ **Resolved Session 17 (§44): started; 0.6–0.8 committed (`51e189a`, `48a9acf`, `0d01e4e`)** | Begin steps 0.6–0.8 (incl. D-50, D-51) on `feature/phase-0-gate-2` | — |
+| **Gate 2 review findings (§47) — open, ask at the start of Session 18** | Which of CR1–CR9 / P1–P3 to fix before the Gate 2 report | One correction commit: CR1, CR3, CR4, CR5, CR7, CR8, CR9, CR2 permission-lookup filter, P1–P3; CR2 cookie part → 0.9; CR6 keep |
+| **Gate 2 report** | After the correction commit: D-14 per-use-case duplicate-operation assessment, docs, report; then approval + merge → `develop` (separate approvals) | — |
 | D-49 O1–O5 | Available count, `Issued` in `CopyStatus`, member subtypes, history name, loan id type (`database.md` §6) | Before the phase that builds the tables (Phase 2/3); recommendations in `database.md` |
-| Merged branch | Delete `feature/phase-0-gate-1` (merged into `develop`)? | Any time; needs the user's OK |
+| Merged branch | Delete `feature/phase-0-gate-1` (merged into `develop`)? | Any time; needs the user's OK (Session 17: asked together with the Gate 2 start; the bare "ok" counted for Gate 2 only) |
 | ~~Gate 1 approval~~ **Resolved Session 16 (`bbee8dc`, DECISION_LOG §39)** | Merge `feature/phase-0-gate-1` → `develop` (`--no-ff`) | After the correction commit — **correction done Session 15 (`8504115`); ask at the start of Session 16** |
 | M15 (§33) | Overall-architecture + DB/ER `archify` diagrams; multi-copy + lending-history DB design | Before Gate 2 (user: after the Gate 1 report); design stays **Proposed** until approved |
 | M15 design point | Title "available count": stored counter vs derived from copy status | Derived (COUNT of copies with status Available) + filtered unique index "one active loan per copy" (D-35); show both with trade-offs |
