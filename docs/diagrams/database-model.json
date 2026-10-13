@@ -1,0 +1,385 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CSE Library: database model (Proposed, M15)",
+    "output": "docs/diagrams/database-model.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/Rokibul-Hassan-Remon/Department-Library-Management-System.git",
+      "link_mode": "local-only",
+      "revision": "fe960d9f93a924acafe3d0ed6d9e89e07496333c"
+    }
+  },
+  "components": [
+    {
+      "id": "authors",
+      "type": "database",
+      "label": "Authors",
+      "sublabel": "AuthorId, Name",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        210,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1398,
+          "end_line": 1404
+        }
+      ]
+    },
+    {
+      "id": "bookauthors",
+      "type": "database",
+      "label": "BookAuthors",
+      "sublabel": "PK (BookId, AuthorId)",
+      "pos": [
+        360,
+        40
+      ],
+      "size": [
+        210,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1404
+        }
+      ]
+    },
+    {
+      "id": "categories",
+      "type": "database",
+      "label": "Categories",
+      "sublabel": "CategoryId, Name UQ, IsActive",
+      "pos": [
+        40,
+        220
+      ],
+      "size": [
+        210,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1402
+        }
+      ]
+    },
+    {
+      "id": "books",
+      "type": "database",
+      "label": "Books (title)",
+      "sublabel": "BookId, Title, ISBN, IsActive",
+      "pos": [
+        360,
+        220
+      ],
+      "size": [
+        210,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1280,
+          "end_line": 1295
+        }
+      ]
+    },
+    {
+      "id": "copies",
+      "type": "database",
+      "label": "BookCopies (physical)",
+      "sublabel": "AccessionNo UQ, CopyStatus, RowVersion",
+      "pos": [
+        680,
+        220
+      ],
+      "size": [
+        230,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1297,
+          "end_line": 1324
+        },
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1225,
+          "end_line": 1238,
+          "label": "availability derived"
+        }
+      ]
+    },
+    {
+      "id": "users",
+      "type": "security",
+      "label": "AspNetUsers",
+      "sublabel": "staff + portal accounts",
+      "pos": [
+        1365,
+        20
+      ],
+      "size": [
+        220,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/CseLibrary.Core/Entities/ApplicationUser.cs",
+          "line": 5,
+          "end_line": 11
+        }
+      ]
+    },
+    {
+      "id": "lending",
+      "type": "database",
+      "label": "LendingTransactions",
+      "sublabel": "issue + return history, never deleted",
+      "pos": [
+        1025,
+        220
+      ],
+      "size": [
+        230,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1362,
+          "end_line": 1396
+        },
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1429,
+          "end_line": 1441,
+          "label": "UX_Lending_ActiveBookCopy"
+        }
+      ]
+    },
+    {
+      "id": "emaillogs",
+      "type": "database",
+      "label": "EmailNotificationLogs",
+      "sublabel": "Phase 4, IdempotencyKey UQ",
+      "pos": [
+        1365,
+        220
+      ],
+      "size": [
+        220,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1529,
+          "end_line": 1546
+        }
+      ]
+    },
+    {
+      "id": "auditlogs",
+      "type": "database",
+      "label": "AuditLogs",
+      "sublabel": "EntityType + EntityId, no FK",
+      "pos": [
+        40,
+        420
+      ],
+      "size": [
+        210,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/PROJECT_DECISIONS.md",
+          "line": 921,
+          "end_line": 932,
+          "label": "D-21"
+        }
+      ]
+    },
+    {
+      "id": "policies",
+      "type": "database",
+      "label": "LibraryPolicies",
+      "sublabel": "MemberCategory UQ, limits, days",
+      "pos": [
+        680,
+        420
+      ],
+      "size": [
+        230,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/PROJECT_DECISIONS.md",
+          "line": 1334,
+          "end_line": 1340,
+          "label": "D-48"
+        }
+      ]
+    },
+    {
+      "id": "members",
+      "type": "database",
+      "label": "Members",
+      "sublabel": "MemberCode UQ, MemberType, IsActive",
+      "pos": [
+        1025,
+        420
+      ],
+      "size": [
+        230,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1326,
+          "end_line": 1360
+        }
+      ]
+    },
+    {
+      "id": "outbox",
+      "type": "database",
+      "label": "OutboxMessages",
+      "sublabel": "Phase 4, written in same tx",
+      "pos": [
+        1365,
+        420
+      ],
+      "size": [
+        220,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1405
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "authors-bookauthors",
+      "from": "authors",
+      "to": "bookauthors",
+      "label": "1 — N"
+    },
+    {
+      "id": "books-bookauthors",
+      "from": "books",
+      "to": "bookauthors",
+      "label": "1 — N",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "categories-books",
+      "from": "categories",
+      "to": "books",
+      "label": "1 — N"
+    },
+    {
+      "id": "books-copies",
+      "from": "books",
+      "to": "copies",
+      "label": "1 — N copies",
+      "variant": "emphasis"
+    },
+    {
+      "id": "copies-lending",
+      "from": "copies",
+      "to": "lending",
+      "label": "1 — N, 1 open",
+      "variant": "emphasis"
+    },
+    {
+      "id": "members-lending",
+      "from": "members",
+      "to": "lending",
+      "label": "1 — N loans",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "users-lending",
+      "from": "users",
+      "to": "lending",
+      "label": "issued / returned by",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "members-policies",
+      "from": "members",
+      "to": "policies",
+      "label": "N — 1 by type"
+    },
+    {
+      "id": "lending-emaillogs",
+      "from": "lending",
+      "to": "emaillogs",
+      "label": "1 — N",
+      "variant": "dashed"
+    },
+    {
+      "id": "users-members",
+      "from": "users",
+      "to": "members",
+      "label": "0..1 — 0..1 portal",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "right"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Copy holder and count",
+      "items": [
+        "Holder = the Issued loan of that copy",
+        "Available = copies with CopyStatus Available",
+        "Counts derived by GROUP BY, no counter column"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Integrity",
+      "items": [
+        "UX_Lending_ActiveBookCopy: one Issued loan per copy",
+        "CHECK: Returned rows need ReturnDate",
+        "FK NO ACTION: no delete while history exists"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Kept from the template",
+      "items": [
+        "AspNetRoles, AspNetUserRoles (Identity)",
+        "Permissions, RolePermissions (D-37)",
+        "GeneralConfigs"
+      ]
+    }
+  ]
+}

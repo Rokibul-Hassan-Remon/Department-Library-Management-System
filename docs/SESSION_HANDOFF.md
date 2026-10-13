@@ -10,8 +10,13 @@
 - Gate 1 docs update (this block, PHASE_0_PLAN, DECISION_LOG §39, PROJECT_DECISIONS): commit on
   `develop` only after the user's OK (check `git log` — do not assume it was done).
 
+### M15 delivered (Session 16), awaiting the user's review
+- `docs/database.md` + D-49 (Proposed), diagrams `docs/diagrams/target-architecture.html` and
+  `database-model.html` (archify finalize pass; no screenshot review). DECISION_LOG §40.
+- Commit status: check `git log`; commit only on the user's OK.
+
 ### Next action, in order
-1. **M15** (DECISION_LOG §33, `requirements.md` FR-M15-01..04) — archify overall target architecture
+1. ~~M15~~ delivered, see above; the user reviews O1–O5 in `database.md`. **M15** (DECISION_LOG §33, `requirements.md` FR-M15-01..04) — archify overall target architecture
    + DB/ER diagrams + DB design proposal (multi-copy titles, copy holder, immutable lending history,
    derived available count vs counter). Everything **Proposed**; no code/migration. Stop for review.
 2. Gate 2 (0.6–0.8) only after explicit approval (new branch `feature/phase-0-gate-2` from `develop`).

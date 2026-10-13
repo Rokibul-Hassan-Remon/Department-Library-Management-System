@@ -85,7 +85,8 @@ by test evidence. Open items: §9 "Session 14" table.
 docs `346496a`, `97891e8`. M15 confirmed for after Gate 1, before Gate 2. **Gate 1 merge → `develop`
 still awaiting the user's explicit approval** (§38).
 **Session 16, 2026-10-13:** Gate 1 approved → merged into `develop` (`bbee8dc`; build 0 errors, tests
-16/16; DECISION_LOG §39). No decision status changed. Next: M15 (Proposed only).
+16/16; DECISION_LOG §39). No decision status changed. M15 delivered as **D-49 (Proposed)** +
+`database.md` + two archify diagrams (DECISION_LOG §40); awaiting review.
 `Archive §n` = `docs/archive/1st discussion.md` (moved from `knowledge Docs/Requirement/` in step 0.2).
 
 ---
@@ -1453,6 +1454,14 @@ of D-48; M11 reclassified them as requirements so that no part of this design re
 
 **Affects:** D-12, D-14 (explicit `ReadCommitted` level — Proposed), D-15, D-21–D-23 (policy
 audited), D-35 (reused, unchanged), D-37 (new permission), D-02 (scope unchanged).
+
+### D-49 Library database design (FR-M15-01..03, M15) — Proposed
+Schema, derived availability, open-loan invariant and append-only lending history as written in
+[database.md](database.md); open choices O1–O5 there (recommendations: derived count, `Issued`
+kept in `CopyStatus`, single `Members` table, live FK in history, `bigint` loan id). Diagram:
+`docs/diagrams/database-model.html`. **Source:** M15 (DECISION_LOG §33, §40). Reuses D-35, D-48
+unchanged. **Implemented: no · Verified: no.** Tables are built in their phase migrations, not in
+Phase 0.
 
 ---
 

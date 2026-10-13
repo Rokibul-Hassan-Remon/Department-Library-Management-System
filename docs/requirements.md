@@ -55,6 +55,9 @@ Quality bar [Confirmed]: DB design "from a 20-year senior architect's perspectiv
 [Proposed] (assistant, to be shown with trade-offs, not approved): available count **derived** from
 copy status (no stored counter that can drift) + filtered unique index "one active loan per copy";
 loan rows immutable except the return fields; holder = the active loan's member.
+**Session 16:** design written in [database.md](database.md) (Proposed, open choices O1–O5) and
+diagrams produced (FR-M15-04): [target-architecture](diagrams/target-architecture.html),
+[database-model](diagrams/database-model.html). Awaiting the user's review; nothing implemented.
 
 ---
 

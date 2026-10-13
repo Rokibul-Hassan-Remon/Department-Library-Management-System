@@ -1546,6 +1546,20 @@ flake fix; Sinks.File version claim wrong; constructor check only re-validated t
   12.0.1); `dotnet test CseLibrary.sln` 16/16; `sqlcmd` on LocalDB → 0 `CseLibrary*` DBs; `.\SQLEXPRESS`
   untouched.
 - User order: update docs first, then M15 (§33). M15 output stays **Proposed**; no code/migration.
+- Docs commit `fe960d9` on the user's "ok".
+
+### 40. M15 delivered for review (Session 16) — Proposed, nothing implemented
+- `docs/diagrams/target-architecture.{json,html}`: whole system, existing parts cite code at
+  `fe960d9`, future parts cite PROJECT_DECISIONS / archive lines.
+- `docs/diagrams/database-model.{json,html}`: tables as `database` nodes with labelled 1 — N links.
+- Both pass archify `finalize` (validate, deliver, strict check, browser-check); one DB-diagram
+  crossing removed by moving `AspNetUsers`; no perceptual (screenshot) review done.
+- `docs/database.md` + **D-49 (Proposed)**: derived available count (no counter), open-loan
+  invariant (filtered unique index + copy `RowVersion`), append-only history (`CHECK`s, FK
+  `NO ACTION`, no delete), indexes; open choices O1–O5 with recommendations. Departs from the
+  archive only in recommendation O3 (single `Members` table instead of subtype tables), which is
+  flagged for a Phase 2 decision.
+- Waiting for the user's review; Gate 2 needs its own approval.
 
 ## Unresolved decisions and why
 

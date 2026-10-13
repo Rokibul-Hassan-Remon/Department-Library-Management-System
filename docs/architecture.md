@@ -25,6 +25,13 @@ Binding rules:
 - Explicit mapping, no AutoMapper — D-17
 - Enforced by architecture tests E1/E3 ([PHASE_0_PLAN.md](PHASE_0_PLAN.md)).
 
+## Target system (Proposed, M15)
+
+Whole application after all phases: [diagrams/target-architecture.html](diagrams/target-architecture.html)
+(source JSON beside it; evidence at `fe960d9`). Database model:
+[diagrams/database-model.html](diagrams/database-model.html), explained in [database.md](database.md).
+Both are **Proposed** (D-49); the layer rules above are Approved.
+
 ## Current (received template, commit `1fdbe5e`)
 
 Interactive diagram generated from the code:

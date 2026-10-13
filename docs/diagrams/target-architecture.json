@@ -1,0 +1,384 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CSE Library: target architecture (Proposed, M15)",
+    "output": "docs/diagrams/target-architecture.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/Rokibul-Hassan-Remon/Department-Library-Management-System.git",
+      "link_mode": "local-only",
+      "revision": "fe960d9f93a924acafe3d0ed6d9e89e07496333c"
+    }
+  },
+  "components": [
+    {
+      "id": "staff",
+      "type": "external",
+      "label": "Staff browser",
+      "sublabel": "Admin / Librarian",
+      "pos": [
+        40,
+        220
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1170,
+          "end_line": 1182,
+          "label": "roles and access"
+        }
+      ]
+    },
+    {
+      "id": "member",
+      "type": "external",
+      "label": "Member browser",
+      "sublabel": "Student / Fellow portal",
+      "pos": [
+        290,
+        420
+      ],
+      "size": [
+        190,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1184,
+          "end_line": 1198,
+          "label": "member portal"
+        },
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1496,
+          "end_line": 1510,
+          "label": "own data only"
+        }
+      ]
+    },
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "Web (MVC)",
+      "sublabel": "CseLibrary.Web: controllers, Razor",
+      "pos": [
+        290,
+        220
+      ],
+      "size": [
+        190,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/CseLibrary.Web/Program.cs",
+          "line": 23,
+          "end_line": 38,
+          "label": "composition root"
+        }
+      ]
+    },
+    {
+      "id": "authz",
+      "type": "security",
+      "label": "Identity + permissions",
+      "sublabel": "cookie auth, DB permission check",
+      "pos": [
+        290,
+        30
+      ],
+      "size": [
+        190,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/CseLibrary.Web/Program.cs",
+          "line": 26,
+          "end_line": 36
+        },
+        {
+          "path": "src/CseLibrary.Web/Authorization/PermissionAuthorizationHandler.cs",
+          "line": 18
+        },
+        {
+          "path": "docs/PROJECT_DECISIONS.md",
+          "line": 1079,
+          "label": "D-37"
+        }
+      ]
+    },
+    {
+      "id": "services",
+      "type": "backend",
+      "label": "Services",
+      "sublabel": "Book, Member, Lending, Policy, Report",
+      "pos": [
+        600,
+        220
+      ],
+      "size": [
+        210,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/CseLibrary.Services/DependencyInjection.cs",
+          "line": 1
+        },
+        {
+          "path": "docs/PROJECT_DECISIONS.md",
+          "line": 1321,
+          "label": "D-48 lending rules"
+        }
+      ]
+    },
+    {
+      "id": "uow",
+      "type": "backend",
+      "label": "Unit of Work",
+      "sublabel": "typed repositories (Data)",
+      "pos": [
+        920,
+        220
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/CseLibrary.Core/Interfaces/IUnitOfWork.cs",
+          "line": 5,
+          "end_line": 12
+        },
+        {
+          "path": "docs/PROJECT_DECISIONS.md",
+          "line": 770,
+          "label": "D-12"
+        }
+      ]
+    },
+    {
+      "id": "dbctx",
+      "type": "backend",
+      "label": "ApplicationDbContext",
+      "sublabel": "EF Core + audit interceptor",
+      "pos": [
+        1230,
+        220
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/CseLibrary.Data/Data/ApplicationDbContext.cs",
+          "line": 7,
+          "end_line": 13
+        },
+        {
+          "path": "docs/PROJECT_DECISIONS.md",
+          "line": 921,
+          "label": "D-21 AuditLogs"
+        }
+      ]
+    },
+    {
+      "id": "sql",
+      "type": "database",
+      "label": "SQL Server",
+      "sublabel": "CseLibrary DB (.\\SQLEXPRESS)",
+      "pos": [
+        1230,
+        420
+      ],
+      "size": [
+        200,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/CseLibrary.Web/appsettings.json",
+          "line": 3,
+          "label": "connection string"
+        },
+        {
+          "path": "src/CseLibrary.Data/DependencyInjection.cs",
+          "line": 19,
+          "end_line": 20
+        }
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "Reminder worker",
+      "sublabel": "hosted service (Phase 4)",
+      "pos": [
+        920,
+        420
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1548,
+          "end_line": 1566,
+          "label": "outbox workflow"
+        },
+        {
+          "path": "docs/PROJECT_DECISIONS.md",
+          "line": 1131,
+          "label": "D-36"
+        }
+      ]
+    },
+    {
+      "id": "smtp",
+      "type": "external",
+      "label": "SMTP server",
+      "sublabel": "department mail",
+      "pos": [
+        600,
+        420
+      ],
+      "size": [
+        210,
+        64
+      ],
+      "sources": [
+        {
+          "path": "docs/archive/1st discussion.md",
+          "line": 1512,
+          "end_line": 1527,
+          "label": "reminder schedule"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "ASP.NET Core process (one deployable)",
+      "wraps": [
+        "web",
+        "authz",
+        "services",
+        "uow",
+        "dbctx",
+        "worker"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "staff-web",
+      "from": "staff",
+      "to": "web",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "member-web",
+      "from": "member",
+      "to": "web",
+      "label": "HTTPS, own data",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "web-authz",
+      "from": "web",
+      "to": "authz",
+      "label": "[HasPermission]",
+      "variant": "security",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "web-services",
+      "from": "web",
+      "to": "services",
+      "label": "I*Service calls",
+      "variant": "emphasis"
+    },
+    {
+      "id": "services-uow",
+      "from": "services",
+      "to": "uow",
+      "label": "IUnitOfWork",
+      "variant": "emphasis"
+    },
+    {
+      "id": "uow-dbctx",
+      "from": "uow",
+      "to": "dbctx",
+      "label": "one SaveChanges"
+    },
+    {
+      "id": "dbctx-sql",
+      "from": "dbctx",
+      "to": "sql",
+      "label": "SQL, Windows auth",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "worker-uow",
+      "from": "worker",
+      "to": "uow",
+      "label": "due loans, outbox",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "worker-smtp",
+      "from": "worker",
+      "to": "smtp",
+      "label": "send email",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Exists today (fe960d9)",
+      "items": [
+        "Web, Services, Data, Core projects (D-41)",
+        "Identity cookie login, permission policy",
+        "UoW + EF Core on SQL Server CseLibrary"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Proposed (not built)",
+      "items": [
+        "Library services: books, copies, members, lending, returns",
+        "Audit interceptor (D-21), DB permission check (D-37)",
+        "Reminder worker + outbox + SMTP (Phase 4, D-36)"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Binding rules",
+      "items": [
+        "Controllers call services only (D-10)",
+        "Services use IUnitOfWork, no EF queries (D-12)",
+        "Repositories never call SaveChanges"
+      ]
+    }
+  ]
+}
