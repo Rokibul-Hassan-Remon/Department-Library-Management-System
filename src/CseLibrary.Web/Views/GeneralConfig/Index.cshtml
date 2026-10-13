@@ -1,0 +1,26 @@
+@model IEnumerable<GeneralConfigDto>
+@{ ViewData["Title"] = "General Configs"; }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>General Configs</h2>
+    <a class="btn btn-primary" asp-action="Create">+ New Config</a>
+</div>
+
+<table class="table table-striped">
+    <thead><tr><th>Group</th><th>Key</th><th>Value</th><th>Description</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>@c.Group</td>
+                <td>@c.Key</td>
+                <td>@c.Value</td>
+                <td>@c.Description</td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@c.Id">Edit</a>
+                    <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@c.Id">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
