@@ -1,5 +1,14 @@
 # Session Handoff
 
+## ▶ Session 15 (2026-10-13) — read first; overrides the Session 14 block where they differ
+- Branch `feature/phase-0-gate-1`: Session 14 commits + `346496a` (close-out docs) + `8504115`
+  (Gate 1 review-finding correction, DECISION_LOG §37).
+- Evidence: build 0 errors (NU1903 AutoMapper only); tests 16/16; no `CseLibrary*` DB on LocalDB.
+- **Next:** user's Gate 1 approval → merge `feature/phase-0-gate-1` → `develop` `--no-ff` (separate
+  OK). Then M15 (architecture + DB/ER diagrams, DB design — Proposed only), then Gate 2 on approval.
+- Still open (PROJECT_DECISIONS §9 "Session 14"): `EF Tools` package (kept for now), old
+  `DefaultTemplate/` folder deletion, UI brand text.
+
 ## ▶ Session 14 (2026-10-13) — read first; overrides older blocks where they differ
 Session 14 closed at the user's request (conversation too long) — **Session 15 starts here.**
 

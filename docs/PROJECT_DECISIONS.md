@@ -1456,7 +1456,7 @@ audited), D-35 (reused, unchanged), D-37 (new permission), D-02 (scope unchanged
 **Session 14 (2026-10-13, DECISION_LOG §30–§35) — open now, ask at the start of Session 15:**
 | Item | Question | Recommendation |
 |---|---|---|
-| Gate 1 findings (§35) | Which of the 10 `/code-review` + 6 `/ponytail-review` findings to fix | One correction commit on `feature/phase-0-gate-1`: code-review 2–5, 8–10 + all ponytail items (incl. NU1510 `Configuration.Abstractions`, direct `Serilog.Sinks.File`); `Program.cs` catch-all → 0.10; stale test-DB sweep optional; Dockerfile restore layer → later Docker work |
+| ~~Gate 1 findings (§35)~~ **Resolved Session 15 (§37, `8504115`)** | Which of the 10 `/code-review` + 6 `/ponytail-review` findings to fix | One correction commit on `feature/phase-0-gate-1`: code-review 2–5, 8–10 + all ponytail items (incl. NU1510 `Configuration.Abstractions`, direct `Serilog.Sinks.File`); `Program.cs` catch-all → 0.10; stale test-DB sweep optional; Dockerfile restore layer → later Docker work |
 | `EF Tools` package | Keep `Microsoft.EntityFrameworkCore.Tools` (only for Visual Studio PMC)? | Remove if nobody uses PMC; CLI uses local `dotnet-ef` |
 | UI brand text | `_Layout.cshtml` still shows "DefaultTemplate" (title, navbar, footer) | Change with the first UI work (visible change, not part of the 0.3 rename) |
 | Old `DefaultTemplate/` folder | Holds only ignored `bin/`, `obj/`, `*.csproj.user` | Delete (needs approval; nothing tracked) |

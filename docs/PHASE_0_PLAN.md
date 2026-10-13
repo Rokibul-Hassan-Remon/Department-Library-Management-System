@@ -76,6 +76,8 @@ Decision references (D-xx) point to `docs/PROJECT_DECISIONS.md`.
 | [x] 0.5 | **Verified (Session 14):** commit `22d27ae` — `tests/CseLibrary.Tests` (xUnit 2.9.3, Mvc.Testing 10.0.12), `TestDatabase` guard, shared `AppFactory`, `SqlCommandCounter`, 15 tests green twice, no test DB left behind (DECISION_LOG §34). Test harness + characterization tests **before** refactoring. xUnit project, `TestDatabase` fixture (LocalDB `CseLibrary_Test_{guid}`, strict name guard checked before migrate **and** before cleanup, drops only the name it generated in this run — D-40), `WebApplicationFactory` (`public partial class Program`), SQL command counter. Characterize current behaviour: login, GeneralConfig CRUD, Users list, permission grant/revoke (documents today's stale-claim defect). | D-43 (Approved), 0.4 | `tests/<Prefix>.Tests/**` (prefix per 0.3), `Program.cs` | `dotnet test` green; DB-name guard test passes; no non-test DB touched |
 
 **⛔ Gate 1 review — stop and wait for user approval.** _Session 14: reported; review findings in DECISION_LOG §35; awaiting the user's fix choice and approval (PROJECT_DECISIONS §9 "Session 14")._
+_Session 15: findings fixed in correction commit `8504115` (DECISION_LOG §37); build 0 errors, tests
+16/16; awaiting Gate 1 approval (merge → `develop`)._
 
 ## Gate 2 — Mapping, contracts, Repository + UoW
 

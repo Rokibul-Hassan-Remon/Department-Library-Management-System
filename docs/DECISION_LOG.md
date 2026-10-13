@@ -1504,6 +1504,27 @@ execution notes, §9 "Session 14" open table), `requirements.md` (FR-M15-01..04)
 (0.5 [x], Gate 1 status), `README.md` (finding 9: net8.0 → .NET 10 — doc-only fix), this log.
 No code changed after `22d27ae`.
 
+### 37. Session 15 — Gate 1 review findings fixed (user: "YES", then "ok" per commit)
+Commits: `346496a` (Session 14 close-out docs), `8504115` (correction).
+**Fixed:** 2 — guard moved to `AppFactory.GuardDbContext` (`ConfigureDbContext` after the app's
+`UseSqlServer`): checks the connection string the app's DbContext resolves, before seeding opens a
+connection; new test runs the real `AddRepositoryLayer` with `.\SQLEXPRESS` and expects the refusal
+without connecting (mutation-checked: fails with the guard line removed). 3 — env vars restored in
+`finally` on dispose. 4 — `UseSetting` removed (env var is the single path). 5 — Drop test creates a
+real `CseLibrary_Test_*` DB, drops it, asserts the app DB survives. 8 — empty `src` solution folder
+removed. 10 — N+1 asserts `>= before + 3`. Ponytail: sync `WithService`, `Configuration.Abstractions`
+(NU1510 gone), direct `Serilog.Sinks.File` (same 7.0.0 comes via `Serilog.AspNetCore`) removed.
+**Not done (verified):** sync interceptor overrides kept — `UserService.GetAllAsync` runs sync
+`Users.ToList()` on the Users page, which the counter must see; `EF Tools` package kept (Visual Studio
+PMC). 1 → 0.10; 6 optional; 7 → Docker work; 9 fixed in `346496a`.
+**Correction-diff review:** `/code-review` 9 findings — fixed 4 (try/finally in Drop test, `EnsureSafe`
+before test `CREATE DATABASE`, assert guard message, env restore in `finally`); rejected 5 (single
+collection so no env race; per-scope recheck cost negligible; exact N+1 count reverts the agreed
+flake fix; Sinks.File version claim wrong; constructor check only re-validated the generated string).
+`/ponytail-review`: lean already.
+**Evidence:** `dotnet build CseLibrary.sln` 0 errors (warnings: NU1903 AutoMapper only);
+`dotnet test CseLibrary.sln` 16/16; 0 `CseLibrary*` DBs left on LocalDB; `.\SQLEXPRESS` untouched.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
