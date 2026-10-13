@@ -848,6 +848,8 @@ Retry-correctness rules (`ChangeTracker.Clear()` alone is **not** sufficient —
    - Identify which use cases need protection, explain the chosen mechanism, add feasible tests.
    - Report remaining limitations; never claim every ambiguous-commit scenario is fully proven.
    - The detailed use-case assessment is presented at Gate 2.
+   - **Session 18 (commit `8cd5f53`):** `ExecuteInTransactionAsync` gained an optional
+     `verifySucceeded` callback (used by role/user create). Phase 0 assessment: DECISION_LOG §48.
 4. Identity stores (`AddEntityFrameworkStores<ApplicationDbContext>`) resolve the same scoped
    context, so their internal SaveChanges join the transaction — **to be proven by test E2**, not
    assumed. Failed `IdentityResult` is converted to a failed `Result` (→ rollback).

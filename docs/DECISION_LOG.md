@@ -1659,7 +1659,7 @@ flake fix; Sinks.File version claim wrong; constructor check only re-validated t
   vulnerable packages; 0 `CseLibrary*` DBs left on LocalDB; `.\SQLEXPRESS` untouched.
   **User "ok"** → commit `0d01e4e`.
 
-### 47. Session 17 — Gate 2 reviews (`develop..HEAD`), findings not yet fixed
+### 47. Session 17 — Gate 2 reviews (`develop..HEAD`) — fixed in Session 18 (§48)
 `/code-review` (9 findings, no verify pass) and `/ponytail-review` ran on the gate diff.
 | # | Finding | Assessment | Recommendation |
 |---|---|---|---|
@@ -1680,6 +1680,57 @@ permission-lookup part of CR2 and P1–P3; CR2 cookie part → 0.9; CR6 kept. Th
 per-use-case duplicate-operation assessment + Gate 2 report. **Not yet answered** — the user asked to
 switch sessions (conversation too long); this log, the handoff and the plan were updated (Session 17
 close-out, not committed).
+
+### 48. Session 18 — review fixes committed; D-14 rule 3 use-case assessment
+- Close-out docs: **user "ok"** → commit `6470649`.
+- User answered "choose 2" = the §47 recommendation as proposed. **User "ok"** → commit `8cd5f53`
+  (16 files):
+  - CR1: `ExecuteInTransactionAsync(work, verifySucceeded = null, ct)` — optional callback (EF's
+    `verifySucceeded`); after a failed commit it is asked only for the attempt whose commit was sent,
+    true returns that attempt's result instead of re-running. Role/user create pass "row with the
+    generated id exists". Signature change of the approved 0.7 method (one optional parameter, still
+    one method).
+  - CR3/CR8/P2: `Services/DuplicateKeyExtensions.cs` — `Task<Result>.OnDuplicate(failure)` +
+    `IUnitOfWork.SaveAsync`; used by GeneralConfig/Permission create+update, Role create+update, User
+    create. A duplicate past the pre-check is `ErrorCodes.Duplicate`, not HTTP 500.
+  - CR4: `IPermissionRepository.GetExistingIdsAsync` — role create/update keep only existing,
+    non-deleted ids (update therefore also drops links to deleted permissions).
+  - CR5: soft delete sets the entry `Modified` (other pending edits kept). Cascade part **not** changed:
+    a tracked non-`BaseEntity` dependent of a soft-deleted principal is still hard-deleted; no current
+    code path does this.
+  - CR7: `PageRequest.ClampTo(total)` — past-the-end page shows the last page.
+  - CR9: seeder restores the latest deleted built-in permission when no live row has the name.
+  - CR2 (part): `GetNamesForUserAsync` returns nothing for a user who is not `Active`; cookie part → 0.9.
+  - P1 `ErrorCodes.Concurrency` deleted; P3 ternary removed. CR6 kept: `ApplicationUser.UpdatedAt`
+    means "last write of the row", including Identity-internal writes (failed login, lockout).
+  - Tests 44 → 49: ambiguous commit verified not re-run (mutation-checked: with `verifySucceeded`
+    returning false the old duplicate error comes back), duplicate role name past the pre-check,
+    unknown/deleted permission ids dropped, soft delete keeps pending edit, seeder restores permission;
+    CR7 and CR2 asserted in existing tests.
+  - Evidence: build 0 errors / 0 warnings; tests 49/49 twice; `has-pending-model-changes` = none;
+    0 `CseLibrary*` DBs on LocalDB; `.\SQLEXPRESS` untouched.
+
+**D-14 rule 3 — duplicate-operation assessment (Phase 0 admin use cases).** Situation: the commit
+reaches SQL Server but the answer is lost, and EF's retry strategy runs the operation again. A single
+`SaveChanges` is re-sent as is; `ExecuteInTransactionAsync` re-runs the whole delegate.
+
+| Use case | Write path | Risk if repeated | Protection | Test | Remaining limitation |
+|---|---|---|---|---|---|
+| Config create | 1 SaveChanges | Second INSERT | Filtered unique index `Key` | G1, soft-delete/key-reuse test | User may see "Key already exists" although the row was created |
+| Config update | 1 SaveChanges | Same UPDATE again | Idempotent (absolute values, no concurrency token) | — (analysis) | None known |
+| Config delete | 1 SaveChanges (soft) | `Status = 3` again | Idempotent | soft-delete test | None known |
+| Permission create / update / delete | same as Config | same | Filtered unique index `Name`; idempotent update/delete | CR3 helper shared; G1 | Same misleading-message risk on create |
+| Role create | Transaction (RoleManager + RolePermissions) | Delegate re-run → "name taken" | `verifySucceeded` (role id exists) + unique `RoleNameIndex` | Ambiguous-commit test at UoW level | Role/user wiring of the callback is not separately fault-injected |
+| Role update | Transaction | Delegate re-run | Idempotent: role reloaded and desired permission set recomputed inside the delegate | F-tests (rollback/retry) | None known |
+| Role delete | 1 SaveChanges (RoleManager, `ConcurrencyStamp`) | DELETE matches 0 rows | Data correct (row already gone) | — (analysis) | User may see Identity "optimistic concurrency failure" although deleted |
+| User create | Transaction (UserManager + roles) | Delegate re-run → "name taken" | `verifySucceeded` (user id exists) + unique `UserNameIndex` | as Role create | Email has no DB unique index (`RequireUniqueEmail` is app-level): two simultaneous creates with one email can both succeed |
+| User update | Transaction | Delegate re-run | Idempotent: user reloaded inside the delegate | F1 | None known |
+| User delete / reset password | 1 SaveChanges (UserManager, `ConcurrencyStamp`) | UPDATE/DELETE matches 0 rows | Data correct | — (analysis) | User may see a concurrency failure although it succeeded |
+
+Not claimed: that every ambiguous-commit case is proven. Only the transaction path is
+fault-injected; single-SaveChanges rows are analysis. The worst remaining outcome is a misleading
+error message, not wrong data, except duplicate email (a race, not a retry), which needs a
+filtered unique index on `NormalizedEmail` — a schema decision for the user (proposal, not done).
 
 ## Unresolved decisions and why
 

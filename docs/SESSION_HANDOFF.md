@@ -1,6 +1,25 @@
 # Session Handoff
 
-## ▶ Session 17 (2026-10-13) — read first; overrides older blocks where they differ
+## ▶ Session 18 (2026-10-13) — read first; overrides older blocks where they differ
+
+### State (verified 2026-10-13)
+- Branch **`feature/phase-0-gate-2`**, `develop..HEAD` = 0.6 `51e189a`, 0.7 `48a9acf`, 0.8 `0d01e4e`,
+  close-out docs `6470649`, review fixes `8cd5f53` (each on the user's "ok").
+- Evidence after `8cd5f53`: build 0 errors / 0 warnings; tests **49/49** twice; no pending model
+  changes; 0 `CseLibrary*` DBs on LocalDB; `.\SQLEXPRESS` untouched.
+- Review fixes + **D-14 rule 3 assessment**: DECISION_LOG §48. Gate 2 report given to the user.
+- _(uncommitted)_ Session 18 docs: this block, DECISION_LOG §47 title + §48, PHASE_0_PLAN Gate 2,
+  PROJECT_DECISIONS D-14 note.
+
+### ⛔ Next action
+1. Wait for the user's **Gate 2 approval**. Do not start Gate 3 (0.9–0.12) without it.
+2. Docs commit (staged list + message, user's OK): `Record Gate 2 review fixes and D-14 assessment (docs)`.
+3. On approval: merge `feature/phase-0-gate-2` → `develop` `--no-ff` — needs its **own** OK.
+- Open proposal (not done): filtered unique index on `AspNetUsers.NormalizedEmail` (duplicate-email
+  race, §48). Still open: O1–O5, `EF Tools` package, UI brand text, deleting `feature/phase-0-gate-1`,
+  `UsersController` role list via `RoleManager.Roles` (0.9), CR2 cookie part (0.9), CR5 cascade part.
+
+## Session 17 (2026-10-13) — superseded by the Session 18 block above where they differ
 Session 17 closed at the user's request (conversation too long) — **Session 18 starts here.**
 
 ### State (verified 2026-10-13)
