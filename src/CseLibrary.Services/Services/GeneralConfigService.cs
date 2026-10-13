@@ -1,8 +1,8 @@
-using AutoMapper;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
+using CseLibrary.Services.Mapping;
 using Microsoft.EntityFrameworkCore;
 
 namespace CseLibrary.Services.Services;
@@ -10,30 +10,28 @@ namespace CseLibrary.Services.Services;
 public class GeneralConfigService : IGeneralConfigService
 {
     private readonly IUnitOfWork _uow;
-    private readonly IMapper _mapper;
 
-    public GeneralConfigService(IUnitOfWork uow, IMapper mapper)
+    public GeneralConfigService(IUnitOfWork uow)
     {
         _uow = uow;
-        _mapper = mapper;
     }
 
     public async Task<IEnumerable<GeneralConfigDto>> GetAllAsync()
     {
         var list = await _uow.GeneralConfigs.Query().AsNoTracking().OrderBy(c => c.Group).ThenBy(c => c.Key).ToListAsync();
-        return list.Select(c => _mapper.Map<GeneralConfigDto>(c));
+        return list.Select(c => c.ToDto());
     }
 
     public async Task<GeneralConfigDto?> GetByIdAsync(int id)
     {
         var entity = await _uow.GeneralConfigs.GetByIdAsync(id);
-        return entity == null ? null : _mapper.Map<GeneralConfigDto>(entity);
+        return entity?.ToDto();
     }
 
     public async Task<GeneralConfigDto?> GetByKeyAsync(string key)
     {
         var entity = await _uow.GeneralConfigs.Query().AsNoTracking().FirstOrDefaultAsync(c => c.Key == key);
-        return entity == null ? null : _mapper.Map<GeneralConfigDto>(entity);
+        return entity?.ToDto();
     }
 
     public async Task<(bool Success, string? Error, GeneralConfigDto? Config)> CreateAsync(CreateGeneralConfigDto dto)
@@ -41,10 +39,10 @@ public class GeneralConfigService : IGeneralConfigService
         if (await _uow.GeneralConfigs.AnyAsync(c => c.Key == dto.Key))
             return (false, "Key already exists", null);
 
-        var entity = _mapper.Map<GeneralConfig>(dto);
+        var entity = new GeneralConfig { Key = dto.Key, Value = dto.Value, Description = dto.Description, Group = dto.Group };
         await _uow.GeneralConfigs.AddAsync(entity);
         await _uow.SaveChangesAsync();
-        return (true, null, _mapper.Map<GeneralConfigDto>(entity));
+        return (true, null, entity.ToDto());
     }
 
     public async Task<(bool Success, string? Error)> UpdateAsync(UpdateGeneralConfigDto dto)

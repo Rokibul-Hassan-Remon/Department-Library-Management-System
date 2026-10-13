@@ -1,8 +1,8 @@
-using AutoMapper;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
+using CseLibrary.Services.Mapping;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,13 +12,11 @@ public class RoleService : IRoleService
 {
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly IUnitOfWork _uow;
-    private readonly IMapper _mapper;
 
-    public RoleService(RoleManager<ApplicationRole> roleManager, IUnitOfWork uow, IMapper mapper)
+    public RoleService(RoleManager<ApplicationRole> roleManager, IUnitOfWork uow)
     {
         _roleManager = roleManager;
         _uow = uow;
-        _mapper = mapper;
     }
 
     public async Task<IEnumerable<RoleDto>> GetAllAsync()
@@ -26,7 +24,7 @@ public class RoleService : IRoleService
         var roles = await _roleManager.Roles
             .Include(r => r.RolePermissions)
             .ToListAsync();
-        return roles.Select(r => _mapper.Map<RoleDto>(r));
+        return roles.Select(r => r.ToDto());
     }
 
     public async Task<RoleDto?> GetByIdAsync(string id)
@@ -34,7 +32,7 @@ public class RoleService : IRoleService
         var role = await _roleManager.Roles
             .Include(r => r.RolePermissions)
             .FirstOrDefaultAsync(r => r.Id == id);
-        return role == null ? null : _mapper.Map<RoleDto>(role);
+        return role?.ToDto();
     }
 
     public async Task<(bool Success, string? Error, RoleDto? Role)> CreateAsync(CreateRoleDto dto)
@@ -51,7 +49,7 @@ public class RoleService : IRoleService
             await _uow.SaveChangesAsync();
         }
 
-        var roleDto = _mapper.Map<RoleDto>(role);
+        var roleDto = role.ToDto();
         roleDto.PermissionIds = dto.PermissionIds;
         return (true, null, roleDto);
     }

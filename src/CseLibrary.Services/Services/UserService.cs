@@ -1,7 +1,7 @@
-using AutoMapper;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces.Services;
+using CseLibrary.Services.Mapping;
 using Microsoft.AspNetCore.Identity;
 
 namespace CseLibrary.Services.Services;
@@ -9,12 +9,10 @@ namespace CseLibrary.Services.Services;
 public class UserService : IUserService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IMapper _mapper;
 
-    public UserService(UserManager<ApplicationUser> userManager, IMapper mapper)
+    public UserService(UserManager<ApplicationUser> userManager)
     {
         _userManager = userManager;
-        _mapper = mapper;
     }
 
     public async Task<IEnumerable<UserDto>> GetAllAsync()
@@ -23,7 +21,7 @@ public class UserService : IUserService
         var result = new List<UserDto>();
         foreach (var u in users)
         {
-            var dto = _mapper.Map<UserDto>(u);
+            var dto = u.ToDto();
             dto.Roles = await _userManager.GetRolesAsync(u);
             result.Add(dto);
         }
@@ -34,7 +32,7 @@ public class UserService : IUserService
     {
         var user = await _userManager.FindByIdAsync(id);
         if (user == null) return null;
-        var dto = _mapper.Map<UserDto>(user);
+        var dto = user.ToDto();
         dto.Roles = await _userManager.GetRolesAsync(user);
         return dto;
     }
@@ -61,7 +59,7 @@ public class UserService : IUserService
                 return (false, string.Join("; ", addRoles.Errors.Select(e => e.Description)), null);
         }
 
-        var result = _mapper.Map<UserDto>(user);
+        var result = user.ToDto();
         result.Roles = await _userManager.GetRolesAsync(user);
         return (true, null, result);
     }

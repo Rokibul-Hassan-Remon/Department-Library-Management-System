@@ -1,8 +1,8 @@
-using AutoMapper;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
+using CseLibrary.Services.Mapping;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,26 +11,24 @@ namespace CseLibrary.Services.Services;
 public class PermissionService : IPermissionService
 {
     private readonly IUnitOfWork _uow;
-    private readonly IMapper _mapper;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public PermissionService(IUnitOfWork uow, IMapper mapper, UserManager<ApplicationUser> userManager)
+    public PermissionService(IUnitOfWork uow, UserManager<ApplicationUser> userManager)
     {
         _uow = uow;
-        _mapper = mapper;
         _userManager = userManager;
     }
 
     public async Task<IEnumerable<PermissionDto>> GetAllAsync()
     {
         var items = await _uow.Permissions.Query().AsNoTracking().OrderBy(p => p.Module).ThenBy(p => p.Name).ToListAsync();
-        return items.Select(p => _mapper.Map<PermissionDto>(p));
+        return items.Select(p => p.ToDto());
     }
 
     public async Task<PermissionDto?> GetByIdAsync(int id)
     {
         var item = await _uow.Permissions.GetByIdAsync(id);
-        return item == null ? null : _mapper.Map<PermissionDto>(item);
+        return item?.ToDto();
     }
 
     public async Task<(bool Success, string? Error, PermissionDto? Permission)> CreateAsync(CreatePermissionDto dto)
@@ -38,10 +36,10 @@ public class PermissionService : IPermissionService
         if (await _uow.Permissions.AnyAsync(p => p.Name == dto.Name))
             return (false, "Permission name already exists", null);
 
-        var entity = _mapper.Map<Permission>(dto);
+        var entity = new Permission { Name = dto.Name, DisplayName = dto.DisplayName, Module = dto.Module, Description = dto.Description };
         await _uow.Permissions.AddAsync(entity);
         await _uow.SaveChangesAsync();
-        return (true, null, _mapper.Map<PermissionDto>(entity));
+        return (true, null, entity.ToDto());
     }
 
     public async Task<(bool Success, string? Error)> UpdateAsync(UpdatePermissionDto dto)
