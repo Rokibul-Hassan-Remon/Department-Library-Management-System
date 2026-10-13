@@ -1731,6 +1731,15 @@ Not claimed: that every ambiguous-commit case is proven. Only the transaction pa
 fault-injected; single-SaveChanges rows are analysis. The worst remaining outcome is a misleading
 error message, not wrong data, except duplicate email (a race, not a retry), which needs a
 filtered unique index on `NormalizedEmail` — a schema decision for the user (proposal, not done).
+- Docs: **user "ok"** → commit `d779249`.
+
+### 49. Session 18 — Gate 2 approved and merged
+- Gate 2 report given; **user "ok"** = Gate 2 approved. Separate **user "ok"** → merge
+  `feature/phase-0-gate-2` → `develop` `--no-ff` = `798ccbd`.
+- Evidence on `develop` after the merge: build 0 errors / 0 warnings; tests 49/49; 0 `CseLibrary*` DBs
+  on LocalDB; `.\SQLEXPRESS` untouched.
+- Not answered: email unique-index proposal (§48) stays open. `feature/phase-0-gate-2` kept (deleting
+  needs the user's OK). Gate 3 (0.9–0.12) not started; it needs its own approval.
 
 ## Unresolved decisions and why
 

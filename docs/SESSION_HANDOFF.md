@@ -11,10 +11,14 @@
 - _(uncommitted)_ Session 18 docs: this block, DECISION_LOG §47 title + §48, PHASE_0_PLAN Gate 2,
   PROJECT_DECISIONS D-14 note.
 
+- **Gate 2 approved** (user "ok") and merged: `develop` @ `798ccbd` (`--no-ff`); docs `d779249`;
+  49/49 tests on `develop` after the merge (DECISION_LOG §49).
+
 ### ⛔ Next action
-1. Wait for the user's **Gate 2 approval**. Do not start Gate 3 (0.9–0.12) without it.
-2. Docs commit (staged list + message, user's OK): `Record Gate 2 review fixes and D-14 assessment (docs)`.
-3. On approval: merge `feature/phase-0-gate-2` → `develop` `--no-ff` — needs its **own** OK.
+1. Verify read-only: branch `develop`, `git log --oneline -5`, `git status`.
+2. If the approval/merge docs are uncommitted: show list + message, commit on the user's OK
+   (`Record Gate 2 approval and merge (docs)`).
+3. Ask explicitly: **start Gate 3 (0.9–0.12)** on `feature/phase-0-gate-3` from `develop`? Not approved yet.
 - Open proposal (not done): filtered unique index on `AspNetUsers.NormalizedEmail` (duplicate-email
   race, §48). Still open: O1–O5, `EF Tools` package, UI brand text, deleting `feature/phase-0-gate-1`,
   `UsersController` role list via `RoleManager.Roles` (0.9), CR2 cookie part (0.9), CR5 cascade part.
