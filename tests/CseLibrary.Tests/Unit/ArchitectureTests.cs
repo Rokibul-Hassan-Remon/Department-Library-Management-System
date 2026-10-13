@@ -43,8 +43,7 @@ public class ArchitectureTests
     public void Unit_of_work_has_no_generic_or_Type_based_repository_accessor()
     {
         var accessors = typeof(IUnitOfWork).GetMethods()
-            .Where(m => m.IsGenericMethod && IsRepository(m.ReturnType.IsGenericType ? m.ReturnType.GetGenericTypeDefinition() : m.ReturnType)
-                        || m.GetParameters().Any(p => p.ParameterType == typeof(Type)));
+            .Where(m => m.IsGenericMethod && IsRepository(m.ReturnType) || m.GetParameters().Any(p => p.ParameterType == typeof(Type)));
         Assert.Empty(accessors);
         Assert.False(typeof(IDisposable).IsAssignableFrom(typeof(IUnitOfWork)));
     }

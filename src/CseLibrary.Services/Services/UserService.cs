@@ -16,8 +16,11 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
     public Task<UserDto?> GetByIdAsync(string id, CancellationToken ct = default) => uow.Users.GetDetailsAsync(id, ct);
 
     // UserManager saves on its own; the transaction makes user + roles one change (D-14).
-    public Task<Result> CreateAsync(CreateUserDto dto, CancellationToken ct = default) =>
-        uow.ExecuteInTransactionAsync(async _ =>
+    // After an ambiguous commit the user's existence decides, so a retry never reports its own name as taken.
+    public Task<Result> CreateAsync(CreateUserDto dto, CancellationToken ct = default)
+    {
+        string? userId = null;
+        return uow.ExecuteInTransactionAsync(async _ =>
         {
             var user = new ApplicationUser
             {
@@ -26,10 +29,13 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
                 FullName = dto.FullName,
                 EmailConfirmed = true
             };
+            userId = user.Id;
             var create = (await userManager.CreateAsync(user, dto.Password)).ToResult();
             if (!create.Succeeded || dto.Roles.Count == 0) return create;
             return (await userManager.AddToRolesAsync(user, dto.Roles)).ToResult();
-        }, ct);
+        }, verifySucceeded: async c => await uow.Users.GetDetailsAsync(userId!, c) != null, ct: ct)
+        .OnDuplicate(Result.Failure(ErrorCodes.Duplicate, "User name is already taken."));
+    }
 
     public Task<Result> UpdateAsync(UpdateUserDto dto, CancellationToken ct = default) =>
         uow.ExecuteInTransactionAsync(async _ =>
@@ -52,7 +58,7 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
                 if (!removed.Succeeded) return removed;
             }
             return toAdd.Count > 0 ? (await userManager.AddToRolesAsync(user, toAdd)).ToResult() : Result.Success();
-        }, ct);
+        }, ct: ct);
 
     public async Task<Result> DeleteAsync(string id, CancellationToken ct = default)
     {

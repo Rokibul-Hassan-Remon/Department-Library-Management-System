@@ -16,6 +16,7 @@ public class UserReadRepository(ApplicationDbContext db) : IUserReadRepository
     public async Task<PagedResult<UserDto>> GetPageAsync(PageRequest page, CancellationToken ct = default)
     {
         var total = await db.Users.CountAsync(ct);
+        page = page.ClampTo(total);
         var items = await ToDto(db.Users.OrderBy(u => u.UserName).ThenBy(u => u.Id).Skip(page.Skip).Take(page.PageSize))
             .ToListAsync(ct);
         return new PagedResult<UserDto>(items, total, page.Page, page.PageSize);

@@ -17,9 +17,13 @@ public class PermissionRepository(ApplicationDbContext db) : Repository<Permissi
     public Task<bool> NameExistsAsync(string name, int? excludeId, CancellationToken ct = default) =>
         Db.Permissions.AnyAsync(p => p.Name == name && p.Id != excludeId, ct);
 
+    public async Task<IReadOnlyList<int>> GetExistingIdsAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default) =>
+        await Db.Permissions.Where(p => ids.Contains(p.Id)).Select(p => p.Id).ToListAsync(ct);
+
     public async Task<IReadOnlyList<string>> GetNamesForUserAsync(string userId, CancellationToken ct = default) =>
-        await (from ur in Db.UserRoles
-               where ur.UserId == userId
+        await (from u in Db.Users
+               where u.Id == userId && u.Status == RecordStatus.Active
+               join ur in Db.UserRoles on u.Id equals ur.UserId
                join rp in Db.RolePermissions on ur.RoleId equals rp.RoleId
                join p in Db.Permissions on rp.PermissionId equals p.Id // filtered: deleted permissions drop out
                select p.Name).Distinct().ToListAsync(ct);

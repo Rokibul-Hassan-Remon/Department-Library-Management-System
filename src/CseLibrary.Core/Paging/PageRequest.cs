@@ -15,4 +15,11 @@ public sealed record PageRequest
     public int Page { get; }
     public int PageSize { get; }
     public int Skip => (Page - 1) * PageSize;
+
+    /// <summary>The last page instead of an empty one when this page is past the end.</summary>
+    public PageRequest ClampTo(int totalCount)
+    {
+        var lastPage = Math.Max(1, (totalCount + PageSize - 1) / PageSize);
+        return Page <= lastPage ? this : new PageRequest(lastPage, PageSize);
+    }
 }

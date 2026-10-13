@@ -1,6 +1,5 @@
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
-using CseLibrary.Core.Exceptions;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Core.Results;
@@ -26,7 +25,7 @@ public class GeneralConfigService(IUnitOfWork uow) : IGeneralConfigService
         {
             Key = dto.Key, Value = dto.Value, Description = dto.Description, Group = dto.Group
         }, ct);
-        return await SaveAsync(ct);
+        return await uow.SaveAsync(ct).OnDuplicate(KeyExists());
     }
 
     public async Task<Result> UpdateAsync(UpdateGeneralConfigDto dto, CancellationToken ct = default)
@@ -39,7 +38,7 @@ public class GeneralConfigService(IUnitOfWork uow) : IGeneralConfigService
         entity.Value = dto.Value;
         entity.Description = dto.Description;
         entity.Group = dto.Group;
-        return await SaveAsync(ct);
+        return await uow.SaveAsync(ct).OnDuplicate(KeyExists());
     }
 
     public async Task<Result> DeleteAsync(int id, CancellationToken ct = default)
@@ -48,22 +47,7 @@ public class GeneralConfigService(IUnitOfWork uow) : IGeneralConfigService
         if (entity == null) return NotFound();
 
         uow.GeneralConfigs.Remove(entity);
-        await uow.SaveChangesAsync(ct);
-        return Result.Success();
-    }
-
-    // The pre-check gives the friendly message; the filtered unique index catches a concurrent duplicate.
-    private async Task<Result> SaveAsync(CancellationToken ct)
-    {
-        try
-        {
-            await uow.SaveChangesAsync(ct);
-            return Result.Success();
-        }
-        catch (DuplicateKeyException)
-        {
-            return KeyExists();
-        }
+        return await uow.SaveAsync(ct);
     }
 
     private static Result KeyExists() => Result.Failure(ErrorCodes.Duplicate, "Key already exists");

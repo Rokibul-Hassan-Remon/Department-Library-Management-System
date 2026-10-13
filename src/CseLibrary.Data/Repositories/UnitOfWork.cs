@@ -5,6 +5,7 @@ using CseLibrary.Core.Results;
 using CseLibrary.Data.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CseLibrary.Data.Repositories;
 
@@ -39,15 +40,19 @@ public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
     }
 
     public async Task<TResult> ExecuteInTransactionAsync<TResult>(
-        Func<CancellationToken, Task<TResult>> work, CancellationToken ct = default) where TResult : Result
+        Func<CancellationToken, Task<TResult>> work,
+        Func<CancellationToken, Task<bool>>? verifySucceeded = null,
+        CancellationToken ct = default) where TResult : Result
     {
         if (db.Database.CurrentTransaction is not null)
             throw new InvalidOperationException("A transaction is already active; nested ExecuteInTransactionAsync is not supported.");
 
+        TResult? committing = null; // the attempt whose commit was sent; verifySucceeded checks it landed
         try
         {
-            return await db.Database.CreateExecutionStrategy().ExecuteAsync(async attemptCt =>
+            return await db.Database.CreateExecutionStrategy().ExecuteAsync<object?, TResult>(null, async (_, _, attemptCt) =>
             {
+                committing = null;
                 db.ChangeTracker.Clear(); // a retry starts from fresh state (D-14)
                 await using var tx = await db.Database.BeginTransactionAsync(attemptCt);
                 try
@@ -60,6 +65,7 @@ public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
                         return result;
                     }
                     await db.SaveChangesAsync(attemptCt);
+                    committing = result;
                     await tx.CommitAsync(attemptCt);
                     return result;
                 }
@@ -68,7 +74,8 @@ public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
                     db.ChangeTracker.Clear(); // disposing tx rolls back
                     throw;
                 }
-            }, ct);
+            }, async (_, _, verifyCt) => new ExecutionResult<TResult>(
+                committing is not null && verifySucceeded is not null && await verifySucceeded(verifyCt), committing!), ct);
         }
         catch (DbUpdateException ex) when (Translate(ex) is { } translated)
         {

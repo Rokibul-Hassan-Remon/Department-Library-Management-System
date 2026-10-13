@@ -40,21 +40,17 @@ public static class DbSeeder
 
     private static async Task SeedPermissionsAsync(ApplicationDbContext db)
     {
-        var existing = await db.Permissions.IgnoreQueryFilters().Select(p => p.Name).ToListAsync();
-        var toAdd = Permissions.All()
-            .Where(p => !existing.Contains(p.Name))
-            .Select(p => new Permission
-            {
-                Name = p.Name,
-                DisplayName = p.Name,
-                Module = p.Module
-            })
-            .ToList();
-        if (toAdd.Count > 0)
+        var existing = await db.Permissions.IgnoreQueryFilters().ToListAsync();
+        foreach (var (name, module) in Permissions.All())
         {
-            db.Permissions.AddRange(toAdd);
-            await db.SaveChangesAsync();
+            var rows = existing.Where(p => p.Name == name).ToList();
+            if (rows.Any(p => p.Status != RecordStatus.Deleted)) continue;
+
+            // A built-in permission must exist: restore the latest deleted row, or add it.
+            if (rows.MaxBy(p => p.Id) is { } deleted) deleted.Status = RecordStatus.Active;
+            else db.Permissions.Add(new Permission { Name = name, DisplayName = name, Module = module });
         }
+        await db.SaveChangesAsync();
     }
 
     private static async Task SeedAdminRoleAsync(ApplicationDbContext db, RoleManager<ApplicationRole> roleManager, string roleName)

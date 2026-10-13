@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Net;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
@@ -8,11 +9,15 @@ using CseLibrary.Core.Paging;
 using CseLibrary.Core.Results;
 using CseLibrary.Data.Data;
 using CseLibrary.Data.Repositories;
+using CseLibrary.Services.Services;
 using CseLibrary.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CseLibrary.Tests.Integration;
 
@@ -51,7 +56,9 @@ public class DataLayerTests(AppFactory app)
 
             var last = await users.GetPageAsync(new PageRequest(first.TotalPages, 2));
             Assert.Equal(all.TotalCount - (first.TotalPages - 1) * 2, last.Items.Count);
-            Assert.Empty((await users.GetPageAsync(new PageRequest(first.TotalPages + 1, 2))).Items);
+            var pastEnd = await users.GetPageAsync(new PageRequest(first.TotalPages + 1, 2)); // CR7: clamped to the last page
+            Assert.Equal(first.TotalPages, pastEnd.Page);
+            Assert.Equal(last.Items.Select(u => u.Id), pastEnd.Items.Select(u => u.Id));
 
             var ids = new List<string>();
             for (var p = 1; p <= first.TotalPages; p++)
@@ -135,6 +142,101 @@ public class DataLayerTests(AppFactory app)
         Assert.Equal(2, attempts);
         Assert.Equal(1, await db.GeneralConfigs.CountAsync(c => c.Key == key));
     }
+
+    [Fact] // CR1: a commit that reached the database but whose answer was lost is verified, not re-run
+    public async Task Ambiguous_commit_is_verified_instead_of_rerun()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlServer(app.Database.ConnectionString, sql => sql.ExecutionStrategy(d => new RetryOnSimulatedFailure(d)))
+            .AddInterceptors(new LoseFirstCommitAnswer())
+            .Options;
+        await using var db = new ApplicationDbContext(options);
+        var uow = new UnitOfWork(db);
+        var key = NewKey();
+        var attempts = 0;
+
+        var result = await uow.ExecuteInTransactionAsync(async ct =>
+        {
+            attempts++;
+            await uow.GeneralConfigs.AddAsync(new GeneralConfig { Key = key }, ct);
+            return Result.Success();
+        }, verifySucceeded: ct => uow.GeneralConfigs.KeyExistsAsync(key, null, ct));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(1, attempts);
+        Assert.Equal(1, await db.GeneralConfigs.CountAsync(c => c.Key == key));
+    }
+
+    [Fact] // CR3: a duplicate name that slips past the pre-check is a failed Result, not an HTTP 500
+    public Task Duplicate_role_name_past_the_pre_check_is_a_failed_result() =>
+        app.WithServiceAsync(async sp =>
+        {
+            var name = "Dup_" + Guid.NewGuid().ToString("N")[..8];
+            Assert.True((await sp.GetRequiredService<IRoleService>().CreateAsync(new CreateRoleDto { Name = name })).Succeeded);
+
+            // No validators = no pre-check, as when two requests pass it at the same moment.
+            var noPreCheck = new RoleManager<ApplicationRole>(sp.GetRequiredService<IRoleStore<ApplicationRole>>(), [],
+                sp.GetRequiredService<ILookupNormalizer>(), sp.GetRequiredService<IdentityErrorDescriber>(),
+                sp.GetRequiredService<ILogger<RoleManager<ApplicationRole>>>());
+            var result = await new RoleService(noPreCheck, sp.GetRequiredService<IUnitOfWork>())
+                .CreateAsync(new CreateRoleDto { Name = name });
+
+            Assert.Equal(ErrorCodes.Duplicate, result.ErrorCode);
+        });
+
+    [Fact] // CR4: deleted or unknown permission ids are dropped instead of failing the FK
+    public Task Role_gets_only_existing_permission_ids() =>
+        app.WithServiceAsync(async sp =>
+        {
+            var permissions = sp.GetRequiredService<IPermissionService>();
+            var name = "Test.Perm." + Guid.NewGuid().ToString("N")[..8];
+            Assert.True((await permissions.CreateAsync(new CreatePermissionDto { Name = name, Module = "Test" })).Succeeded);
+            var all = await permissions.GetAllAsync();
+            var deletedId = all.Single(p => p.Name == name).Id;
+            var validId = all.First(p => p.Id != deletedId).Id;
+            Assert.True((await permissions.DeleteAsync(deletedId)).Succeeded);
+
+            var created = await sp.GetRequiredService<IRoleService>().CreateAsync(new CreateRoleDto
+            {
+                Name = "Role_" + Guid.NewGuid().ToString("N")[..8], PermissionIds = [validId, deletedId, int.MaxValue]
+            });
+
+            Assert.True(created.Succeeded, created.Error);
+            Assert.Equal([validId], await sp.GetRequiredService<ApplicationDbContext>().RolePermissions
+                .Where(rp => rp.RoleId == created.Value).Select(rp => rp.PermissionId).ToListAsync());
+        });
+
+    [Fact] // CR5: a soft delete keeps other pending edits of the same entity
+    public Task Soft_delete_keeps_pending_edits() =>
+        app.WithServiceAsync(async sp =>
+        {
+            var uow = sp.GetRequiredService<IUnitOfWork>();
+            var config = new GeneralConfig { Key = NewKey(), Value = "old" };
+            await uow.GeneralConfigs.AddAsync(config);
+            await uow.SaveChangesAsync();
+
+            config.Value = "new";
+            uow.GeneralConfigs.Remove(config);
+            await uow.SaveChangesAsync();
+
+            var row = await sp.GetRequiredService<ApplicationDbContext>().GeneralConfigs
+                .IgnoreQueryFilters().AsNoTracking().SingleAsync(c => c.Id == config.Id);
+            Assert.Equal((RecordStatus.Deleted, "new"), (row.Status, row.Value));
+        });
+
+    [Fact] // CR9: startup seeding restores a deleted built-in permission
+    public Task Seeder_restores_a_deleted_built_in_permission() =>
+        app.WithServiceAsync(async sp =>
+        {
+            var permissions = sp.GetRequiredService<IPermissionService>();
+            var id = (await permissions.GetAllAsync()).Single(p => p.Name == CseLibrary.Core.Constants.Permissions.Users.Delete).Id;
+            Assert.True((await permissions.DeleteAsync(id)).Succeeded);
+
+            await DbSeeder.SeedAsync(sp.GetRequiredService<ApplicationDbContext>(), sp.GetRequiredService<UserManager<ApplicationUser>>(),
+                sp.GetRequiredService<RoleManager<ApplicationRole>>(), sp.GetRequiredService<IConfiguration>());
+
+            Assert.NotNull(await permissions.GetByIdAsync(id));
+        });
 
     [Fact] // F3
     public Task Failed_result_rolls_back_and_clears_the_change_tracker() =>
@@ -229,16 +331,19 @@ public class DataLayerTests(AppFactory app)
         });
     }
 
-    [Fact] // D-51: only Active users can log in
-    public async Task Inactive_user_cannot_log_in()
+    [Fact] // D-51: only Active users can log in; CR2: or hold permissions
+    public async Task Inactive_user_cannot_log_in_and_has_no_permissions()
     {
-        var (email, roleName) = await CreateUserWithRole();
+        var permissionId = (await app.WithServiceAsync(sp => sp.GetRequiredService<IPermissionService>().GetAllAsync()))[0].Id;
+        var (email, roleName) = await CreateUserWithRole(permissionId);
         var id = (await FindUserAsync(email))!.Id;
+        Assert.NotEmpty(await PermissionsOf(id));
         var update = await app.WithServiceAsync(sp => sp.GetRequiredService<IUserService>().UpdateAsync(new UpdateUserDto
         {
             Id = id, Email = email, IsActive = false, Roles = [roleName]
         }));
         Assert.True(update.Succeeded, update.Error);
+        Assert.Empty(await PermissionsOf(id));
 
         var response = await AppFactory.PostFormAsync(app.NewClient(), "/Account/Login", "/Account/Login", new()
         {
@@ -272,14 +377,17 @@ public class DataLayerTests(AppFactory app)
             await db.SaveChangesAsync();
         });
 
-    private async Task<(string Email, string RoleName)> CreateUserWithRole()
+    private Task<IReadOnlyList<string>> PermissionsOf(string userId) =>
+        app.WithServiceAsync(sp => sp.GetRequiredService<IPermissionService>().GetPermissionsForUserAsync(userId));
+
+    private async Task<(string Email, string RoleName)> CreateUserWithRole(params int[] permissionIds)
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var roleName = "Role_" + suffix;
         var email = $"user_{suffix}@test.local";
         await app.WithServiceAsync(async sp =>
         {
-            var role = await sp.GetRequiredService<IRoleService>().CreateAsync(new CreateRoleDto { Name = roleName });
+            var role = await sp.GetRequiredService<IRoleService>().CreateAsync(new CreateRoleDto { Name = roleName, PermissionIds = permissionIds });
             Assert.True(role.Succeeded, role.Error);
             var user = await sp.GetRequiredService<IUserService>().CreateAsync(new CreateUserDto
             {
@@ -304,5 +412,18 @@ public class DataLayerTests(AppFactory app)
         : ExecutionStrategy(dependencies, maxRetryCount: 2, maxRetryDelay: TimeSpan.Zero)
     {
         protected override bool ShouldRetryOn(Exception exception) => exception is SimulatedTransientException;
+    }
+
+    // The commit reaches the database; the answer to the first one is "lost".
+    private sealed class LoseFirstCommitAnswer : DbTransactionInterceptor
+    {
+        private bool _lost;
+
+        public override Task TransactionCommittedAsync(DbTransaction transaction, TransactionEndEventData eventData, CancellationToken ct = default)
+        {
+            if (_lost) return Task.CompletedTask;
+            _lost = true;
+            throw new SimulatedTransientException();
+        }
     }
 }

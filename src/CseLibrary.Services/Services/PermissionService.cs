@@ -1,6 +1,5 @@
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
-using CseLibrary.Core.Exceptions;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Core.Results;
@@ -23,7 +22,7 @@ public class PermissionService(IUnitOfWork uow) : IPermissionService
         {
             Name = dto.Name, DisplayName = dto.DisplayName, Module = dto.Module, Description = dto.Description
         }, ct);
-        return await SaveAsync(ct);
+        return await uow.SaveAsync(ct).OnDuplicate(NameExists());
     }
 
     public async Task<Result> UpdateAsync(UpdatePermissionDto dto, CancellationToken ct = default)
@@ -36,7 +35,7 @@ public class PermissionService(IUnitOfWork uow) : IPermissionService
         entity.DisplayName = dto.DisplayName;
         entity.Module = dto.Module;
         entity.Description = dto.Description;
-        return await SaveAsync(ct);
+        return await uow.SaveAsync(ct).OnDuplicate(NameExists());
     }
 
     public async Task<Result> DeleteAsync(int id, CancellationToken ct = default)
@@ -45,26 +44,11 @@ public class PermissionService(IUnitOfWork uow) : IPermissionService
         if (entity == null) return NotFound();
 
         uow.Permissions.Remove(entity);
-        await uow.SaveChangesAsync(ct);
-        return Result.Success();
+        return await uow.SaveAsync(ct);
     }
 
     public Task<IReadOnlyList<string>> GetPermissionsForUserAsync(string userId, CancellationToken ct = default) =>
         uow.Permissions.GetNamesForUserAsync(userId, ct);
-
-    // The pre-check gives the friendly message; the filtered unique index catches a concurrent duplicate.
-    private async Task<Result> SaveAsync(CancellationToken ct)
-    {
-        try
-        {
-            await uow.SaveChangesAsync(ct);
-            return Result.Success();
-        }
-        catch (DuplicateKeyException)
-        {
-            return NameExists();
-        }
-    }
 
     private static Result NameExists() => Result.Failure(ErrorCodes.Duplicate, "Permission name already exists");
     private static Result NotFound() => Result.Failure(ErrorCodes.NotFound, "Permission not found");

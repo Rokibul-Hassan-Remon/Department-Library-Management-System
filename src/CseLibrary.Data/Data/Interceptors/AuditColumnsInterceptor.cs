@@ -39,7 +39,7 @@ public sealed class AuditColumnsInterceptor(ICurrentUser currentUser, TimeProvid
             {
                 if (entry.State == EntityState.Deleted)
                 {
-                    entry.State = EntityState.Unchanged;
+                    entry.State = EntityState.Modified; // keeps any other pending edit of this entity
                     Set(entry, nameof(BaseEntity.Status), RecordStatus.Deleted);
                 }
                 if (entry.State == EntityState.Added)
