@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CseLibrary.Tests.Infrastructure;
@@ -26,24 +27,35 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public const string AdminEmail = "admin@local";
     public const string AdminPassword = "Test-Admin-Pw1"; // test-only, in memory; never a real secret
 
+    private const string ConnectionVar = "ConnectionStrings__DefaultConnection";
+    private const string SeedPasswordVar = "Seed__Admin__Password";
+    private readonly string? _oldConnection = Environment.GetEnvironmentVariable(ConnectionVar);
+    private readonly string? _oldSeedPassword = Environment.GetEnvironmentVariable(SeedPasswordVar);
+
     public TestDatabase Database { get; } = new();
     public SqlCommandCounter Commands { get; } = new();
 
     public AppFactory()
     {
-        // Guard before anything can migrate (startup runs DbSeeder → MigrateAsync).
-        TestDatabase.EnsureSafe(Database.ConnectionString);
         // Environment variables override every appsettings file, so the app cannot resolve the dev DB.
-        Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", Database.ConnectionString);
-        Environment.SetEnvironmentVariable("Seed__Admin__Password", AdminPassword);
+        // Program.cs reads the connection string eagerly at startup, so a UseSetting override is not enough.
+        Environment.SetEnvironmentVariable(ConnectionVar, Database.ConnectionString);
+        Environment.SetEnvironmentVariable(SeedPasswordVar, AdminPassword);
     }
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        builder.UseSetting("ConnectionStrings:DefaultConnection", Database.ConnectionString);
-        builder.ConfigureTestServices(services =>
-            services.ConfigureDbContext<ApplicationDbContext>(o => o.AddInterceptors(Commands)));
-    }
+    protected override void ConfigureWebHost(IWebHostBuilder builder) =>
+        builder.ConfigureTestServices(services => GuardDbContext(services, Commands));
+
+    /// <summary>
+    /// Runs after the app's UseSqlServer, before startup seeding opens a connection (DbSeeder → MigrateAsync):
+    /// checks the connection string the app actually resolved, not the one generated here.
+    /// </summary>
+    public static void GuardDbContext(IServiceCollection services, params IInterceptor[] interceptors) =>
+        services.ConfigureDbContext<ApplicationDbContext>(o =>
+        {
+            TestDatabase.EnsureSafe(o.Options.Extensions.OfType<RelationalOptionsExtension>().Single().ConnectionString ?? "");
+            o.AddInterceptors(interceptors);
+        });
 
     public Task InitializeAsync()
     {
@@ -53,14 +65,16 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     async Task IAsyncLifetime.DisposeAsync()
     {
-        await base.DisposeAsync();
-        Database.Drop();
-    }
-
-    public T WithService<T>(Func<IServiceProvider, T> action)
-    {
-        using var scope = Services.CreateScope();
-        return action(scope.ServiceProvider);
+        try
+        {
+            await base.DisposeAsync();
+            Database.Drop();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(ConnectionVar, _oldConnection);
+            Environment.SetEnvironmentVariable(SeedPasswordVar, _oldSeedPassword);
+        }
     }
 
     public async Task<T> WithServiceAsync<T>(Func<IServiceProvider, Task<T>> action)
