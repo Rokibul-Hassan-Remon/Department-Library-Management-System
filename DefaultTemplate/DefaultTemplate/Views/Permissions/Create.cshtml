@@ -1,0 +1,14 @@
+@model CreatePermissionDto
+@{ ViewData["Title"] = "Create Permission"; }
+
+<h2>Create Permission</h2>
+<form asp-action="Create" method="post" class="col-md-6">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3"><label class="form-label">Name</label><input asp-for="Name" class="form-control" required /></div>
+    <div class="mb-3"><label class="form-label">Display name</label><input asp-for="DisplayName" class="form-control" /></div>
+    <div class="mb-3"><label class="form-label">Module</label><input asp-for="Module" class="form-control" /></div>
+    <div class="mb-3"><label class="form-label">Description</label><input asp-for="Description" class="form-control" /></div>
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a class="btn btn-secondary" asp-action="Index">Cancel</a>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

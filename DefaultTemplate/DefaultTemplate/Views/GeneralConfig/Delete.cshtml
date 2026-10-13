@@ -1,0 +1,15 @@
+@model GeneralConfigDto
+@{ ViewData["Title"] = "Delete Config"; }
+
+<h2>Delete Config</h2>
+<p class="text-danger">Are you sure?</p>
+<dl class="row">
+    <dt class="col-sm-3">Group</dt><dd class="col-sm-9">@Model.Group</dd>
+    <dt class="col-sm-3">Key</dt><dd class="col-sm-9">@Model.Key</dd>
+    <dt class="col-sm-3">Value</dt><dd class="col-sm-9">@Model.Value</dd>
+</dl>
+<form asp-action="Delete" method="post">
+    <input type="hidden" name="id" value="@Model.Id" />
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a class="btn btn-secondary" asp-action="Index">Cancel</a>
+</form>

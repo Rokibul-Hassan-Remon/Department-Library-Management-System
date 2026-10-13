@@ -1,0 +1,26 @@
+@model IEnumerable<PermissionDto>
+@{ ViewData["Title"] = "Permissions"; }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Permissions</h2>
+    <a class="btn btn-primary" asp-action="Create">+ New Permission</a>
+</div>
+
+<table class="table table-striped">
+    <thead><tr><th>Module</th><th>Name</th><th>Display name</th><th>Description</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            <tr>
+                <td>@p.Module</td>
+                <td>@p.Name</td>
+                <td>@p.DisplayName</td>
+                <td>@p.Description</td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@p.Id">Edit</a>
+                    <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@p.Id">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

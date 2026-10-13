@@ -1,0 +1,5 @@
+# D-07 T1: store and check out every file byte-for-byte (no line-ending conversion).
+* -text
+# Committed in af89144 before this rule and stored normalized (LF); keep that behavior.
+/.gitignore text
+/LICENSE text
