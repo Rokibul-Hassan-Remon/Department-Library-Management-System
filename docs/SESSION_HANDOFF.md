@@ -6,9 +6,10 @@
 - Branch **`feature/phase-0-gate-3`**, not merged. New this session: `21869c6` docs (Session 21
   close-out) · **`b1bba18` D-56 staff-side rules + `UsersController` role list** · `b5e8b3b` docs ·
   **`ac24fd7` menu from DB permissions (D-37 regression) + case-insensitive role diff** ·
-  **`56bb5f0` D-57** · docs commit(s) after it.
-- Evidence at `56bb5f0`: build 0 errors / 0 warnings; tests **76/76**; mutation checks M1–M9
-  (DECISION_LOG §64–§65). No migration; no non-test database touched.
+  **`56bb5f0` D-57** · `946ac49` docs · **`2c862e0` access tests A5/A6/A10/A11** ·
+  **`42ae3f4` D-55 toasts + A2** · docs commit after it.
+- Evidence at `42ae3f4`: build 0 errors / 0 warnings; tests **86/86**; mutation checks for every
+  new rule (DECISION_LOG §64–§66). No migration; no non-test database touched.
 - After the D-56 diff the user gave **blanket permission for the remaining sequence**
   ("don't wait for my approval"); limits kept: no destructive command, no Proposed/Pending
   decision treated as Approved.
@@ -19,10 +20,15 @@
   `sp_getapplock`; `RoleService` Admin-role rules; `UsersController` → `IRoleService.GetNamesAsync`.
 - Gate 3 `/code-review` + `/ponytail-review` done (§65): menu bug fixed; **D-57 Approved and
   implemented** (only an Admin may reset/re-email/deactivate/delete a privileged user).
+- Missing 0.9 tests A5/A6/A10/A11 added; **D-55 implemented** (toasts, permission failure →
+  safe local page + toast, AJAX 403, test A2) — §66.
 
-### Next action
-- Step 0.10 (D-55 toast, status-code page, test A2), then 0.11 / 0.11a, 0.12, as far as Approved
-  decisions allow; Gate 3 report → user approval → merge.
+### ⛔ Next action — waiting for the user (§66 "Stopped")
+1. Approve or change the **D-34 0.10 items** (status-code pages, Error view Reference ID only,
+   Serilog TraceId, enricher check; tests B1–B2).
+2. Approve starting **0.11a HiLo demonstration** (test DB only, D-29/D-30).
+3. Then 0.11 audit (D-21–D-27 approvals), 0.12 smoke (needs approval to run against a
+   non-test DB), Gate 3 report → approval → merge.
 
 ## Session 21 (2026-10-14) — superseded by the Session 22 block above where they differ
 Session 21 closed at the user's request (conversation too long) — Session 22 started here.

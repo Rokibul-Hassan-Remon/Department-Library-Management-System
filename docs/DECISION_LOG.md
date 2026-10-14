@@ -2089,6 +2089,32 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   explicit message is clearer.
 - Evidence after `56bb5f0`: build 0/0, tests **76/76**.
 
+### 66. Session 22 — missing access tests, D-55 toasts, stop at Proposed items (2026-10-15)
+- 0.9 "Done when: tests A1–A11" was not met (no A5 behaviour test, no A6/A10, no A11) →
+  added `2c862e0`: POST without antiforgery token → 400; reflection test (class-level
+  `[Authorize]`, anonymous allowlist `Account.Login/AccessDenied`, `Home.Index/Privacy/Error`,
+  `[HasPermission]` on every other action except authenticated-only `Account.ChangePassword/
+  Logout`); fallback test via test-only `FallbackProbeController`. Mutations: no fallback policy,
+  no class `[Authorize]` → the matching test fails. (Existing lockout test relabelled A3.)
+- **D-55 implemented `42ae3f4`** (design + Session 20 details Approved; executed under the user's
+  blanket permission): `_Toasts.cshtml` (TempData `Error`/`Warning` 5 s, `Success`/`Info` 3 s,
+  max 3, label text + colour, close button, Bootstrap 5.1 pauses on hover/focus) replaces the
+  layout alerts; `AccessDeniedRedirect` on `OnRedirectToAccessDenied`: local same-site Referer
+  (not `//…`, not the denied URL) else `/`, red toast "You don't have permission to perform
+  this action."; AJAX (`X-Requested-With`) → 403; `Home.Error` raises an error toast with the
+  Reference ID (Q-S19-11). Test A2 (5 Referer cases + AJAX) and a toast render test; the two
+  tests that expected `/Account/AccessDenied` now expect `/`. Mutations: no `//` guard, no hook
+  → tests fail. Evidence: build 0/0, **86/86**.
+- Not done in D-55: client-side (AJAX) toasts — no AJAX UI exists yet; "overall toast plus field
+  messages" for validation — forms keep their validation summary + field messages.
+- **Stopped** — remaining Gate 3 work needs decisions that are not Approved:
+  - 0.10 rest = D-34 **Proposed** items: `UseStatusCodePagesWithReExecute`, Error view with the
+    Reference ID only (remove the template's "Development Mode" text), Serilog output with
+    TraceId, verify `WithMachineName`/`WithThreadId` enrichers (tests B1–B2).
+  - 0.11a HiLo demonstration — plan says "stop for approval" (D-29/D-30); 0.11 audit depends
+    on it and on D-21–D-27 (Proposed).
+  - 0.12 manual smoke needs the app run against a non-test database (approval needed).
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

@@ -1662,7 +1662,7 @@ require account `Active` **and** approval not `Pending`/`Rejected`.
 Items 1–6 above stay in force (Student → Active; Fellow → Pending → Librarian review; separate
 workflow methods with shared logic; no physical `AspNetUsers` delete, `Status = Deleted`).
 
-### D-55 UI notifications and error handling — design Approved (Session 19); implementation not approved
+### D-55 UI notifications and error handling — design Approved (Session 19); implemented Session 22 (`42ae3f4`)
 **Source:** user, Session 19 (DECISION_LOG §53).
 1. **One reusable toast mechanism** for the whole application (shared component/service, not
    per-page logic), top-right:
