@@ -1740,6 +1740,24 @@ filtered unique index on `NormalizedEmail` — a schema decision for the user (p
   on LocalDB; `.\SQLEXPRESS` untouched.
 - Not answered: email unique-index proposal (§48) stays open. `feature/phase-0-gate-2` kept (deleting
   needs the user's OK). Gate 3 (0.9–0.12) not started; it needs its own approval.
+- Docs: **user "ok"** → commit `4c288a5`.
+
+### 50. Session 18 — branch per task, unique email (D-52), merged branches deleted
+- **User (standing rule):** every new feature or task starts on its own branch from `develop` and is
+  merged back into `develop` when it is finished. Extends D-07 beyond gate branches.
+- **User:** create the unique email index — members log in by email + password (→ **D-52 Approved**).
+  User asked about an index on the password too; assistant advised against it: only a salted hash is
+  stored (equal passwords give different hashes, so a unique index protects nothing) and login looks
+  the user up by email, then verifies the hash.
+- **User:** "do what you think is good" for old branches → `feature/phase-0-gate-1` and
+  `feature/phase-0-gate-2` deleted with `git branch -d` (refuses unmerged branches; both are in
+  `develop` via `bbee8dc` / `798ccbd`).
+- Work on `feature/email-unique-index`: `EmailIndex` unique + filtered; migration `UniqueUserEmail`
+  (scaffolded, no data step — test DBs only; never applied to `.\SQLEXPRESS`); `UserService` create and
+  update map a duplicate to "User name or email is already taken."; test: two users with one email →
+  `DuplicateKeyException`.
+- Evidence: build 0 errors / 0 warnings; tests 50/50 twice; no pending model changes; 0
+  `CseLibrary*` DBs on LocalDB.
 
 ## Unresolved decisions and why
 

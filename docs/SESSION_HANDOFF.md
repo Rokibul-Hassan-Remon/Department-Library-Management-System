@@ -14,14 +14,18 @@
 - **Gate 2 approved** (user "ok") and merged: `develop` @ `798ccbd` (`--no-ff`); docs `d779249`;
   49/49 tests on `develop` after the merge (DECISION_LOG §49).
 
+- Approval docs `4c288a5`. **Standing rule (user):** every new task on its own branch from `develop`,
+  merged back when finished (§50). Old gate branches deleted (`-d`).
+- **D-52 Approved:** unique email index — on `feature/email-unique-index` (migration
+  `UniqueUserEmail`, tests 50/50 twice, §50).
+
 ### ⛔ Next action
-1. Verify read-only: branch `develop`, `git log --oneline -5`, `git status`.
-2. If the approval/merge docs are uncommitted: show list + message, commit on the user's OK
-   (`Record Gate 2 approval and merge (docs)`).
+1. Verify read-only: `git branch --show-current`, `git log --oneline -5`, `git status`.
+2. If `feature/email-unique-index` is not yet committed/merged: commit (user's OK on list + message),
+   then merge → `develop` `--no-ff` (standing rule, §50) and verify build + tests on `develop`.
 3. Ask explicitly: **start Gate 3 (0.9–0.12)** on `feature/phase-0-gate-3` from `develop`? Not approved yet.
-- Open proposal (not done): filtered unique index on `AspNetUsers.NormalizedEmail` (duplicate-email
-  race, §48). Still open: O1–O5, `EF Tools` package, UI brand text, deleting `feature/phase-0-gate-1`,
-  `UsersController` role list via `RoleManager.Roles` (0.9), CR2 cookie part (0.9), CR5 cascade part.
+- Still open: O1–O5, `EF Tools` package, UI brand text, `UsersController` role list via
+  `RoleManager.Roles` (0.9), CR2 cookie part (0.9), CR5 cascade part.
 
 ## Session 17 (2026-10-13) — superseded by the Session 18 block above where they differ
 Session 17 closed at the user's request (conversation too long) — **Session 18 starts here.**

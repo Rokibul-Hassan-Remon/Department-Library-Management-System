@@ -1507,8 +1507,19 @@ instead. Template migration converts `IsDeleted = 1 → 3`, else `1`; `IsActive 
 **Source:** user, Session 16 (DECISION_LOG §41). **Implemented: yes — `0d01e4e` (Session 17, §46)**;
 migration `RecordStatusAndAuditColumns` hand-edited for the data conversion and tested up/down on
 existing rows. `AspNetUsers` has the `CHECK` but no query filter (users are deleted by
-`UserManager`). Open: review CR5, CR9 (§47). Resolves the
+`UserManager`). Review CR5, CR9 fixed in `8cd5f53` (§48). Resolves the
 D-48 open point "`IsActive` vs `IsDeleted`".
+
+### D-52 Unique user email in the database — Approved (Session 18, user)
+Members log in with email + password, so `AspNetUsers.EmailIndex` on `NormalizedEmail` becomes a
+**unique** index filtered `[NormalizedEmail] IS NOT NULL` (users are hard-deleted, so no `Status`
+filter). `RequireUniqueEmail` stays as the friendly pre-check; a duplicate past it is
+`ErrorCodes.Duplicate` ("User name or email is already taken.") on user create and update.
+No index on the password: only a salted hash is stored, every hash differs even for equal
+passwords, and login never searches by password. A migration fails on a database that already
+holds duplicate emails; clean them first.
+**Source:** user, Session 18 (DECISION_LOG §50); closes the D-14 rule 3 duplicate-email gap (§48).
+**Implemented:** migration `UniqueUserEmail`, branch `feature/email-unique-index`.
 
 ---
 
@@ -1522,10 +1533,10 @@ D-48 open point "`IsActive` vs `IsDeleted`".
 | UI brand text | `_Layout.cshtml` still shows "DefaultTemplate" (title, navbar, footer) | Change with the first UI work (visible change, not part of the 0.3 rename) |
 | ~~Old `DefaultTemplate/` folder~~ **Resolved Session 17 (DECISION_LOG §43): deleted** | Holds only ignored `bin/`, `obj/`, `*.csproj.user` | Delete (needs approval; nothing tracked) |
 | ~~Gate 2 start~~ **Resolved Session 17 (§44): started; 0.6–0.8 committed (`51e189a`, `48a9acf`, `0d01e4e`)** | Begin steps 0.6–0.8 (incl. D-50, D-51) on `feature/phase-0-gate-2` | — |
-| **Gate 2 review findings (§47) — open, ask at the start of Session 18** | Which of CR1–CR9 / P1–P3 to fix before the Gate 2 report | One correction commit: CR1, CR3, CR4, CR5, CR7, CR8, CR9, CR2 permission-lookup filter, P1–P3; CR2 cookie part → 0.9; CR6 keep |
-| **Gate 2 report** | After the correction commit: D-14 per-use-case duplicate-operation assessment, docs, report; then approval + merge → `develop` (separate approvals) | — |
+| ~~Gate 2 review findings (§47)~~ **Resolved Session 18 (`8cd5f53`, §48)** | Which of CR1–CR9 / P1–P3 to fix before the Gate 2 report | One correction commit: CR1, CR3, CR4, CR5, CR7, CR8, CR9, CR2 permission-lookup filter, P1–P3; CR2 cookie part → 0.9; CR6 keep |
+| ~~Gate 2 report~~ **Resolved Session 18: approved, merged `798ccbd` (§49)** | After the correction commit: D-14 per-use-case duplicate-operation assessment, docs, report; then approval + merge → `develop` (separate approvals) | — |
 | D-49 O1–O5 | Available count, `Issued` in `CopyStatus`, member subtypes, history name, loan id type (`database.md` §6) | Before the phase that builds the tables (Phase 2/3); recommendations in `database.md` |
-| Merged branch | Delete `feature/phase-0-gate-1` (merged into `develop`)? | Any time; needs the user's OK (Session 17: asked together with the Gate 2 start; the bare "ok" counted for Gate 2 only) |
+| ~~Merged branch~~ **Resolved Session 18 (§50): `gate-1` and `gate-2` deleted with `-d`** | Delete `feature/phase-0-gate-1` (merged into `develop`)? | Any time; needs the user's OK (Session 17: asked together with the Gate 2 start; the bare "ok" counted for Gate 2 only) |
 | ~~Gate 1 approval~~ **Resolved Session 16 (`bbee8dc`, DECISION_LOG §39)** | Merge `feature/phase-0-gate-1` → `develop` (`--no-ff`) | After the correction commit — **correction done Session 15 (`8504115`); ask at the start of Session 16** |
 | M15 (§33) | Overall-architecture + DB/ER `archify` diagrams; multi-copy + lending-history DB design | Before Gate 2 (user: after the Gate 1 report); design stays **Proposed** until approved |
 | M15 design point | Title "available count": stored counter vs derived from copy status | Derived (COUNT of copies with status Available) + filtered unique index "one active loan per copy" (D-35); show both with trade-offs |

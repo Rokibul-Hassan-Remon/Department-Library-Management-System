@@ -184,6 +184,21 @@ public class DataLayerTests(AppFactory app)
             Assert.Equal(ErrorCodes.Duplicate, result.ErrorCode);
         });
 
+    [Fact] // D-52: the database rejects a second user with the same email, even past RequireUniqueEmail
+    public Task Duplicate_user_email_is_rejected_by_the_database() =>
+        app.WithServiceAsync(async sp =>
+        {
+            var email = $"same_{Guid.NewGuid():N}@test.local".ToUpperInvariant();
+            var db = sp.GetRequiredService<ApplicationDbContext>();
+            foreach (var name in new[] { "A_" + email, "B_" + email })
+                db.Users.Add(new ApplicationUser
+                {
+                    UserName = name, NormalizedUserName = name, Email = email, NormalizedEmail = email,
+                    SecurityStamp = Guid.NewGuid().ToString()
+                });
+            await Assert.ThrowsAsync<DuplicateKeyException>(() => sp.GetRequiredService<IUnitOfWork>().SaveChangesAsync());
+        });
+
     [Fact] // CR4: deleted or unknown permission ids are dropped instead of failing the FK
     public Task Role_gets_only_existing_permission_ids() =>
         app.WithServiceAsync(async sp =>

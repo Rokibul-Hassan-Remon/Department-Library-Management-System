@@ -34,7 +34,7 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
             if (!create.Succeeded || dto.Roles.Count == 0) return create;
             return (await userManager.AddToRolesAsync(user, dto.Roles)).ToResult();
         }, verifySucceeded: async c => await uow.Users.GetDetailsAsync(userId!, c) != null, ct: ct)
-        .OnDuplicate(Result.Failure(ErrorCodes.Duplicate, "User name is already taken."));
+        .OnDuplicate(Taken());
     }
 
     public Task<Result> UpdateAsync(UpdateUserDto dto, CancellationToken ct = default) =>
@@ -58,7 +58,7 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
                 if (!removed.Succeeded) return removed;
             }
             return toAdd.Count > 0 ? (await userManager.AddToRolesAsync(user, toAdd)).ToResult() : Result.Success();
-        }, ct: ct);
+        }, ct: ct).OnDuplicate(Taken());
 
     public async Task<Result> DeleteAsync(string id, CancellationToken ct = default)
     {
@@ -76,4 +76,5 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
     }
 
     private static Result NotFound() => Result.Failure(ErrorCodes.NotFound, "User not found");
+    private static Result Taken() => Result.Failure(ErrorCodes.Duplicate, "User name or email is already taken.");
 }
