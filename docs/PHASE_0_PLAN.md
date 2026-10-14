@@ -93,7 +93,9 @@ _Session 15: findings fixed in correction commit `8504115` (DECISION_LOG §37); 
 **⛔ Gate 2 review — stop and wait for user approval.** _Session 17: steps 0.6–0.8 committed on
 `feature/phase-0-gate-2`; `/code-review` + `/ponytail-review` run (DECISION_LOG §47). Session 18:
 fixes committed (`8cd5f53`), D-14 assessment (§48), Gate 2 report given. **Gate 2 approved by the
-user and merged into `develop` `--no-ff` (`798ccbd`, DECISION_LOG §49).**_
+user and merged into `develop` `--no-ff` (`798ccbd`, DECISION_LOG §49).** Then D-52 unique email
+index (`70bad0f` → `e9a0536`, §50). Gate 3 not started — needs its own approval; it owes the CR2
+cookie part and the `UsersController` role list (0.9)._
 
 ## Gate 3 — Security, errors, audit, verification
 

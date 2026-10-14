@@ -1758,6 +1758,17 @@ filtered unique index on `NormalizedEmail` — a schema decision for the user (p
   `DuplicateKeyException`.
 - Evidence: build 0 errors / 0 warnings; tests 50/50 twice; no pending model changes; 0
   `CseLibrary*` DBs on LocalDB.
+- **User "ok"** → commit `70bad0f`; merged → `develop` `--no-ff` = `e9a0536` (standing rule); on
+  `develop`: build 0/0, tests 50/50, 0 test DBs left. `feature/email-unique-index` deleted (`-d`).
+
+### 51. Session 18 — close-out
+- User asked to switch sessions (conversation too long) and to record this session's decisions,
+  discussion and findings in the existing docs. Close-out done on branch `docs/session-18-closeout`
+  (standing rule §50): SESSION_HANDOFF Session 18 block rewritten (state, decisions, next action,
+  lessons), this log, PROJECT_DECISIONS (D-52 commit, open-decision table), PHASE_0_PLAN Gate 3 note.
+- Process lesson: a bare "ok" after several questions was taken as approval of the first pending
+  action only (docs commit, then Gate 2, then merge, then the next commit) — each asked again.
+- Next: Gate 3 (0.9–0.12) start needs the user's explicit approval.
 
 ## Unresolved decisions and why
 

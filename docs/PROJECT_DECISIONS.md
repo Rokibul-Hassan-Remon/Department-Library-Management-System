@@ -1519,7 +1519,8 @@ No index on the password: only a salted hash is stored, every hash differs even 
 passwords, and login never searches by password. A migration fails on a database that already
 holds duplicate emails; clean them first.
 **Source:** user, Session 18 (DECISION_LOG §50); closes the D-14 rule 3 duplicate-email gap (§48).
-**Implemented:** migration `UniqueUserEmail`, branch `feature/email-unique-index`.
+**Implemented: yes — `70bad0f`, merged into `develop` `e9a0536` (Session 18, §50);** migration
+`UniqueUserEmail`, test: two users with one email → `DuplicateKeyException`.
 
 ---
 
@@ -1535,6 +1536,8 @@ holds duplicate emails; clean them first.
 | ~~Gate 2 start~~ **Resolved Session 17 (§44): started; 0.6–0.8 committed (`51e189a`, `48a9acf`, `0d01e4e`)** | Begin steps 0.6–0.8 (incl. D-50, D-51) on `feature/phase-0-gate-2` | — |
 | ~~Gate 2 review findings (§47)~~ **Resolved Session 18 (`8cd5f53`, §48)** | Which of CR1–CR9 / P1–P3 to fix before the Gate 2 report | One correction commit: CR1, CR3, CR4, CR5, CR7, CR8, CR9, CR2 permission-lookup filter, P1–P3; CR2 cookie part → 0.9; CR6 keep |
 | ~~Gate 2 report~~ **Resolved Session 18: approved, merged `798ccbd` (§49)** | After the correction commit: D-14 per-use-case duplicate-operation assessment, docs, report; then approval + merge → `develop` (separate approvals) | — |
+| **Gate 3 start — open, ask at the start of Session 19** | Begin steps 0.9–0.12 on `feature/phase-0-gate-3` from `develop` | Includes CR2 cookie part (D-32/D-37) and the `UsersController` role list (0.9) |
+| CR5 cascade part (§48) | Soft delete of a principal still hard-deletes tracked non-`BaseEntity` dependents | Decide when the first such relation is built (Phase 2/3); no current code path |
 | D-49 O1–O5 | Available count, `Issued` in `CopyStatus`, member subtypes, history name, loan id type (`database.md` §6) | Before the phase that builds the tables (Phase 2/3); recommendations in `database.md` |
 | ~~Merged branch~~ **Resolved Session 18 (§50): `gate-1` and `gate-2` deleted with `-d`** | Delete `feature/phase-0-gate-1` (merged into `develop`)? | Any time; needs the user's OK (Session 17: asked together with the Gate 2 start; the bare "ok" counted for Gate 2 only) |
 | ~~Gate 1 approval~~ **Resolved Session 16 (`bbee8dc`, DECISION_LOG §39)** | Merge `feature/phase-0-gate-1` → `develop` (`--no-ff`) | After the correction commit — **correction done Session 15 (`8504115`); ask at the start of Session 16** |
