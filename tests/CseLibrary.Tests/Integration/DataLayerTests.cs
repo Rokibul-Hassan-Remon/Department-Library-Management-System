@@ -178,7 +178,7 @@ public class DataLayerTests(AppFactory app)
             var noPreCheck = new RoleManager<ApplicationRole>(sp.GetRequiredService<IRoleStore<ApplicationRole>>(), [],
                 sp.GetRequiredService<ILookupNormalizer>(), sp.GetRequiredService<IdentityErrorDescriber>(),
                 sp.GetRequiredService<ILogger<RoleManager<ApplicationRole>>>());
-            var result = await new RoleService(noPreCheck, sp.GetRequiredService<IUnitOfWork>())
+            var result = await new RoleService(noPreCheck, sp.GetRequiredService<IUnitOfWork>(), sp.GetRequiredService<ICurrentUser>())
                 .CreateAsync(new CreateRoleDto { Name = name });
 
             Assert.Equal(ErrorCodes.Duplicate, result.ErrorCode);

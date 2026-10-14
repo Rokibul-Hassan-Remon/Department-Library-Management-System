@@ -1,7 +1,10 @@
 using System.Data.Common;
 using System.Net;
 using System.Text.RegularExpressions;
+using CseLibrary.Core.Entities;
+using CseLibrary.Core.Interfaces;
 using CseLibrary.Data.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -44,7 +47,11 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-        builder.ConfigureTestServices(services => GuardDbContext(services, Commands));
+        builder.ConfigureTestServices(services =>
+        {
+            GuardDbContext(services, Commands);
+            services.AddScoped<ICurrentUser, TestCurrentUser>();
+        });
 
     /// <summary>
     /// Runs after the app's UseSqlServer, before startup seeding opens a connection (DbSeeder → MigrateAsync):
@@ -57,10 +64,11 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
             o.AddInterceptors(interceptors);
         });
 
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
         _ = Services; // starts the host: migrate + seed into the test database
-        return Task.CompletedTask;
+        TestCurrentUser.SeedAdminId = await WithServiceAsync(async sp =>
+            (await sp.GetRequiredService<UserManager<ApplicationUser>>().FindByEmailAsync(AdminEmail))!.Id);
     }
 
     async Task IAsyncLifetime.DisposeAsync()

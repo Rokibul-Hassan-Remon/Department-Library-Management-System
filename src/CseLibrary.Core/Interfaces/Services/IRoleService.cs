@@ -7,6 +7,7 @@ public interface IRoleService
 {
     Task<IReadOnlyList<RoleDto>> GetAllAsync(CancellationToken ct = default);
     Task<RoleDto?> GetByIdAsync(string id, CancellationToken ct = default);
+    Task<IReadOnlyList<string>> GetNamesAsync(CancellationToken ct = default);
 
     /// <summary>Returns the new role's id.</summary>
     Task<Result<string>> CreateAsync(CreateRoleDto dto, CancellationToken ct = default);

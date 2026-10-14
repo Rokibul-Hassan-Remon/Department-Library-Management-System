@@ -14,6 +14,16 @@ public class RoleReadRepository(ApplicationDbContext db) : IRoleReadRepository
     public Task<RoleDto?> GetDetailsAsync(string id, CancellationToken ct = default) =>
         ToDto(db.Roles.Where(r => r.Id == id)).FirstOrDefaultAsync(ct);
 
+    public async Task<IReadOnlyList<string>> GetNamesAsync(CancellationToken ct = default) =>
+        await db.Roles.OrderBy(r => r.Name).Select(r => r.Name!).ToListAsync(ct);
+
+    public Task<bool> AnyPrivilegedAsync(IReadOnlyCollection<string> normalizedNames, CancellationToken ct = default) =>
+        (from r in db.Roles
+         where normalizedNames.Contains(r.NormalizedName!)
+         join rp in db.RolePermissions on r.Id equals rp.RoleId
+         join p in db.Permissions on rp.PermissionId equals p.Id // filtered: deleted permissions drop out
+         select r.Id).AnyAsync(ct);
+
     // Only ids, and only of permissions that are not deleted.
     private IQueryable<RoleDto> ToDto(IQueryable<ApplicationRole> q) =>
         q.Select(r => new RoleDto

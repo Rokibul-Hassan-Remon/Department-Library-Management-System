@@ -1,3 +1,4 @@
+using CseLibrary.Core.Constants;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces.Repositories;
@@ -24,6 +25,17 @@ public class UserReadRepository(ApplicationDbContext db) : IUserReadRepository
 
     public Task<UserDto?> GetDetailsAsync(string id, CancellationToken ct = default) =>
         ToDto(Live.Where(u => u.Id == id)).FirstOrDefaultAsync(ct);
+
+    public Task<bool> IsEffectiveAdminAsync(string userId, CancellationToken ct = default) =>
+        EffectiveAdmins.AnyAsync(u => u.Id == userId, ct);
+
+    public Task<int> CountEffectiveAdminsAsync(CancellationToken ct = default) => EffectiveAdmins.CountAsync(ct);
+
+    private IQueryable<ApplicationUser> EffectiveAdmins =>
+        db.Users.Where(u => u.Status == RecordStatus.Active && (from ur in db.UserRoles
+                                                                 join r in db.Roles on ur.RoleId equals r.Id
+                                                                 where ur.UserId == u.Id && r.Name == SystemRoles.Admin
+                                                                 select ur).Any());
 
     // Deleted users are hidden from the list and details (D-53, Q-S19-15).
     private IQueryable<ApplicationUser> Live => db.Users.Where(u => u.Status != RecordStatus.Deleted);

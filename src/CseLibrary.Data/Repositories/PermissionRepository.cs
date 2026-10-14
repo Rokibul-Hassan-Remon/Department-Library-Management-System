@@ -20,6 +20,8 @@ public class PermissionRepository(ApplicationDbContext db) : Repository<Permissi
     public async Task<IReadOnlyList<int>> GetExistingIdsAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default) =>
         await Db.Permissions.Where(p => ids.Contains(p.Id)).Select(p => p.Id).ToListAsync(ct);
 
+    public Task<int> CountAsync(CancellationToken ct = default) => Db.Permissions.CountAsync(ct);
+
     public async Task<IReadOnlyList<string>> GetNamesForUserAsync(string userId, CancellationToken ct = default) =>
         await (from u in Db.Users
                where u.Id == userId && u.Status == RecordStatus.Active

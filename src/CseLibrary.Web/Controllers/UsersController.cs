@@ -1,12 +1,10 @@
 using CseLibrary.Core.Constants;
 using CseLibrary.Core.DTOs;
-using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Core.Paging;
 using CseLibrary.Web.Authorization;
 using CseLibrary.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CseLibrary.Web.Controllers;
@@ -15,23 +13,23 @@ namespace CseLibrary.Web.Controllers;
 public class UsersController : Controller
 {
     private readonly IUserService _userService;
-    private readonly RoleManager<ApplicationRole> _roleManager;
+    private readonly IRoleService _roleService;
 
-    public UsersController(IUserService userService, RoleManager<ApplicationRole> roleManager)
+    public UsersController(IUserService userService, IRoleService roleService)
     {
         _userService = userService;
-        _roleManager = roleManager;
+        _roleService = roleService;
     }
 
     [HasPermission(Permissions.Users.View)]
     public async Task<IActionResult> Index(int page = 1) => View(await _userService.GetPageAsync(new PageRequest(page)));
 
     [HttpGet, HasPermission(Permissions.Users.Create)]
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
         return View(new CreateUserViewModel
         {
-            AvailableRoles = _roleManager.Roles.Select(r => r.Name!).ToList()
+            AvailableRoles = [.. await _roleService.GetNamesAsync()]
         });
     }
 
@@ -40,7 +38,7 @@ public class UsersController : Controller
     {
         if (!ModelState.IsValid)
         {
-            model.AvailableRoles = _roleManager.Roles.Select(r => r.Name!).ToList();
+            model.AvailableRoles = [.. await _roleService.GetNamesAsync()];
             return View(model);
         }
 
@@ -56,7 +54,7 @@ public class UsersController : Controller
         if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error ?? "Failed to create user.");
-            model.AvailableRoles = _roleManager.Roles.Select(r => r.Name!).ToList();
+            model.AvailableRoles = [.. await _roleService.GetNamesAsync()];
             return View(model);
         }
         TempData["Success"] = "User created.";
@@ -77,7 +75,7 @@ public class UsersController : Controller
             FullName = user.FullName,
             IsActive = user.IsActive,
             SelectedRoles = user.Roles,
-            AvailableRoles = _roleManager.Roles.Select(r => r.Name!).ToList()
+            AvailableRoles = [.. await _roleService.GetNamesAsync()]
         });
     }
 
@@ -86,7 +84,7 @@ public class UsersController : Controller
     {
         if (!ModelState.IsValid)
         {
-            model.AvailableRoles = _roleManager.Roles.Select(r => r.Name!).ToList();
+            model.AvailableRoles = [.. await _roleService.GetNamesAsync()];
             return View(model);
         }
 
@@ -102,7 +100,7 @@ public class UsersController : Controller
         if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, result.Error ?? "Failed to update user.");
-            model.AvailableRoles = _roleManager.Roles.Select(r => r.Name!).ToList();
+            model.AvailableRoles = [.. await _roleService.GetNamesAsync()];
             return View(model);
         }
         TempData["Success"] = "User updated.";

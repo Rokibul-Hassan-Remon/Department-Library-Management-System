@@ -16,14 +16,15 @@ public class ArchitectureTests
     private static readonly Assembly Core = typeof(IUnitOfWork).Assembly;
     private static readonly Assembly Data = typeof(ApplicationDbContext).Assembly;
 
-    [Fact] // E1
-    public void Controllers_take_no_DbContext_unit_of_work_or_repository()
+    [Fact] // E1; RoleManager: role lists come from IRoleService (D-56 item 8)
+    public void Controllers_take_no_DbContext_unit_of_work_repository_or_RoleManager()
     {
         var offenders = Web.GetTypes()
             .Where(t => typeof(ControllerBase).IsAssignableFrom(t))
             .SelectMany(t => t.GetConstructors().SelectMany(c => c.GetParameters()).Select(p => (t, p.ParameterType)))
             .Where(x => typeof(DbContext).IsAssignableFrom(x.ParameterType) || x.ParameterType == typeof(IUnitOfWork)
-                        || IsRepository(x.ParameterType))
+                        || IsRepository(x.ParameterType)
+                        || x.ParameterType.IsGenericType && x.ParameterType.GetGenericTypeDefinition() == typeof(Microsoft.AspNetCore.Identity.RoleManager<>))
             .Select(x => $"{x.t.Name}({x.ParameterType.Name})");
         Assert.Empty(offenders);
     }

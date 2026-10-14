@@ -9,7 +9,6 @@ namespace CseLibrary.Data.Data;
 public class SeedAdminOptions
 {
     public const string SectionName = "Seed:Admin";
-    public string Role { get; set; } = "Admin";
     public string Email { get; set; } = "admin@local";
     public string? Password { get; set; }
     public string? FullName { get; set; } = "System Administrator";
@@ -33,7 +32,7 @@ public static class DbSeeder
 
         await db.Database.MigrateAsync();
         await SeedPermissionsAsync(db);
-        await SeedAdminRoleAsync(db, roleManager, admin.Role);
+        await SeedAdminRoleAsync(db, roleManager, SystemRoles.Admin);
         await SeedAdminUserAsync(userManager, admin);
         await SeedDefaultGeneralConfigsAsync(db);
     }
@@ -95,9 +94,9 @@ public static class DbSeeder
                     "Failed to create seed admin user: " + string.Join("; ", result.Errors.Select(e => e.Description)));
         }
 
-        if (!await userManager.IsInRoleAsync(user, options.Role))
+        if (!await userManager.IsInRoleAsync(user, SystemRoles.Admin))
         {
-            await userManager.AddToRoleAsync(user, options.Role);
+            await userManager.AddToRoleAsync(user, SystemRoles.Admin);
         }
     }
 
