@@ -1,7 +1,4 @@
-using System.Security.Claims;
-using CseLibrary.Core.Constants;
 using CseLibrary.Core.Entities;
-using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -13,16 +10,11 @@ public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IPermissionService _permissionService;
 
-    public AccountController(
-        SignInManager<ApplicationUser> signInManager,
-        UserManager<ApplicationUser> userManager,
-        IPermissionService permissionService)
+    public AccountController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager)
     {
         _signInManager = signInManager;
         _userManager = userManager;
-        _permissionService = permissionService;
     }
 
     [HttpGet, AllowAnonymous]
@@ -47,8 +39,6 @@ public class AccountController : Controller
             ModelState.AddModelError(string.Empty, "Invalid login attempt.");
             return View(model);
         }
-
-        await AddPermissionClaimsAsync(user);
 
         if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
             return Redirect(model.ReturnUrl);
@@ -84,20 +74,5 @@ public class AccountController : Controller
         await _signInManager.RefreshSignInAsync(user);
         TempData["Success"] = "Password changed successfully.";
         return RedirectToAction("Index", "Home");
-    }
-
-    private async Task AddPermissionClaimsAsync(ApplicationUser user)
-    {
-        var existing = await _userManager.GetClaimsAsync(user);
-        var stale = existing.Where(c => c.Type == Permissions.ClaimType).ToList();
-        if (stale.Count > 0) await _userManager.RemoveClaimsAsync(user, stale);
-
-        var perms = await _permissionService.GetPermissionsForUserAsync(user.Id);
-        var claims = perms.Select(p => new Claim(Permissions.ClaimType, p)).ToList();
-        if (claims.Count > 0)
-        {
-            await _userManager.AddClaimsAsync(user, claims);
-            await _signInManager.RefreshSignInAsync(user);
-        }
     }
 }

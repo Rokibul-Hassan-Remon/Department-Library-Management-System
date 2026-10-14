@@ -42,8 +42,8 @@ public class CharacterizationTests(AppFactory app)
         Assert.Contains("Invalid login attempt.", await response.Content.ReadAsStringAsync());
     }
 
-    [Fact] // defect (D-37, test A9 in 0.9): login copies permissions into AspNetUserClaims
-    public async Task Login_writes_permission_claims_to_the_database()
+    [Fact] // A9 (D-37, fixed in 0.9; was a defect): login writes nothing to AspNetUserClaims
+    public async Task Login_writes_no_permission_claims_to_the_database()
     {
         var (email, _) = await CreateUserWithPermissions(Permissions.GeneralConfig.View);
         await app.LoggedInClient(email, UserPassword);
@@ -53,7 +53,7 @@ public class CharacterizationTests(AppFactory app)
             var users = sp.GetRequiredService<UserManager<ApplicationUser>>();
             return await users.GetClaimsAsync((await users.FindByEmailAsync(email))!);
         });
-        Assert.Contains(claims, c => c.Type == Permissions.ClaimType && c.Value == Permissions.GeneralConfig.View);
+        Assert.Empty(claims);
     }
 
     [Fact]
@@ -91,12 +91,10 @@ public class CharacterizationTests(AppFactory app)
         Assert.Null(await GetConfig(key));
     }
 
-    // defect (D-37, fixed in 0.9 by tests A7/A9). Login builds the cookie from AspNetUserClaims *before*
-    // rewriting them, and RefreshSignInAsync is a no-op inside the login request (.NET 8+), so each
-    // cookie carries the permissions written by the *previous* login. A revoked permission is denied
-    // on the current cookie (DB fallback), allowed again after the next login, denied after the one after.
+    // A7 (D-37, fixed in 0.9). The old defect: each cookie carried the permissions written by the
+    // *previous* login, so a revoked permission came back for exactly one later login.
     [Fact]
-    public async Task Revoked_permission_comes_back_for_one_login_from_stale_claim_rows()
+    public async Task Revoked_permission_is_denied_on_the_next_request_and_after_the_next_login()
     {
         var (email, roleId) = await CreateUserWithPermissions(Permissions.GeneralConfig.View);
         var first = await app.LoggedInClient(email, UserPassword);
@@ -106,9 +104,47 @@ public class CharacterizationTests(AppFactory app)
 
         Assert.Equal(HttpStatusCode.Redirect, (await first.GetAsync("/GeneralConfig")).StatusCode);
         var second = await app.LoggedInClient(email, UserPassword);
-        Assert.Equal(HttpStatusCode.OK, (await second.GetAsync("/GeneralConfig")).StatusCode);
-        var third = await app.LoggedInClient(email, UserPassword);
-        Assert.Equal(HttpStatusCode.Redirect, (await third.GetAsync("/GeneralConfig")).StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await second.GetAsync("/GeneralConfig")).StatusCode);
+    }
+
+    // A7 (D-37): a legacy permission row in AspNetUserClaims goes into the cookie (the default claims
+    // factory copies user claims), but the handler ignores cookie permission claims, so it grants nothing.
+    [Fact]
+    public async Task Legacy_permission_claim_in_the_cookie_grants_nothing()
+    {
+        var (email, _) = await CreateUserWithPermissions();
+        await app.WithServiceAsync(async sp =>
+        {
+            var users = sp.GetRequiredService<UserManager<ApplicationUser>>();
+            var claim = new System.Security.Claims.Claim(Permissions.ClaimType, Permissions.GeneralConfig.View);
+            Assert.True((await users.AddClaimAsync((await users.FindByEmailAsync(email))!, claim)).Succeeded);
+        });
+
+        var client = await app.LoggedInClient(email, UserPassword);
+        var response = await client.GetAsync("/GeneralConfig");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/Account/AccessDenied", response.Headers.Location?.OriginalString);
+    }
+
+    [Fact] // A8 (D-37): removing the user from the role denies on the next request with the same cookie
+    public async Task Removed_from_role_is_denied_on_the_next_request()
+    {
+        var (email, _) = await CreateUserWithPermissions(Permissions.GeneralConfig.View);
+        var client = await app.LoggedInClient(email, UserPassword);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/GeneralConfig")).StatusCode);
+
+        await app.WithServiceAsync(async sp =>
+        {
+            var user = (await sp.GetRequiredService<UserManager<ApplicationUser>>().FindByEmailAsync(email))!;
+            var result = await sp.GetRequiredService<IUserService>().UpdateAsync(new UpdateUserDto
+            {
+                Id = user.Id, Email = email, FullName = user.FullName, IsActive = true, Roles = []
+            });
+            Assert.True(result.Succeeded, result.Error);
+        });
+
+        Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/GeneralConfig")).StatusCode);
     }
 
     [Fact] // current behaviour: a granted permission works on the next request (DB fallback in the handler)
