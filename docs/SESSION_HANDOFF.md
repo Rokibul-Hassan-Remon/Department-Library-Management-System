@@ -1,7 +1,28 @@
 # Session Handoff
 
-## ▶ Session 21 (2026-10-14) — read first; overrides the Session 20 block where they differ
-Session 21 closed at the user's request (conversation too long) — **Session 22 starts here.**
+## ▶ Session 22 (2026-10-14) — read first; overrides the Session 21 block where they differ
+
+### State
+- Branch **`feature/phase-0-gate-3`**, not merged. New this session: `21869c6` docs (Session 21
+  close-out) · **`b1bba18` D-56 staff-side rules + `UsersController` role list** · docs commit(s)
+  after it.
+- Evidence at `b1bba18`: build 0 errors / 0 warnings; tests **73/73**; mutation checks M1–M7
+  (DECISION_LOG §64). No migration; no non-test database touched.
+- After the D-56 diff the user gave **blanket permission for the remaining sequence**
+  ("don't wait for my approval"); limits kept: no destructive command, no Proposed/Pending
+  decision treated as Approved.
+
+### Done this session (DECISION_LOG §64)
+- D-56 Q-S21-4 … 15 implemented: `SystemRoles.Admin`; `Seed:Admin:Role` removed; privileged
+  role assign/remove Admin-only (`UserService`); last-effective-Admin guard under
+  `sp_getapplock`; `RoleService` Admin-role rules; `UsersController` → `IRoleService.GetNamesAsync`.
+
+### Next action
+- Gate 3 `/code-review` + `/ponytail-review`, then 0.10 – 0.12 as far as Approved decisions
+  allow (see the Session 22 progress lines below as they are added).
+
+## Session 21 (2026-10-14) — superseded by the Session 22 block above where they differ
+Session 21 closed at the user's request (conversation too long) — Session 22 started here.
 
 ### State (verified 2026-10-14)
 - Branch **`feature/phase-0-gate-3`** (from `develop` @ `5bb43bc`), **8 commits, not merged**:

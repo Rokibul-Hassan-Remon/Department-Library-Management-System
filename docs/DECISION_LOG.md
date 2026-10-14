@@ -2042,6 +2042,28 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - Close-out docs (this section, SESSION_HANDOFF Session 21 block, PHASE_0_PLAN note,
   PROJECT_DECISIONS §9 "Session 22 start" row) are uncommitted unless the user asks to commit.
 
+### 64. Session 22 — Gate 3 (0.9) D-56 implementation (2026-10-14)
+- Verified at start: branch `feature/phase-0-gate-3`, top `add844a`, build 0/0, tests 65/65.
+  Session 21 close-out committed on the user's "ok" (`21869c6`).
+- Plan proposed and approved ("ok"), then two choices approved separately:
+  (a) **concurrency mechanism = `sp_getapplock`** (Exclusive, `LockOwner = Transaction`,
+  resource `CseLibrary.AdminGuard`) instead of `UPDLOCK/HOLDLOCK`; (b) **error codes**
+  `ErrorCodes.Forbidden = "SECURITY.FORBIDDEN"`, `ErrorCodes.LastAdmin = "SECURITY.LAST_ADMIN"`.
+- Implemented `b1bba18` (user gave blanket permission for the remaining sequence after the diff):
+  `SystemRoles.Admin` constant; `Seed:Admin:Role` / `SeedAdminOptions.Role` removed;
+  `IRoleReadRepository.GetNamesAsync` / `AnyPrivilegedAsync`, `IUserReadRepository.IsEffectiveAdminAsync`
+  / `CountEffectiveAdminsAsync`, `IPermissionRepository.CountAsync`, `IUnitOfWork.AcquireAdminGuardLockAsync`;
+  `UserService` checks only the changed roles (non-Admin may still edit an Admin's name/email),
+  runs every check before the first write, and wraps `DeleteAsync` in a transaction;
+  `RoleService` rules per Q-S21-12/14/15; `UsersController` uses `IRoleService.GetNamesAsync`
+  (architecture test E1 now also forbids `RoleManager<>` in controllers).
+- Tests: new `RoleAssignmentTests` (8); test host `TestCurrentUser` = request user, else
+  `ActAs(...)`, else the seeded Admin (direct service calls in tests have no request).
+  Evidence: build 0/0, **73/73**; mutation checks M1–M7 (privileged check, count, lock, caller
+  check, rename / permission / delete guards) each fail the matching test.
+- Not changed: non-Admins still see all role names on the Users pages (server refuses
+  privileged ones); `RoleService.DeleteAsync` still deletes physically (§63 item 8, no decision).
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

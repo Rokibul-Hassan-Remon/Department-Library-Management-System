@@ -131,6 +131,8 @@ _Session 19 notes (DECISION_LOG §52–§53):_
   soft delete; concurrency-safe), `RoleService` rules (Admin-only privileged edits/deletes,
   `Admin` role undeletable, keeps all permissions, no rename to/from `Admin`), together with the
   `UsersController` role-list refactor. Registration itself stays outside Phase 0._
+- _Session 22 (§64): D-56 staff-side rules + `UsersController` role list done `b1bba18`
+  (`RoleAssignmentTests`, 73/73, mutation M1–M7). Still open in 0.9: Gate 3 reviews only._
 
 **⛔ Gate 3 review — stop and wait for user approval before Phase 1.**
 
