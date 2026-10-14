@@ -209,6 +209,23 @@ public class CharacterizationTests(AppFactory app)
         Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/GeneralConfig")).StatusCode);
     }
 
+    [Fact] // D-37: the menu uses the same database check; a legacy claim shows nothing
+    public async Task Menu_shows_links_for_database_permissions_only()
+    {
+        var (email, _) = await CreateUserWithPermissions(Permissions.GeneralConfig.View);
+        await app.WithServiceAsync(async sp =>
+        {
+            var users = sp.GetRequiredService<UserManager<ApplicationUser>>();
+            var claim = new System.Security.Claims.Claim(Permissions.ClaimType, Permissions.Users.View);
+            Assert.True((await users.AddClaimAsync((await users.FindByEmailAsync(email))!, claim)).Succeeded);
+        });
+
+        var html = await (await app.LoggedInClient(email, UserPassword)).GetStringAsync("/");
+
+        Assert.Contains("href=\"/GeneralConfig\"", html);
+        Assert.DoesNotContain("href=\"/Users\"", html);
+    }
+
     [Fact] // current behaviour: a granted permission works on the next request (DB fallback in the handler)
     public async Task Granted_permission_works_on_the_next_request()
     {

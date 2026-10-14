@@ -48,8 +48,8 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
             if (user == null) return NotFound();
 
             var current = await userManager.GetRolesAsync(user);
-            var toRemove = current.Except(dto.Roles).ToList();
-            var toAdd = dto.Roles.Except(current).ToList();
+            var toRemove = current.Except(dto.Roles, StringComparer.OrdinalIgnoreCase).ToList();
+            var toAdd = dto.Roles.Except(current, StringComparer.OrdinalIgnoreCase).ToList();
             if (await CheckRoleChangeAsync([.. toAdd, .. toRemove], attemptCt) is { } denied) return denied;
 
             var deactivated = user.Status == RecordStatus.Active && !dto.IsActive;
