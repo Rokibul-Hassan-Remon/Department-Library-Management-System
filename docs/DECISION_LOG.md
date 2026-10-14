@@ -1900,6 +1900,29 @@ User sent five requests in one message:
   (0.10), Logout authenticated. Test passwords lengthened to 11 chars. New tests: allowlist (A1),
   lockout (A5), password policy from config, cookie/stamp/antiforgery settings; 64/64; mutation
   checks (lockout off, binding removed, Index not anonymous) each fail.
+  Committed `215d75e` (14 files incl. docs, user "ok").
+- Proposed next (not approved): D-32 code — custom `SignInManager.CanSignInAsync`, stamp update
+  on deactivation in `UserService.UpdateAsync`, test A4 with a test-only validation interval 0.
+
+### 56. Session 20 — close-out
+- User asked to switch sessions (conversation too long) and to record this session's decisions,
+  discussion and findings in the existing docs. Updated: SESSION_HANDOFF (Session 20 block
+  rewritten), this log, PROJECT_DECISIONS (commit hashes for D-31/D-53, D-32 note, section 9
+  "Session 21 start" row), PHASE_0_PLAN (0.9 progress note).
+- Branch `feature/phase-0-gate-3`: 4 commits on top of `develop` @ `5bb43bc` — `fab1af1` (D-37),
+  `9234229` (docs), `8550c00` (D-53), `215d75e` (D-31). Not merged; Gate 3 not reported.
+- Findings worth keeping:
+  1. The auto-mode permission classifier can block an approved `git commit`; the user granted
+     `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git status:*)` in `.claude/settings.local.json`
+     (local, excluded from Git). Other git/read commands may still be classified.
+  2. Python is not installed on this machine — edit docs with the Edit tool or `sed`.
+  3. Identity's defaults (6 chars, symbol, upper case) would hide a broken config binding if a
+     test only checks a password that fails both rule sets — test a password that only the
+     configured policy accepts (done in `Password_policy_comes_from_configuration`).
+  4. `UpdateSecurityStampAsync` saves the whole user, so setting `Status` first and calling it
+     stores both in one write (used by D-53 delete; reusable for D-32 deactivation).
+  5. The dev DB `CseLibrary` on `.\SQLEXPRESS` does not exist; the app has never run against it.
+- This close-out is uncommitted (docs only) unless the user asks to commit it.
 
 ## Unresolved decisions and why
 
@@ -1920,11 +1943,11 @@ connection string and D-47 below are **resolved** (§29); kept as history.
 | D-13 signatures | Contract approved; exact signatures reviewed at Gate 2 |
 | D-14 ambiguous commits | Approach approved (M8); per-use-case assessment (risk, mechanism, tests, limitations) due at Gate 2 |
 | D-15 / D-34 details | `PageRequest` limits, `Result` type — Proposed |
-| D-31 values / D-32 mechanism | Baseline approved; **Session 19 (§52): password + lockout values and D-32 mechanism Approved**; stamp interval, cookie settings, global antiforgery still Proposed |
+| D-31 values / D-32 mechanism | Baseline approved; **Session 19 (§52): password + lockout values and D-32 mechanism Approved**; **Session 20 (§55): stamp interval, cookie, antiforgery Approved and D-31 implemented `215d75e`**. D-32 implementation awaits execution approval (§56) |
 | Q-S19-1 / Q-S19-2 (§52) | ~~Registration scope~~ answered → D-54 (§53); anonymous `Error` / status-code / `AccessDenied` pages (now tied to D-55 Q-S19-10) |
 | ~~Q-S19-2 … Q-S19-17 (§53)~~ | **Answered Session 20 (§55)** — registration details (D-54), toast/forbidden-page details (D-55), deleted users in list + email reuse (D-53/D-52), anonymous error pages |
-| D-53 implementation (§53) | Requirement approved; code change (soft delete + stamp + no resurrection) awaits approval |
-| D-37 cleanup | Removing existing permission rows from `AspNetUserClaims` needs separate approval. **Session 19 (§53): criteria, environment and rollback reported; target DB + count not yet approved** |
+| ~~D-53 implementation (§53)~~ | **Resolved Session 20 (§55): implemented `8550c00`** |
+| ~~D-37 cleanup~~ | **Closed Session 20 (§55):** target `CseLibrary` does not exist on `.\SQLEXPRESS`; nothing to delete |
 | D-21/24/25/27 details | Audit schema, event list, bulk-write rule, consistency table — Proposed |
 | D-47 naming (M9) | `LibraryManagement.*` vs Approved `CseLibrary.*`; blocks 0.3 (Q-M9-9) |
 | ~~D-45 outstanding-loan rule (M9)~~ | Superseded by D-48 (M10) — conflict resolved as configuration; no request workflow |

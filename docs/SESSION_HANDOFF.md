@@ -1,27 +1,61 @@
 # Session Handoff
 
-## ▶ Session 20 (2026-10-14) — read first, then the Session 19 block below
-- Verified: `feature/phase-0-gate-3`, same 7 uncommitted files as the Session 19 table; build
-  0 errors; tests **52/52**.
-- **Q-S19-2 … Q-S19-17 answered and recorded** (DECISION_LOG §55; PROJECT_DECISIONS D-31, D-53,
-  D-54, D-55, section 9). Highlights: Registration outside Phase 0, `Registrations.Review`
-  permission, approval state separate from `RecordStatus`; D-55 toast in step 0.10 with test A2;
-  error/status pages anonymous; deleted users hidden by default; deleted emails not reusable.
-- **Separate approvals (one ok = one approval):**
-  1. ~~D-37 commit~~ **Done: `fab1af1`** on `feature/phase-0-gate-3` (3 files, user "ok"; build 0
-     errors, tests 52/52 before commit).
-  2. ~~D-37 cleanup~~ **Closed:** read-only check — `CseLibrary` does not exist on `.\SQLEXPRESS`;
-     nothing to delete. Docs commit `9234229` done; this note is uncommitted.
-  3. ~~D-53 soft-delete code~~ **Done: `8550c00`** (53/53, mutation check).
-  4. ~~D-31 stamp interval / cookie / global antiforgery~~ **Approved values:** stamp 5 min,
-     `Secure = Always`, explicit `HttpOnly`/`SameSite = Lax`, global antiforgery.
-  5. D-31 baseline code — **implemented, uncommitted** (Program.cs, appsettings, Data DI,
-     6 controllers, tests); 64/64; commit awaits its own approval.
-- **Next after that:** D-32 (`CanSignInAsync` override + stamp on deactivation, test A4), the
-  `UsersController` role list, then 0.10 (D-55 toast, status-code page, test A2).
+## ▶ Session 20 (2026-10-14) — read first; overrides older blocks where they differ
+Session 20 closed at the user's request (conversation too long) — **Session 21 starts here.**
+
+### State (verified 2026-10-14)
+- Branch **`feature/phase-0-gate-3`** (from `develop` @ `5bb43bc`), **4 commits, not merged**:
+  | Commit | Content |
+  |---|---|
+  | `fab1af1` | D-37: permissions checked in the DB every request; login writes no claims |
+  | `9234229` | Docs: Session 19–20 decisions |
+  | `8550c00` | D-53: users soft-deleted (`Status = Deleted` + stamp); hidden from list/details |
+  | `215d75e` | D-31: password/lockout from appsettings, stamp 5 min, cookie flags, global antiforgery, `FallbackPolicy` + class `[Authorize]` + allowlist |
+- Evidence: build 0 errors / 0 warnings; tests **64/64**; mutation checks for D-37, D-53, D-31
+  (each fails when the fix is undone). No migration; no non-test database touched.
+- Only this close-out (docs) is uncommitted.
+- Local `.claude/settings.local.json` (excluded via `.git/info/exclude`) allows `git add`,
+  `git commit`, `git status` — granted by the user after the classifier blocked an approved commit.
+
+### Decisions this session (details: DECISION_LOG §55, PROJECT_DECISIONS D-31/D-53/D-54/D-55)
+- **Q-S19-2 … Q-S19-17 answered** (recorded as stated): Registration outside Phase 0;
+  `Registrations.Review` permission; approval state separate from `RecordStatus`; Fellow approval
+  → Active; existing Member validated + linked, no automatic duplicate; re-apply allowed without
+  duplicates; Student gets a System Admin-configured default member role; email confirmation
+  *to be considered* (not decided). D-55: safe local return else Home + toast, AJAX 401/403, no
+  open redirect, Reference ID in error toast, warning 5 s / info 3 s / max 3 / pause on hover,
+  Bootstrap toast + current `TempData` keys, built in 0.10 with test A2. Error/status pages
+  anonymous. Deleted users hidden by default; deleted email not reusable (index unchanged).
+- **D-31 remaining values Approved:** stamp 5 min, `Secure = Always`, explicit `HttpOnly` /
+  `SameSite = Lax`, global antiforgery.
+- **D-37 cleanup closed:** `CseLibrary` does not exist on `.\SQLEXPRESS` (read-only check).
+- Assistant defaults stated in the D-31 request (user may object): no Registration link /
+  landing-page redesign yet, `AccessDenied` stays until D-55, Logout authenticated.
+
+### Findings (details: DECISION_LOG §56)
 - Existing users with passwords under 10 chars still sign in (policy applies when a password is
   set); the seeded admin password must be ≥ 10 chars with a digit.
-- Docs only changed this session (uncommitted); no code, DB, staging or commit change.
+- An old cookie on a login-only page lasts until stamp validation (now ≤ 5 min).
+- Python is not installed; edit docs with the Edit tool or `sed`.
+
+### ⛔ Next action (Session 21), in order
+1. Verify read-only: branch = `feature/phase-0-gate-3`, `git log --oneline -5` (top `215d75e` or a
+   close-out docs commit), `dotnet build` + `dotnet test` (expect 64/64).
+2. Ask the user whether to commit this close-out (docs) — if not already done.
+3. **D-32 — execution approval pending** (proposed at the end of Session 20): custom
+   `SignInManager.CanSignInAsync` (only `Active`; move the check out of `AccountController`),
+   `UpdateSecurityStampAsync` when `UpdateAsync` turns a user `Inactive`, test A4 (stamp changes;
+   old cookie denied on a permission page and, with a test-only interval 0, on a login-only page;
+   re-login refused). Code → build/test/mutation → diff → separate commit "ok".
+4. Then: `UsersController` role list (`RoleManager.Roles` → `IRoleService`), Gate 3
+   `/code-review` + `/ponytail-review`, step 0.10 (D-55 toast, status-code page, test A2),
+   0.11 audit, 0.12 smoke. Gate 3 report → approval → merge (each separate).
+- Still open (unchanged): D-49 O1–O5, `EF Tools` package, UI brand text, CR5 cascade part.
+
+### Learned in Session 20
+- One "ok" = one action, every time: values approval ≠ code approval ≠ commit approval.
+- Mutation-check every security test; make sure the test cannot pass on framework defaults.
+- Fix test fixtures (e.g. password length) in the same commit as the policy that breaks them.
 
 ## Session 19 (2026-10-14) — superseded by the Session 20 block above where they differ
 Session 19 closed at the user's request (conversation too long) — **Session 20 starts here.**

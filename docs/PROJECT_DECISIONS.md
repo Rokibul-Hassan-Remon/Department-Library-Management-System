@@ -1050,7 +1050,7 @@ security-stamp validation interval **5 min** (`Security:StampValidationMinutes`;
 30 min); cookie **`Secure = Always`**, `HttpOnly = true` and `SameSite = Lax` set explicitly,
 8 h sliding unchanged; global **`AutoValidateAntiforgeryToken`** (existing per-action attributes
 may stay). Code change (D-31 baseline commit) needs its own execution approval.
-**Implemented Session 20 (execution approved, uncommitted; DECISION_LOG §55):** all approved D-31
+**Implemented Session 20 — committed `215d75e` (DECISION_LOG §55):** all approved D-31
 values from `appsettings` (`Identity`, `Security:StampValidationMinutes`), cookie flags, global
 antiforgery, `FallbackPolicy` + class `[Authorize]`; anonymous: `Home.Index`/`Privacy`/`Error`,
 `Account.Login`/`AccessDenied` (AccessDenied until D-55). Status-code page comes with 0.10.
@@ -1114,6 +1114,9 @@ user cannot sign in again; deactivating a user calls `UpdateSecurityStampAsync`;
 validation and protected-page access are verified by automated tests (A4). This approval does
 **not** approve any other security setting (the stamp validation interval value stays D-31
 Proposed). In code the flag is `ApplicationUser.Status` (`RecordStatus.Active`/`Inactive`).
+**Session 20 (DECISION_LOG §56):** not implemented yet; the stamp interval it relies on is now
+5 min (D-31, `215d75e`). Implementation plan proposed (section 9, "Session 21 start"); execution
+approval pending.
 
 ### D-33 Permission claims via `UserClaimsPrincipalFactory` — Superseded by D-37
 Original proposal: a custom `UserClaimsPrincipalFactory` adds permission claims to the cookie at
@@ -1596,7 +1599,7 @@ a soft-deleted user keeps the email in the unique index (open question Q-S19-16)
 by default** in the normal Users list; an authorized admin view may show them when needed.
 Q-S19-16 — a deleted user's email **cannot be reused for now**; the D-52 unique index stays
 unchanged. The code change still needs a separate execution approval.
-**Implemented Session 20 (execution approved, uncommitted; DECISION_LOG §55):** `DeleteAsync` sets
+**Implemented Session 20 — committed `8550c00` (DECISION_LOG §55):** `DeleteAsync` sets
 `Status = Deleted` and saves it through `UpdateSecurityStampAsync` (one write, stamp changed);
 `UpdateAsync`/`DeleteAsync`/`ResetPasswordAsync` treat a deleted user as not found;
 `UserReadRepository` hides deleted users from list + details. No admin "show deleted" view yet
@@ -1708,6 +1711,7 @@ workflow methods with shared logic; no physical `AspNetUsers` delete, `Status = 
 | ~~Gate 2 start~~ **Resolved Session 17 (§44): started; 0.6–0.8 committed (`51e189a`, `48a9acf`, `0d01e4e`)** | Begin steps 0.6–0.8 (incl. D-50, D-51) on `feature/phase-0-gate-2` | — |
 | ~~Gate 2 review findings (§47)~~ **Resolved Session 18 (`8cd5f53`, §48)** | Which of CR1–CR9 / P1–P3 to fix before the Gate 2 report | One correction commit: CR1, CR3, CR4, CR5, CR7, CR8, CR9, CR2 permission-lookup filter, P1–P3; CR2 cookie part → 0.9; CR6 keep |
 | ~~Gate 2 report~~ **Resolved Session 18: approved, merged `798ccbd` (§49)** | After the correction commit: D-14 per-use-case duplicate-operation assessment, docs, report; then approval + merge → `develop` (separate approvals) | — |
+| **Session 21 start — D-32 execution approval (§56)** | Implement D-32: custom `SignInManager.CanSignInAsync` (only `Active`; check moved out of `AccountController`), `UpdateSecurityStampAsync` when `UpdateAsync` turns a user `Inactive`, test A4 (stamp changes, old cookie denied on permission page and — with a test-only interval 0 — on a login-only page, re-login refused) | Proposed to the user at the end of Session 20; not yet approved. Then `UsersController` role list, Gate 3 `/code-review` + `/ponytail-review`, 0.10 |
 | ~~Session 19 work review (§53, §54)~~ **Session 20 (§55): Q-S19-2…17 answered; still separate approvals: D-37 commit, D-37 cleanup (target DB → read-only count → rows + rollback → delete), D-53 code, D-31 stamp/cookie/antiforgery values** | Review the uncommitted D-37 fix + docs; then separately: commit, D-37 cleanup target DB + read-only count, D-53 implementation, open values below | Commit the D-37 fix first (tests 52/52) |
 | ~~Gate 3 start~~ **Resolved Session 19 (§52): started on `feature/phase-0-gate-3`** | Begin steps 0.9–0.12 on `feature/phase-0-gate-3` from `develop` | Includes CR2 cookie part (D-32/D-37) and the `UsersController` role list (0.9) |
 | ~~Q-S19-1 Registration scope (Session 19, §52)~~ **Design answered Session 19 (§53) → D-54**; details open as Q-S19-3 … Q-S19-9, Q-S19-17 | Public Registration is approved as an anonymous endpoint that grants no privileged role — but who may register (students/fellows only? institutional email?), what the account gets (no role / a member role), link to the member record, staff approval/activation, and the phase it is built in are not decided. No registration endpoint exists today | Decide before Registration is implemented; 0.9 only reserves it in the anonymous allowlist |
