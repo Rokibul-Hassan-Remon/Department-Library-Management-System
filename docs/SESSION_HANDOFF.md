@@ -4,10 +4,11 @@
 
 ### State
 - Branch **`feature/phase-0-gate-3`**, not merged. New this session: `21869c6` docs (Session 21
-  close-out) · **`b1bba18` D-56 staff-side rules + `UsersController` role list** · docs commit(s)
-  after it.
-- Evidence at `b1bba18`: build 0 errors / 0 warnings; tests **73/73**; mutation checks M1–M7
-  (DECISION_LOG §64). No migration; no non-test database touched.
+  close-out) · **`b1bba18` D-56 staff-side rules + `UsersController` role list** · `b5e8b3b` docs ·
+  **`ac24fd7` menu from DB permissions (D-37 regression) + case-insensitive role diff** ·
+  **`56bb5f0` D-57** · docs commit(s) after it.
+- Evidence at `56bb5f0`: build 0 errors / 0 warnings; tests **76/76**; mutation checks M1–M9
+  (DECISION_LOG §64–§65). No migration; no non-test database touched.
 - After the D-56 diff the user gave **blanket permission for the remaining sequence**
   ("don't wait for my approval"); limits kept: no destructive command, no Proposed/Pending
   decision treated as Approved.
@@ -16,10 +17,12 @@
 - D-56 Q-S21-4 … 15 implemented: `SystemRoles.Admin`; `Seed:Admin:Role` removed; privileged
   role assign/remove Admin-only (`UserService`); last-effective-Admin guard under
   `sp_getapplock`; `RoleService` Admin-role rules; `UsersController` → `IRoleService.GetNamesAsync`.
+- Gate 3 `/code-review` + `/ponytail-review` done (§65): menu bug fixed; **D-57 Approved and
+  implemented** (only an Admin may reset/re-email/deactivate/delete a privileged user).
 
 ### Next action
-- Gate 3 `/code-review` + `/ponytail-review`, then 0.10 – 0.12 as far as Approved decisions
-  allow (see the Session 22 progress lines below as they are added).
+- Step 0.10 (D-55 toast, status-code page, test A2), then 0.11 / 0.11a, 0.12, as far as Approved
+  decisions allow; Gate 3 report → user approval → merge.
 
 ## Session 21 (2026-10-14) — superseded by the Session 22 block above where they differ
 Session 21 closed at the user's request (conversation too long) — Session 22 started here.

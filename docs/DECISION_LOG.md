@@ -2064,6 +2064,31 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - Not changed: non-Admins still see all role names on the Users pages (server refuses
   privileged ones); `RoleService.DeleteAsync` still deletes physically (§63 item 8, no decision).
 
+### 65. Session 22 — Gate 3 reviews, menu fix, D-57 (2026-10-14)
+- `/code-review` on `develop...feature/phase-0-gate-3` (10 findings), verified one by one:
+  1. **Menu bug (real, from D-37 `fab1af1`):** `_Layout.cshtml` showed links by cookie
+     `Permission` claims, which login no longer writes → fixed `ac24fd7`: the layout calls
+     `IAuthorizationService` with the same `Permission:*` policies (one query per request via
+     the handler cache); test `Menu_shows_links_for_database_permissions_only`; reverting the
+     layout fails it.
+  2. **Role-name case (real, minor):** `UpdateAsync` role diff now ignores case (`ac24fd7`).
+  3. **Account takeover (real, security):** a non-Admin `Users.Edit` holder could reset an
+     Admin's password / change email / deactivate or delete a non-last Admin. Not covered by
+     D-56 → raised with the user → **D-57 Approved** (user's rule text) → implemented
+     `56bb5f0`; tests `Non_admin_cannot_reset_change_email_deactivate_or_delete_a_privileged_user`,
+     `Admin_reset_and_self_service_password_change_still_work_for_privileged_users`;
+     mutations M8 (no target check) and M9 (email change unchecked) each fail the first test.
+  4. Dismissed with reason: `Cookie.SecurePolicy = Always` (D-31 Approved); deleted user's email
+     not reusable (Q-S19-16 "keep for now"); class-level `[Authorize]` beside the fallback policy
+     (FR-M9-05 Approved); test caller defaults to the seeded Admin (mutation checks prove the
+     non-Admin paths run via `ActAs`); role privilege looked up by normalized name (works; style).
+  5. Noted, no change: `RoleService.DeleteAsync` privilege check is outside a transaction — a
+     concurrent permission grant by an Admin could interleave (very unlikely; no decision).
+- `/ponytail-review`: lean; one optional 2-line cut (`AcquireAdminGuardLockAsync`'s explicit
+  "no transaction" check duplicates `sp_getapplock`'s own negative result). Not applied: the
+  explicit message is clearer.
+- Evidence after `56bb5f0`: build 0/0, tests **76/76**.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

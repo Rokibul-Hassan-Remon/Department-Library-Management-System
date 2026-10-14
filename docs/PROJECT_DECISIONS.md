@@ -1796,7 +1796,21 @@ details stay in force. Registration is still built outside Phase 0 (Q-S19-9).
   `DbSeeder` already restores missing ones at startup).
 - **Q-S21-15 Role renames:** `RoleService` refuses server-side both renaming the `Admin` role and
   renaming any other role **to** `Admin`, so the fixed identity can be neither broken nor hijacked.
-Open: none from Q-S21 (section 9).
+Open: none from Q-S21 (section 9). **Extended Session 22 by D-57** (operations on privileged users).
+
+### D-57 Only an Admin may reset, re-email, deactivate or delete a privileged user — Approved (Session 22); implemented `56bb5f0`
+**Source:** user, Session 22 (DECISION_LOG §65), after the Gate 3 code review found that a
+non-Admin `Users.Edit` holder could reset an Admin's password and sign in as that Admin,
+bypassing D-56. Extends D-56 (Q-S21-4/8); does not replace it.
+1. **Non-Admin:** cannot reset the password of, change the email of, deactivate or soft-delete a
+   user who holds a privileged role (D-56 Q-S21-5/10: any role with ≥ 1 live permission).
+2. **Admin** (effective Admin, D-56 Q-S21-7): may do all of these; the last-effective-Admin
+   protection still applies.
+3. **Server-side:** enforced in `UserService` (`ErrorCodes.Forbidden`), not only by hiding UI.
+4. **Other users** (no privileged role): current permission rules unchanged. Editing a
+   privileged user's full name with unchanged email/status/roles stays allowed.
+5. **Existing flows must keep working** (tested): sign-in, self-service password change
+   (`/Account/ChangePassword`, not routed through `UserService`), Admin password reset.
 
 ---
 
