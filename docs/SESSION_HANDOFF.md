@@ -1,31 +1,57 @@
 # Session Handoff
 
-## ▶ Session 18 (2026-10-13) — read first; overrides older blocks where they differ
+## ▶ Session 18 (2026-10-13/14) — read first; overrides older blocks where they differ
+Session 18 closed at the user's request (conversation too long) — **Session 19 starts here.**
 
-### State (verified 2026-10-13)
-- Branch **`feature/phase-0-gate-2`**, `develop..HEAD` = 0.6 `51e189a`, 0.7 `48a9acf`, 0.8 `0d01e4e`,
-  close-out docs `6470649`, review fixes `8cd5f53` (each on the user's "ok").
-- Evidence after `8cd5f53`: build 0 errors / 0 warnings; tests **49/49** twice; no pending model
-  changes; 0 `CseLibrary*` DBs on LocalDB; `.\SQLEXPRESS` untouched.
-- Review fixes + **D-14 rule 3 assessment**: DECISION_LOG §48. Gate 2 report given to the user.
-- _(uncommitted)_ Session 18 docs: this block, DECISION_LOG §47 title + §48, PHASE_0_PLAN Gate 2,
-  PROJECT_DECISIONS D-14 note.
+### State (verified 2026-10-14)
+- Branch **`develop`** @ `e9a0536` (local only; `main` @ `af89144` unchanged). Only `develop`, `main`
+  and the close-out branch `docs/session-18-closeout` exist; merged task branches were deleted (`-d`).
+  Session 18 commits, each on the user's "ok":
+  | Commit | Content | Log |
+  |---|---|---|
+  | `6470649` | Session 17 close-out docs | §48 |
+  | `8cd5f53` | Gate 2 review fixes CR1–CR5, CR7–CR9, P1–P3 (+5 tests) | §48 |
+  | `d779249` | Review fixes + **D-14 rule 3 use-case assessment** (docs) | §48 |
+  | `798ccbd` | **Gate 2 approved → merged into `develop` `--no-ff`** | §49 |
+  | `4c288a5` | Gate 2 approval docs | §49 |
+  | `70bad0f` + merge `e9a0536` | **D-52** unique user email index (migration `UniqueUserEmail`) | §50 |
+  | _(uncommitted, branch `docs/session-18-closeout`)_ | this close-out | §51 |
+- Evidence on `develop` @ `e9a0536`: build 0 errors / 0 warnings; tests **50/50**; no pending model
+  changes; 0 `CseLibrary*` DBs on LocalDB; `.\SQLEXPRESS` untouched (no migration applied anywhere
+  but test DBs).
 
-- **Gate 2 approved** (user "ok") and merged: `develop` @ `798ccbd` (`--no-ff`); docs `d779249`;
-  49/49 tests on `develop` after the merge (DECISION_LOG §49).
+### Decisions this session (details: PROJECT_DECISIONS / DECISION_LOG)
+- §47 findings: user chose the recommendation ("choose 2"); CR2 cookie part → 0.9; CR6 kept
+  (`ApplicationUser.UpdatedAt` = last write of the row, incl. Identity-internal writes).
+- `ExecuteInTransactionAsync(work, verifySucceeded = null, ct)` — optional EF `verifySucceeded`
+  callback (D-14 note); role/user create use it.
+- **Gate 2 approved and merged** (§49).
+- **Standing rule (user, §50):** every new feature/task on its own branch from `develop`, merged back
+  `--no-ff` when finished and verified. Commits still need the user's OK on list + message.
+- **D-52 Approved:** unique filtered index on `AspNetUsers.NormalizedEmail` (login is by email). No
+  index on the password (salted hash; login looks up by email) — user asked, assistant advised no.
 
-- Approval docs `4c288a5`. **Standing rule (user):** every new task on its own branch from `develop`,
-  merged back when finished (§50). Old gate branches deleted (`-d`).
-- **D-52 Approved:** unique email index — on `feature/email-unique-index` (migration
-  `UniqueUserEmail`, tests 50/50 twice, §50).
-
-### ⛔ Next action
+### ⛔ Next action (Session 19), in order
 1. Verify read-only: `git branch --show-current`, `git log --oneline -5`, `git status`.
-2. If `feature/email-unique-index` is not yet committed/merged: commit (user's OK on list + message),
-   then merge → `develop` `--no-ff` (standing rule, §50) and verify build + tests on `develop`.
-3. Ask explicitly: **start Gate 3 (0.9–0.12)** on `feature/phase-0-gate-3` from `develop`? Not approved yet.
-- Still open: O1–O5, `EF Tools` package, UI brand text, `UsersController` role list via
-  `RoleManager.Roles` (0.9), CR2 cookie part (0.9), CR5 cascade part.
+2. If the close-out on `docs/session-18-closeout` is uncommitted: show list + message, commit on the
+   user's OK (`Record Session 18 close-out (docs)`), merge → `develop` `--no-ff`, delete the branch (`-d`).
+3. Ask explicitly: **start Gate 3 (0.9–0.12)** on `feature/phase-0-gate-3` from `develop`? Not approved.
+   Gate 3 already owes: CR2 cookie part (deactivated user keeps a valid cookie, D-32/D-37) and the
+   `UsersController` role list still reading `RoleManager.Roles` (0.9).
+- Still open: D-49 O1–O5 (`database.md`), `EF Tools` package, UI brand text, CR5 cascade part
+  (tracked non-`BaseEntity` dependent of a soft-deleted principal is hard-deleted; no current path).
+
+### Learned in Session 18
+- A bare "ok" after several questions approves **one** thing — the first pending action. Ask the rest
+  again; never bundle commit + merge + decision under one "ok".
+- `dotnet ef migrations add` prints a `HostAbortedException` trace at `builder.Build()` (Program.cs
+  line 43): normal design-time stop, before seeding/`MigrateAsync` — no database is touched.
+- Fault-inject an ambiguous commit with a `DbTransactionInterceptor` that throws a retryable
+  exception from `TransactionCommittedAsync` + a test execution strategy; mutation-check by making
+  `verifySucceeded` return false (the old duplicate error must come back).
+- A duplicate past Identity's validators can be simulated by building `RoleManager` with an empty
+  validator list over the real store.
+- In Git Bash, multi-line doc edits work best as a small `node` script in the scratchpad.
 
 ## Session 17 (2026-10-13) — superseded by the Session 18 block above where they differ
 Session 17 closed at the user's request (conversation too long) — **Session 18 starts here.**
