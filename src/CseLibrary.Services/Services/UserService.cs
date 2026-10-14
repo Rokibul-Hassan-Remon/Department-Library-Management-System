@@ -53,6 +53,8 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
             if (await CheckRoleChangeAsync([.. toAdd, .. toRemove], attemptCt) is { } denied) return denied;
 
             var deactivated = user.Status == RecordStatus.Active && !dto.IsActive;
+            if ((deactivated || !string.Equals(user.Email, dto.Email, StringComparison.Ordinal))
+                && await CheckPrivilegedTargetAsync(current, attemptCt) is { } protectedUser) return protectedUser;
             if ((deactivated || toRemove.Contains(SystemRoles.Admin))
                 && await GuardLastAdminAsync(user.Id, attemptCt) is { } lastAdmin) return lastAdmin;
 
@@ -78,6 +80,7 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
         {
             var user = await FindLiveAsync(id);
             if (user == null) return NotFound();
+            if (await CheckPrivilegedTargetAsync(await userManager.GetRolesAsync(user), attemptCt) is { } denied) return denied;
             if (await GuardLastAdminAsync(user.Id, attemptCt) is { } lastAdmin) return lastAdmin;
             user.Status = RecordStatus.Deleted;
             return (await userManager.UpdateSecurityStampAsync(user)).ToResult();
@@ -87,20 +90,29 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
     {
         var user = await FindLiveAsync(id);
         if (user == null) return NotFound();
+        if (await CheckPrivilegedTargetAsync(await userManager.GetRolesAsync(user), ct) is { } denied) return denied;
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
         return (await userManager.ResetPasswordAsync(user, token, newPassword)).ToResult();
     }
 
     // D-56 Q-S21-4/8: only an effective Admin may assign or remove a privileged role (self-promotion included).
-    private async Task<Result?> CheckRoleChangeAsync(ICollection<string> changed, CancellationToken ct)
-    {
-        if (changed.Count == 0) return null;
-        var normalized = changed.Select(n => userManager.NormalizeName(n)!).ToList();
-        if (!await uow.Roles.AnyPrivilegedAsync(normalized, ct)) return null;
-        return currentUser.UserId is { } callerId && await uow.Users.IsEffectiveAdminAsync(callerId, ct)
-            ? null
-            : Result.Failure(ErrorCodes.Forbidden, "Only an Admin can assign or remove a role that has permissions.");
-    }
+    private async Task<Result?> CheckRoleChangeAsync(ICollection<string> changed, CancellationToken ct) =>
+        await IsPrivilegedAsync(changed, ct) && !await CallerIsAdminAsync(ct)
+            ? Result.Failure(ErrorCodes.Forbidden, "Only an Admin can assign or remove a role that has permissions.")
+            : null;
+
+    // D-57: only an effective Admin may reset the password of, change the email of, deactivate or delete
+    // a user who holds a privileged role (account takeover otherwise bypasses D-56). Other users: unchanged.
+    private async Task<Result?> CheckPrivilegedTargetAsync(ICollection<string> targetRoles, CancellationToken ct) =>
+        await IsPrivilegedAsync(targetRoles, ct) && !await CallerIsAdminAsync(ct)
+            ? Result.Failure(ErrorCodes.Forbidden, "Only an Admin can reset the password, change the email, deactivate or delete a user whose role has permissions.")
+            : null;
+
+    private async Task<bool> IsPrivilegedAsync(ICollection<string> roleNames, CancellationToken ct) =>
+        roleNames.Count > 0 && await uow.Roles.AnyPrivilegedAsync(roleNames.Select(n => userManager.NormalizeName(n)!).ToList(), ct);
+
+    private async Task<bool> CallerIsAdminAsync(CancellationToken ct) =>
+        currentUser.UserId is { } callerId && await uow.Users.IsEffectiveAdminAsync(callerId, ct);
 
     // D-56 Q-S21-7: the lock makes this check and the caller's write one step, so two requests cannot
     // each remove one of the last two Admins. Applies to the acting user too.

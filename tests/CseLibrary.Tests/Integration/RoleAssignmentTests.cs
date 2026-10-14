@@ -42,6 +42,46 @@ public class RoleAssignmentTests(AppFactory app)
         Assert.DoesNotContain(SystemRoles.Admin, (await GetUser(staff.Id)).Roles);
     }
 
+    [Fact] // D-57: a non-Admin cannot take over or lock out a privileged user; plain users are unchanged
+    public async Task Non_admin_cannot_reset_change_email_deactivate_or_delete_a_privileged_user()
+    {
+        var staff = await CreateUser(await CreateRole(Permissions.Users.Edit, Permissions.Users.Delete));
+        var privileged = await CreateUser(await CreateRole(Permissions.GeneralConfig.View));
+        var plain = await CreateUser(await CreateRole());
+
+        using (TestCurrentUser.ActAs(staff.Id))
+        {
+            Assert.Equal(ErrorCodes.Forbidden, (await ResetPassword(privileged.Id, "Changed-Pw12")).ErrorCode);
+            Assert.Equal(ErrorCodes.Forbidden, (await Update(privileged, privileged.Roles, email: "x_" + privileged.Email)).ErrorCode);
+            Assert.Equal(ErrorCodes.Forbidden, (await Update(privileged, privileged.Roles, isActive: false)).ErrorCode);
+            Assert.Equal(ErrorCodes.Forbidden, (await Delete(privileged.Id)).ErrorCode);
+
+            Assert.True((await ResetPassword(plain.Id, "Changed-Pw12")).Succeeded);
+            Assert.True((await Update(plain, plain.Roles, email: "x_" + plain.Email)).Succeeded);
+            Assert.True((await Update(plain, plain.Roles, isActive: false)).Succeeded);
+            Assert.True((await Delete(plain.Id)).Succeeded);
+        }
+        var unchanged = await GetUser(privileged.Id);
+        Assert.Equal((privileged.Email, true), (unchanged.Email, unchanged.IsActive));
+        await app.LoggedInClient(privileged.Email!, UserPassword); // old password still works
+    }
+
+    [Fact] // D-57: an Admin may reset a privileged user's password; self-service password change still works
+    public async Task Admin_reset_and_self_service_password_change_still_work_for_privileged_users()
+    {
+        var privileged = await CreateUser(await CreateRole(Permissions.GeneralConfig.View));
+
+        Assert.True((await ResetPassword(privileged.Id, "Admin-Reset-Pw1")).Succeeded); // as the seeded Admin
+        var client = await app.LoggedInClient(privileged.Email!, "Admin-Reset-Pw1");
+
+        var changed = await AppFactory.PostFormAsync(client, "/Account/ChangePassword", "/Account/ChangePassword", new()
+        {
+            ["CurrentPassword"] = "Admin-Reset-Pw1", ["NewPassword"] = "Self-Changed-Pw1", ["ConfirmPassword"] = "Self-Changed-Pw1"
+        });
+        Assert.Equal(HttpStatusCode.Redirect, changed.StatusCode);
+        await app.LoggedInClient(privileged.Email!, "Self-Changed-Pw1");
+    }
+
     [Fact] // Q-S21-4 through the real request pipeline: the signed-in user is the caller
     public async Task Self_promotion_through_the_Users_page_is_refused()
     {
@@ -193,11 +233,14 @@ public class RoleAssignmentTests(AppFactory app)
             UserName = email, Email = email, Password = UserPassword, Roles = roles
         }));
 
-    private Task<Result> Update(UserDto user, IList<string> roles, bool isActive = true, string? fullName = null) =>
+    private Task<Result> Update(UserDto user, IList<string> roles, bool isActive = true, string? fullName = null, string? email = null) =>
         app.WithServiceAsync(sp => sp.GetRequiredService<IUserService>().UpdateAsync(new UpdateUserDto
         {
-            Id = user.Id, Email = user.Email, FullName = fullName ?? user.FullName, IsActive = isActive, Roles = roles
+            Id = user.Id, Email = email ?? user.Email, FullName = fullName ?? user.FullName, IsActive = isActive, Roles = roles
         }));
+
+    private Task<Result> ResetPassword(string id, string password) =>
+        app.WithServiceAsync(sp => sp.GetRequiredService<IUserService>().ResetPasswordAsync(id, password));
 
     private Task<Result> Delete(string id) => app.WithServiceAsync(sp => sp.GetRequiredService<IUserService>().DeleteAsync(id));
 
