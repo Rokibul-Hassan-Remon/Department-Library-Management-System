@@ -51,6 +51,7 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
         {
             GuardDbContext(services, Commands);
             services.AddScoped<ICurrentUser, TestCurrentUser>();
+            services.AddControllersWithViews().AddApplicationPart(typeof(FallbackProbeController).Assembly); // A11
         });
 
     /// <summary>

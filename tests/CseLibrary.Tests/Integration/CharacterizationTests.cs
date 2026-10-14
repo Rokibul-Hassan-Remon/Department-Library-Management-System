@@ -77,7 +77,29 @@ public class CharacterizationTests(AppFactory app)
     public async Task Only_the_public_allowlist_is_anonymous(string url, HttpStatusCode expected) =>
         Assert.Equal(expected, (await app.NewClient().GetAsync(url)).StatusCode);
 
-    [Fact] // A5 (D-31): 5 failures lock the account; the right password is then refused too
+    [Fact] // A11 (D-31): an endpoint with no authorization metadata is still guarded by the fallback policy
+    public async Task Endpoint_without_authorization_metadata_requires_login()
+    {
+        var response = await app.NewClient().GetAsync("/FallbackProbe");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/Account/Login", response.Headers.Location?.OriginalString);
+        var signedIn = await app.LoggedInClient(AppFactory.AdminEmail, AppFactory.AdminPassword);
+        Assert.Equal("reached", await signedIn.GetStringAsync("/FallbackProbe")); // the probe itself is reachable
+    }
+
+    [Fact] // A5 (D-31): a POST without an antiforgery token is refused with 400
+    public async Task Post_without_antiforgery_token_is_rejected()
+    {
+        var response = await app.NewClient().PostAsync("/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Email"] = AppFactory.AdminEmail, ["Password"] = AppFactory.AdminPassword, ["RememberMe"] = "false"
+        }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact] // A3 (D-31): 5 failures lock the account; the right password is then refused too
     public async Task Five_failed_logins_lock_the_account()
     {
         var (email, _) = await CreateUserWithPermissions();
