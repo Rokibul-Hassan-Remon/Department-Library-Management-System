@@ -31,7 +31,9 @@ namespace CseLibrary.Web.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            var requestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+            TempData["Error"] = $"An unexpected error occurred. Reference ID: {requestId}"; // D-55 Q-S19-11
+            return View(new ErrorViewModel { RequestId = requestId });
         }
     }
 }

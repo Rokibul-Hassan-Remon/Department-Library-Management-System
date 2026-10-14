@@ -77,6 +77,54 @@ public class CharacterizationTests(AppFactory app)
     public async Task Only_the_public_allowlist_is_anonymous(string url, HttpStatusCode expected) =>
         Assert.Equal(expected, (await app.NewClient().GetAsync(url)).StatusCode);
 
+    [Theory] // A2 (D-55, Q-S19-10): back to a safe local page with a red toast; never AccessDenied, never off-site
+    [InlineData("https://localhost/Account/ChangePassword?x=1", "/Account/ChangePassword?x=1")]
+    [InlineData(null, "/")]                                       // typed URL: Home
+    [InlineData("https://evil.example/phish", "/")]               // other site
+    [InlineData("https://localhost//evil.example/phish", "/")]    // protocol-relative path
+    [InlineData("https://localhost/GeneralConfig", "/")]          // the denied page itself: no loop
+    public async Task Permission_failure_returns_to_a_safe_page_with_a_toast(string? referer, string expected)
+    {
+        var (email, _) = await CreateUserWithPermissions();
+        var client = await app.LoggedInClient(email, UserPassword);
+        var request = new HttpRequestMessage(HttpMethod.Get, "/GeneralConfig");
+        if (referer != null) request.Headers.Referrer = new Uri(referer);
+
+        var denied = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Redirect, denied.StatusCode);
+        Assert.Equal(expected, denied.Headers.Location?.OriginalString);
+        Assert.Contains("You don&#x27;t have permission to perform this action.", await client.GetStringAsync(expected));
+    }
+
+    [Fact] // A2 (D-55): AJAX requests get a plain 403, no redirect
+    public async Task Ajax_permission_failure_is_403()
+    {
+        var (email, _) = await CreateUserWithPermissions();
+        var client = await app.LoggedInClient(email, UserPassword);
+        var request = new HttpRequestMessage(HttpMethod.Get, "/GeneralConfig");
+        request.Headers.Add("X-Requested-With", "XMLHttpRequest");
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(request)).StatusCode);
+    }
+
+    [Fact] // D-55: the existing TempData messages render as one toast (label text, close button)
+    public async Task Success_message_renders_as_a_toast()
+    {
+        var client = await app.LoggedInClient(AppFactory.AdminEmail, AppFactory.AdminPassword);
+        var key = "Toast." + Guid.NewGuid().ToString("N")[..8];
+        var created = await AppFactory.PostFormAsync(client, "/GeneralConfig/Create", "/GeneralConfig/Create", new()
+        {
+            ["Key"] = key, ["Value"] = "v", ["Group"] = "Test", ["Description"] = ""
+        });
+        Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+
+        var html = await client.GetStringAsync(created.Headers.Location!.OriginalString);
+        Assert.Contains("class=\"toast ", html);
+        Assert.Contains("<strong>Success:</strong>", html);
+        Assert.Contains("data-bs-dismiss=\"toast\"", html);
+    }
+
     [Fact] // A11 (D-31): an endpoint with no authorization metadata is still guarded by the fallback policy
     public async Task Endpoint_without_authorization_metadata_requires_login()
     {
@@ -208,7 +256,7 @@ public class CharacterizationTests(AppFactory app)
         var response = await client.GetAsync("/GeneralConfig");
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.Contains("/Account/AccessDenied", response.Headers.Location?.OriginalString);
+        Assert.Equal("/", response.Headers.Location?.OriginalString); // D-55: Home with a toast, not AccessDenied
     }
 
     [Fact] // A8 (D-37): removing the user from the role denies on the next request with the same cookie
@@ -255,7 +303,7 @@ public class CharacterizationTests(AppFactory app)
         var client = await app.LoggedInClient(email, UserPassword);
         var denied = await client.GetAsync("/GeneralConfig");
         Assert.Equal(HttpStatusCode.Redirect, denied.StatusCode);
-        Assert.Contains("/Account/AccessDenied", denied.Headers.Location?.OriginalString);
+        Assert.Equal("/", denied.Headers.Location?.OriginalString); // D-55
 
         await SetRolePermissions(roleId, Permissions.GeneralConfig.View);
 

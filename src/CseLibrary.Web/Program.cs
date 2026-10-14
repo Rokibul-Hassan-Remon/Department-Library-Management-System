@@ -35,6 +35,7 @@ try
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Events.OnRedirectToAccessDenied = AccessDeniedRedirect.HandleAsync; // D-55
     });
     // A changed security stamp (deactivation, deletion) ends existing sessions within this interval (D-31, D-32).
     builder.Services.Configure<SecurityStampValidatorOptions>(options =>
