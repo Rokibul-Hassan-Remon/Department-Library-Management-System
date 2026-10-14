@@ -32,6 +32,7 @@ public static class DependencyInjection
                 options.User.RequireUniqueEmail = true;
                 options.SignIn.RequireConfirmedEmail = false;
             })
+            .AddSignInManager<ActiveUserSignInManager>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 

@@ -368,6 +368,50 @@ public class DataLayerTests(AppFactory app)
         Assert.Contains("Invalid login attempt.", await response.Content.ReadAsStringAsync());
     }
 
+    [Fact] // A4 (D-32): deactivation changes the stamp; the old cookie is denied on a permission page at once
+           // and on a login-only page at the next stamp check; signing in again is refused
+    public async Task Deactivated_user_loses_existing_sessions()
+    {
+        var permissionId = (await app.WithServiceAsync(sp => sp.GetRequiredService<IPermissionService>().GetAllAsync()))
+            .Single(p => p.Name == CseLibrary.Core.Constants.Permissions.GeneralConfig.View).Id;
+        var (email, roleName) = await CreateUserWithRole(permissionId);
+        var before = (await FindUserAsync(email))!;
+        var client = await app.LoggedInClient(email, UserPassword);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/GeneralConfig")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/Account/ChangePassword")).StatusCode);
+
+        var update = await app.WithServiceAsync(sp => sp.GetRequiredService<IUserService>().UpdateAsync(new UpdateUserDto
+        {
+            Id = before.Id, Email = email, IsActive = false, Roles = [roleName]
+        }));
+        Assert.True(update.Succeeded, update.Error);
+        Assert.NotEqual(before.SecurityStamp, (await FindUserAsync(email))!.SecurityStamp);
+
+        Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/GeneralConfig")).StatusCode);
+
+        // Test-only: check the stamp on every request instead of every 5 min (shared options instance, restored below).
+        var stampOptions = app.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<SecurityStampValidatorOptions>>().Value;
+        var interval = stampOptions.ValidationInterval;
+        stampOptions.ValidationInterval = TimeSpan.Zero;
+        try
+        {
+            var page = await client.GetAsync("/Account/ChangePassword");
+            Assert.Equal(HttpStatusCode.Redirect, page.StatusCode);
+            Assert.Contains("/Account/Login", page.Headers.Location?.OriginalString);
+        }
+        finally
+        {
+            stampOptions.ValidationInterval = interval;
+        }
+
+        var login = await AppFactory.PostFormAsync(app.NewClient(), "/Account/Login", "/Account/Login", new()
+        {
+            ["Email"] = email, ["Password"] = UserPassword, ["RememberMe"] = "false"
+        });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        Assert.Contains("Invalid login attempt.", await login.Content.ReadAsStringAsync());
+    }
+
     [Fact] // D-53: delete keeps the row, blocks login and the old cookie, cannot be undone by an edit, hides the user
     public async Task Deleted_user_is_kept_but_locked_out_and_hidden()
     {

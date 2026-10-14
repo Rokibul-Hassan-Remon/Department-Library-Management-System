@@ -45,8 +45,10 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
 
             user.Email = dto.Email;
             user.FullName = dto.FullName;
+            // D-32: deactivation changes the stamp (same single write), so existing cookies stop working.
+            var deactivated = user.Status == RecordStatus.Active && !dto.IsActive;
             user.Status = dto.IsActive ? RecordStatus.Active : RecordStatus.Inactive;
-            var update = (await userManager.UpdateAsync(user)).ToResult();
+            var update = (await (deactivated ? userManager.UpdateSecurityStampAsync(user) : userManager.UpdateAsync(user))).ToResult();
             if (!update.Succeeded) return update;
 
             var current = await userManager.GetRolesAsync(user);
