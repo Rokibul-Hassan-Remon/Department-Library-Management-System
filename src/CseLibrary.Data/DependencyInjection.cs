@@ -25,13 +25,10 @@ public static class DependencyInjection
             .UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure())
             .AddInterceptors(sp.GetRequiredService<AuditColumnsInterceptor>()));
 
+        // Password and lockout values come from the "Identity" section of appsettings (D-31).
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {
-                options.Password.RequireDigit = true;
-                options.Password.RequiredLength = 6;
-                options.Password.RequireNonAlphanumeric = false;
-                options.Password.RequireUppercase = false;
-                options.Password.RequireLowercase = false;
+                configuration.GetSection("Identity").Bind(options);
                 options.User.RequireUniqueEmail = true;
                 options.SignIn.RequireConfirmedEmail = false;
             })

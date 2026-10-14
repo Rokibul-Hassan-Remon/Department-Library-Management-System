@@ -1045,6 +1045,15 @@ and documented, not hard-coded.
 min length **10**, at least **one digit**; lockout after **5** failed attempts for **15 minutes**;
 `PasswordSignInAsync(..., lockoutOnFailure: true)`. Still **Proposed** (not covered by this
 approval): security-stamp validation interval, cookie settings, global antiforgery.
+**Approved Session 20 (2026-10-14, DECISION_LOG §55), after comparison with the current config:**
+security-stamp validation interval **5 min** (`Security:StampValidationMinutes`; current default
+30 min); cookie **`Secure = Always`**, `HttpOnly = true` and `SameSite = Lax` set explicitly,
+8 h sliding unchanged; global **`AutoValidateAntiforgeryToken`** (existing per-action attributes
+may stay). Code change (D-31 baseline commit) needs its own execution approval.
+**Implemented Session 20 (execution approved, uncommitted; DECISION_LOG §55):** all approved D-31
+values from `appsettings` (`Identity`, `Security:StampValidationMinutes`), cookie flags, global
+antiforgery, `FallbackPolicy` + class `[Authorize]`; anonymous: `Home.Index`/`Privacy`/`Error`,
+`Account.Login`/`AccessDenied` (AccessDenied until D-55). Status-code page comes with 0.10.
 **Approved Session 19 (DECISION_LOG §52) — 0.9 access design** (supersedes the Session 13
 Q-M9-10 answer "all pages authenticated except Login, AccessDenied, Error"):
 - `Home.Index` is **public** and is the CSE Library landing page, with **Login** and

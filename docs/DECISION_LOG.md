@@ -1887,6 +1887,19 @@ User sent five requests in one message:
   `Status = Deleted` + `UpdateSecurityStampAsync`; deleted user = not found for update/delete/reset
   password; hidden from Users list + details. Separate commit from D-32 (smaller review). New test
   `Deleted_user_is_kept_but_locked_out_and_hidden`; build 0/0; tests 53/53; mutation check passed.
+  Committed `8550c00` (code + docs, user "ok").
+- **D-31 remaining values Approved** (user "ok" after a current-vs-proposed table): stamp interval
+  5 min (from config), cookie `Secure = Always` + explicit `HttpOnly`/`SameSite = Lax`, 8 h sliding
+  kept, global `AutoValidateAntiforgeryToken`. Values only — D-31 baseline code not yet approved.
+- **D-31 baseline implemented** (user "ok" to start code; commit needs its own ok): Identity
+  password/lockout bound from `appsettings` `Identity`; `Security:StampValidationMinutes` = 5;
+  cookie Secure/HttpOnly/SameSite=Lax; global antiforgery; `FallbackPolicy` = authenticated;
+  class `[Authorize]` on all 6 controllers; `[AllowAnonymous]` on Home Index/Privacy/Error,
+  Account Login/AccessDenied. Assistant's defaults (user told to object if needed): no Registration
+  link or landing-page redesign yet (Registration outside Phase 0), AccessDenied stays until D-55
+  (0.10), Logout authenticated. Test passwords lengthened to 11 chars. New tests: allowlist (A1),
+  lockout (A5), password policy from config, cookie/stamp/antiforgery settings; 64/64; mutation
+  checks (lockout off, binding removed, Index not anonymous) each fail.
 
 ## Unresolved decisions and why
 

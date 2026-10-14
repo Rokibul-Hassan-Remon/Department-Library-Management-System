@@ -2,10 +2,12 @@ using CseLibrary.Core.Constants;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Web.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CseLibrary.Web.Controllers;
 
+[Authorize]
 public class PermissionsController : Controller
 {
     private readonly IPermissionService _service;

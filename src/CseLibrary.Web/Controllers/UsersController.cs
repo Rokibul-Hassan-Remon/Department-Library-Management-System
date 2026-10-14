@@ -5,11 +5,13 @@ using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Core.Paging;
 using CseLibrary.Web.Authorization;
 using CseLibrary.Web.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CseLibrary.Web.Controllers;
 
+[Authorize]
 public class UsersController : Controller
 {
     private readonly IUserService _userService;

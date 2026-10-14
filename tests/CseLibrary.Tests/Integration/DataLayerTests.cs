@@ -25,7 +25,7 @@ namespace CseLibrary.Tests.Integration;
 [Collection(AppCollection.Name)]
 public class DataLayerTests(AppFactory app)
 {
-    private const string UserPassword = "Passw0rd!";
+    private const string UserPassword = "Passw0rd!12";
 
     [Fact] // D1 + D4
     public async Task Users_page_costs_the_same_queries_for_any_user_count_and_never_selects_secrets()

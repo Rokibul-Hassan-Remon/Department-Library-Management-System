@@ -12,9 +12,15 @@
      errors, tests 52/52 before commit).
   2. ~~D-37 cleanup~~ **Closed:** read-only check — `CseLibrary` does not exist on `.\SQLEXPRESS`;
      nothing to delete. Docs commit `9234229` done; this note is uncommitted.
-  3. D-53 soft-delete code — **implemented, uncommitted** (`UserService`, `UserReadRepository`,
-     `DataLayerTests`); 53/53; commit awaits its own approval.
-  4. D-31 stamp interval / cookie / global antiforgery — compare with the current config, then ask.
+  3. ~~D-53 soft-delete code~~ **Done: `8550c00`** (53/53, mutation check).
+  4. ~~D-31 stamp interval / cookie / global antiforgery~~ **Approved values:** stamp 5 min,
+     `Secure = Always`, explicit `HttpOnly`/`SameSite = Lax`, global antiforgery.
+  5. D-31 baseline code — **implemented, uncommitted** (Program.cs, appsettings, Data DI,
+     6 controllers, tests); 64/64; commit awaits its own approval.
+- **Next after that:** D-32 (`CanSignInAsync` override + stamp on deactivation, test A4), the
+  `UsersController` role list, then 0.10 (D-55 toast, status-code page, test A2).
+- Existing users with passwords under 10 chars still sign in (policy applies when a password is
+  set); the seeded admin password must be ≥ 10 chars with a digit.
 - Docs only changed this session (uncommitted); no code, DB, staging or commit change.
 
 ## Session 19 (2026-10-14) — superseded by the Session 20 block above where they differ

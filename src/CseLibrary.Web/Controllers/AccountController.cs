@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CseLibrary.Web.Controllers;
 
+[Authorize]
 public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
@@ -33,7 +34,7 @@ public class AccountController : Controller
             return View(model);
         }
 
-        var result = await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: false);
+        var result = await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: true);
         if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, "Invalid login attempt.");
@@ -55,10 +56,10 @@ public class AccountController : Controller
     [HttpGet, AllowAnonymous]
     public IActionResult AccessDenied() => View();
 
-    [HttpGet, Authorize]
+    [HttpGet]
     public IActionResult ChangePassword() => View(new ChangePasswordViewModel());
 
-    [HttpPost, Authorize, ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
     {
         if (!ModelState.IsValid) return View(model);

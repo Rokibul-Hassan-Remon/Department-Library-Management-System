@@ -5,7 +5,9 @@ using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace CseLibrary.Tests.Integration;
 
@@ -16,7 +18,7 @@ namespace CseLibrary.Tests.Integration;
 [Collection(AppCollection.Name)]
 public class CharacterizationTests(AppFactory app)
 {
-    private const string UserPassword = "Passw0rd!";
+    private const string UserPassword = "Passw0rd!12";
 
     [Fact]
     public async Task Login_with_valid_admin_credentials_redirects_home()
@@ -64,6 +66,66 @@ public class CharacterizationTests(AppFactory app)
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Contains("/Account/Login", response.Headers.Location?.OriginalString);
     }
+
+    [Theory] // A1 (D-31): the public allowlist answers anonymously; everything else needs a login
+    [InlineData("/", HttpStatusCode.OK)]
+    [InlineData("/Home/Privacy", HttpStatusCode.OK)]
+    [InlineData("/Home/Error", HttpStatusCode.OK)]
+    [InlineData("/Account/Login", HttpStatusCode.OK)]
+    [InlineData("/Account/ChangePassword", HttpStatusCode.Redirect)]
+    [InlineData("/Users", HttpStatusCode.Redirect)]
+    public async Task Only_the_public_allowlist_is_anonymous(string url, HttpStatusCode expected) =>
+        Assert.Equal(expected, (await app.NewClient().GetAsync(url)).StatusCode);
+
+    [Fact] // A5 (D-31): 5 failures lock the account; the right password is then refused too
+    public async Task Five_failed_logins_lock_the_account()
+    {
+        var (email, _) = await CreateUserWithPermissions();
+        for (var i = 0; i < 5; i++) await PostLogin(email, "wrong-password-1");
+
+        var response = await PostLogin(email, UserPassword);
+
+        Assert.Contains("Invalid login attempt.", await response.Content.ReadAsStringAsync());
+        Assert.True(await app.WithServiceAsync(async sp =>
+        {
+            var users = sp.GetRequiredService<UserManager<ApplicationUser>>();
+            return await users.IsLockedOutAsync((await users.FindByEmailAsync(email))!);
+        }));
+    }
+
+    [Theory] // D-31: password policy from appsettings — min 10 with a digit, no other character rules
+    [InlineData("Abcdef-g1", false)]  // 9 chars: fails on length alone
+    [InlineData("abcdefghij", false)] // no digit
+    [InlineData("abcdefgh12", true)]  // Identity's defaults would refuse this (no upper case, no symbol)
+    public async Task Password_policy_comes_from_configuration(string password, bool accepted)
+    {
+        var email = $"pw_{Guid.NewGuid():N}@test.local";
+        var result = await app.WithServiceAsync(sp => sp.GetRequiredService<IUserService>().CreateAsync(new CreateUserDto
+        {
+            UserName = email, Email = email, Password = password
+        }));
+        Assert.Equal(accepted, result.Succeeded);
+    }
+
+    [Fact] // D-31: auth cookie is Secure, HttpOnly, SameSite=Lax; stamp checked every 5 min; antiforgery is global
+    public async Task Cookie_stamp_and_antiforgery_settings_are_applied()
+    {
+        var response = await PostLogin(AppFactory.AdminEmail, AppFactory.AdminPassword);
+        var cookie = response.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith(".AspNetCore.Identity.Application="));
+        Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=lax", cookie, StringComparison.OrdinalIgnoreCase);
+
+        var sp = app.Services;
+        Assert.Equal(TimeSpan.FromMinutes(5), sp.GetRequiredService<IOptions<SecurityStampValidatorOptions>>().Value.ValidationInterval);
+        Assert.Contains(sp.GetRequiredService<IOptions<MvcOptions>>().Value.Filters, f => f is AutoValidateAntiforgeryTokenAttribute);
+    }
+
+    private Task<HttpResponseMessage> PostLogin(string email, string password) =>
+        AppFactory.PostFormAsync(app.NewClient(), "/Account/Login", "/Account/Login", new()
+        {
+            ["Email"] = email, ["Password"] = password, ["RememberMe"] = "false"
+        });
 
     [Fact]
     public async Task GeneralConfig_create_edit_delete_round_trip()
