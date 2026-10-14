@@ -1618,6 +1618,8 @@ tests: row kept, sign-in refused, existing cookie denied, edit cannot resurrect.
 **Source:** user, Session 19 (DECISION_LOG §53). Recorded as a design decision; building it needs
 separate approval.
 1. **Form:** one Registration form with a radio choice **`Student`** / **`Dept. Fellow`**.
+   **Control superseded Session 21 by D-56 (Q-S21-3): a dropdown** populated from the
+   `RegistrationType` enum; the two choices themselves are unchanged.
 2. **Student:** a successful registration immediately creates an **Active** account, subject to
    the agreed account-security rules (D-31). Choosing `Student` grants **no** privileged role or
    permission; access follows the configured authorization policy.
@@ -1656,7 +1658,7 @@ require account `Active` **and** approval not `Pending`/`Rejected`.
   design + approval).
 - **Q-S19-9 Phase:** Registration is implemented **outside Phase 0**.
 - **Q-S19-17 Student default access:** a **System Admin-configured default member role**, with no
-  privileged permission.
+  privileged permission. **Refined Session 21 by D-56 (Q-S21-1):** separate Student and Fellow defaults.
 Items 1–6 above stay in force (Student → Active; Fellow → Pending → Librarian review; separate
 workflow methods with shared logic; no physical `AspNetUsers` delete, `Status = Deleted`).
 
@@ -1701,9 +1703,124 @@ workflow methods with shared logic; no physical `AspNetUsers` delete, `Status = 
   **current `TempData` keys**.
 - **Q-S19-14:** implemented in **step 0.10**, together with the **test A2** update.
 
+### D-56 Registration type is a closed enum, not a role — design Approved (Session 21); implementation not approved
+**Source:** user, Session 21 (DECISION_LOG §58). Refines D-54; D-54 items 1–6 and its Session 20
+details stay in force. Registration is still built outside Phase 0 (Q-S19-9).
+1. **`RegistrationType` enum** with exactly two values: **`Student`**, **`DepartmentFellow`**
+   (UI label "Dept. Fellow"). It lives in Core with the other domain enums.
+2. **Not an authorization concept:** `RegistrationType` is only the applicant's registration
+   choice. It is never a role, claim or permission, and authorization never reads it (D-37).
+3. **Choice source:** the public Registration form's choices come from `RegistrationType` only.
+   The database role list (`IRoleService` / `RoleReadRepository`) is **never** used to populate
+   or validate the public form, so anonymous users can neither see nor submit role names such as
+   `Admin`.
+4. **Server-side enforcement:** the registration service validates the posted value with
+   `Enum.IsDefined` (model binding accepts undefined numbers such as `"7"`) and rejects anything
+   else; the form carries no role or permission field, and any extra posted field is ignored by
+   the view model. Public registration can never assign `Admin` or any other privileged role.
+5. **Workflows (from D-54):** `Student` → Student workflow → `Active` after successful
+   registration, subject to all other security checks (D-31). `DepartmentFellow` → Fellow
+   workflow → `Pending`; never `Active` until a user with **`Registrations.Review`** approves it
+   manually (Q-S19-6). Reject is the same permission. Both workflows are separate service methods
+   that share common logic (validation, identity creation); no extra Fellow verification rules
+   are invented now.
+6. **Access after activation:** only the configured member role/permissions are applied (per-type
+   default roles, Q-S19-17 → Q-S21-1); approval never grants all permissions or a privileged role.
+7. **Retention / sign-in:** no physical `AspNetUsers` delete; `Status = Deleted` users cannot sign
+   in or reach protected functionality (D-53, D-32). Sign-in also requires approval not
+   `Pending`/`Rejected` (D-54 status-model gap, Q-S19-8 schema still open).
+8. **Layering:** registration rules live in a registration service (Services layer) using
+   `IUnitOfWork`; controllers only map the form. `IRoleService` / `RoleService` /
+   `RoleReadRepository` remain the path for **staff-side** role operations (e.g. the
+   `UsersController` role list on the `Users.Create`/`Users.Edit` pages, which are not public).
+**Approved details Session 21 (2026-10-14, DECISION_LOG §59)** — implementation still not approved:
+- **Q-S21-1 Default roles:** two separate **System Admin-configured** default roles, one for
+  `Student` and one for `DepartmentFellow` (refines Q-S19-17, which named only the Student role).
+  Both must be **non-privileged**; the server validates the configuration and refuses a
+  privileged role as a registration default. The Student role is applied on successful Student
+  registration, the Fellow role only on approval (item 5).
+- **Q-S21-2 Storage:** `RegistrationType` is stored on the **registration application record**
+  (Q-S19-8). It is a business classification only — never an authorization role, claim or
+  permission.
+- **Q-S21-3 Form control:** a **dropdown** populated from the `RegistrationType` enum, with
+  server-side validation of the submitted value (item 4). Supersedes the radio in D-54 item 1.
+- **Q-S21-4 `Admin` role assignment (staff Users page):** `UserService` enforces server-side that
+  only an `Admin` user may assign or remove the `Admin` role, on create and edit. This prevents
+  privilege escalation, including self-promotion by a holder of `Users.Create`/`Users.Edit`.
+  Existing authorization checks stay unchanged (`[HasPermission(Users.*)]`, D-37 database check,
+  D-31 fallback policy); the rule is an additional check, not a replacement.
+  **Scope extended by Q-S21-8:** the rule covers every privileged role (Q-S21-5), not only `Admin`.
+**Approved details Session 21 (2026-10-14, DECISION_LOG §60)** — implementation still not approved:
+- **Q-S21-5 Privileged role:** a role is privileged if it has any permission **outside the
+  approved member-permission allowlist**. The allowlist is defined when member-portal permissions
+  are designed; until then it is empty, so every role holding at least one permission counts as
+  privileged (confirmed by Q-S21-10).
+- **Q-S21-6 Admin identification:** Admin-specific security checks use the **literal role name
+  `"Admin"`**. Conflict with the configurable seed role name resolved by Q-S21-9 (fixed constant).
+- **Q-S21-7 Last effective Admin:** the server refuses any operation that would leave no
+  effective Admin — removing a privileged role from, deactivating (D-32) or soft-deleting (D-53)
+  the last effective Admin, including the acting user themselves. The check and the write must be
+  atomic so two concurrent operations cannot each pass the check and together remove the last
+  two Admins (mechanism proposed at implementation, within the D-14 transaction rules).
+  "Effective Admin" = holds the `Admin` role and `Status = Active`, even while temporarily locked
+  out (Q-S21-11).
+- **Q-S21-8 Scope and phase:** the assignment/removal restriction of Q-S21-4 applies to **all
+  privileged roles** (Q-S21-5): only an `Admin` may assign or remove a privileged role. Built in
+  **Gate 3 (0.9)** together with the `UsersController` role-list refactor.
+**Approved details Session 21 (2026-10-14, DECISION_LOG §61)** — implementation still not approved:
+- **Q-S21-9 Fixed Admin identity (Option A):** the Admin role name is a **fixed constant**
+  (`"Admin"`) used by the seeder and every Admin-specific check. `Seed:Admin:Role`
+  (`appsettings.json`, `SeedAdminOptions.Role`) is either removed, or kept only with startup
+  validation that **fails** when its value differs from the constant. A mismatch is never
+  silently allowed. Which of the two: Q-S21-13 (**removed**).
+- **Q-S21-10 Interim classification (Option A):** until the member-permission allowlist is
+  defined, **every role with one or more permissions is privileged** (Q-S21-5). In Gate 3 a
+  non-Admin `Users.Create`/`Users.Edit` holder can therefore assign or remove only roles without
+  permissions.
+- **Q-S21-11 Lockout (Option B):** an `Admin` with `Status = Active` **counts as an effective
+  Admin even during a temporary authentication lockout** (D-31); lockout state is not part of
+  the Q-S21-7 count.
+- **Q-S21-12 `RoleService` enforcement (Option A):** in **Gate 3 (0.9)**, `RoleService` enforces
+  server-side the same rules so role management cannot bypass them: only an `Admin` may change
+  a role's permissions so that it becomes privileged (privilege escalation through permission
+  changes) or edit/delete a privileged role (Q-S21-8 scope); the **`Admin` role cannot be
+  deleted**; and no permission change may undermine the last-effective-Admin protection
+  (Q-S21-7). Existing authorization checks (`[HasPermission(Roles.*)]`, D-37, D-31) stay.
+  Exact boundaries: Q-S21-14, Q-S21-15 (answered below).
+**Approved details Session 21 (2026-10-14, DECISION_LOG §62)** — implementation still not approved:
+- **Q-S21-13 Seed setting:** `Seed:Admin:Role` is **removed** (`appsettings.json` and
+  `SeedAdminOptions.Role`); the seeder uses the fixed `"Admin"` constant (Q-S21-9). No startup
+  validation is needed because no setting remains.
+- **Q-S21-14 Admin role permissions:** the `Admin` role **always holds every permission**; any
+  change that removes a permission from it is refused server-side in `RoleService` (as
+  `DbSeeder` already restores missing ones at startup).
+- **Q-S21-15 Role renames:** `RoleService` refuses server-side both renaming the `Admin` role and
+  renaming any other role **to** `Admin`, so the fixed identity can be neither broken nor hijacked.
+Open: none from Q-S21 (section 9).
+
 ---
 
 ## 9. Open decisions
+
+**Session 21 (2026-10-14, DECISION_LOG §58–§62) — D-56 / staff role assignment.** Q-S21-1 … 15
+answered (§59–§62, see D-56); none open:
+| Item | Question | Recommendation |
+|---|---|---|
+| ~~Q-S21-13 `Seed:Admin:Role` (Q-S21-9)~~ **Answered Session 21 (§62): removed** | Remove the setting, or keep it with startup validation that fails on a mismatch? | Remove it (one less setting; a value that must always equal a constant has no purpose) |
+| ~~Q-S21-14 Admin role permissions (Q-S21-12)~~ **Answered Session 21 (§62): `Admin` role always holds all permissions; removals refused** | Admin identity is the role **name** (Q-S21-6), so stripping permissions from the `Admin` role leaves an "effective Admin" who can do nothing. Which removals are refused: **any** permission (the `Admin` role always holds every permission, as `DbSeeder` already restores at startup), or only those needed to manage users/roles (`Users.*`, `Roles.*`)? | Any: the `Admin` role always holds all permissions; edits to its permission set are refused |
+| ~~Q-S21-15 Renaming roles (Q-S21-9, Q-S21-12)~~ **Answered Session 21 (§62): both renames refused** | `RoleService.UpdateAsync` lets a `Roles.Edit` holder rename a role. Renaming `Admin`, or renaming another role **to** `Admin`, would break or hijack the fixed identity | Refuse both server-side (follows from Q-S21-9); confirm |
+| ~~Q-S21-9 **Conflict:** literal `"Admin"` vs configurable seed role (Q-S21-6)~~ **Answered Session 21 (§61): Option A — fixed constant; setting removed or startup-validated (Q-S21-13)** | `appsettings.json` `Seed:Admin:Role` and `SeedAdminOptions.Role` let the seeded admin role be renamed. If it is set to anything but `"Admin"`, the seeded admin is not an Admin for the Q-S21-4/7/8 checks | Make `"Admin"` one Core constant used by the seeder and the checks, and remove `Seed:Admin:Role` (or fail at startup when it differs). Code/config change — needs your approval |
+| ~~Q-S21-10 Interim effect of the empty allowlist (Q-S21-5, Q-S21-8)~~ **Answered Session 21 (§61): Option A — every role with ≥ 1 permission is privileged** | Until member permissions exist, every role with any permission is privileged, so in Gate 3 only an `Admin` may assign or remove **any** role that has permissions; a non-Admin `Users.Create`/`Users.Edit` holder can only assign permission-less roles | Accept as intended (safe default); confirm |
+| ~~Q-S21-11 Locked-out Admin (Q-S21-7)~~ **Answered Session 21 (§61): Option B — `Active` Admin counts during temporary lockout** | Does an `Admin` who is temporarily locked out (D-31 lockout) still count as an effective Admin? | Yes — lockout is temporary; count `Admin` + `Active` only |
+| ~~Q-S21-12 Role-side escalation paths (Q-S21-7, Q-S21-8)~~ **Answered Session 21 (§61): Option A — enforced in `RoleService`, Gate 3 (Q-S21-14, Q-S21-15)** | The rules cover user operations. A `Roles.Edit`/`Roles.Delete` holder can still (a) add staff permissions to a role they or others already hold, making it privileged, or (b) delete/strip the `Admin` role, leaving no effective Admin | Apply the same rules in `RoleService`: only an `Admin` may edit/delete a privileged role or make a role privileged; the `Admin` role cannot be deleted or lose permissions. Gate 3 (0.9) — needs your approval |
+| ~~Q-S21-5 "Privileged role" definition (Q-S21-1)~~ **Answered Session 21 (§60): permissions outside the member allowlist (allowlist defined with the member portal)** | Which roles count as privileged when validating registration defaults? Only the `Admin` role, or any role that holds a staff permission (`Users.*`, `Roles.*`, `GeneralConfig.*`, `Registrations.Review`, …)? | Any role holding a permission outside an explicit member-permission list; the list is defined with the member portal (no member permissions exist yet) |
+| ~~Q-S21-6 Identifying `Admin` (Q-S21-4)~~ **Answered Session 21 (§60): literal `"Admin"` (conflict: Q-S21-9)** | The admin role name comes from configuration (`Seed:Admin:Role`, default `"Admin"`, `DbSeeder`), not a constant | Use the configured seed role name in both the seeder and `UserService` |
+| ~~Q-S21-7 Last Admin (Q-S21-4)~~ **Answered Session 21 (§60): protected server-side against privileged-role removal, deactivation, soft delete; concurrency-safe** | May an `Admin` remove the `Admin` role from the last remaining `Admin` (incl. themselves), or deactivate/delete that user? | Refuse it server-side (avoids locking everyone out); needs your approval as a new rule |
+| ~~Q-S21-8 Scope and timing (Q-S21-4)~~ **Answered Session 21 (§60): all privileged roles; Gate 3 (0.9) with the role-list refactor** | Restriction covers the `Admin` role only, or every privileged role (Q-S21-5)? Built in Gate 3 (0.9, with the role-list refactor) or later? | `Admin` only, as decided; Gate 3 0.9 together with the `UsersController` role list |
+| ~~Q-S21-1 Fellow member role (D-56)~~ **Answered Session 21 (§59): separate configured non-privileged roles, validated** | Q-S19-17 configures a default member role for **Students**. On approval, does a Fellow get the same configured role, or a separately configured Fellow role? | A separate System Admin setting per registration type (Fellows may later get different limits); both non-privileged |
+| ~~Q-S21-2 Store the type (D-56)~~ **Answered Session 21 (§59): on the registration application record; classification only** | Is `RegistrationType` stored? Where? | Yes, on the registration application record (Q-S19-8), so review/re-apply know the workflow; never copied into roles or claims |
+| ~~Q-S21-3 Form control (D-54/D-56)~~ **Answered Session 21 (§59): dropdown from the enum, server-validated** | D-54 says **radio** `Student` / `Dept. Fellow`; Session 21 text says **dropdown** | Radio (two options, both visible); either way the values come from the enum |
+| ~~Q-S21-4 Privileged roles on the staff Users page (0.9)~~ **Answered Session 21 (§59): option (b), enforced in `UserService`** | `UsersController` Create/Edit lists **all** DB roles, so any holder of `Users.Create`/`Users.Edit` can assign `Admin` to anyone (incl. themselves via Edit) | Decide before the Gate 3 report: (a) document `Users.Create`/`Users.Edit` as Admin-only grants, or (b) only users who are `Admin` may assign/remove the `Admin` role (server-side check in `UserService`). Recommend (b) |
 
 **Session 14 (2026-10-13, DECISION_LOG §30–§35) — open now, ask at the start of Session 15:**
 | Item | Question | Recommendation |

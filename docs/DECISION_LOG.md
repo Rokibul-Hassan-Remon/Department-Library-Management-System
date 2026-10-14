@@ -1939,6 +1939,80 @@ User sent five requests in one message:
   check → A4 + `Inactive_user_cannot_log_in_and_has_no_permissions` fail.
 - Commits (each on its own user "ok"): `c63854b` code; docs commit after it.
 
+### 58. Session 21 — registration type revised (2026-10-14)
+- After the `UsersController` role-list plan (staff page, `IRoleService.GetNamesAsync`), the user
+  asked that the **public** registration choice never come from database roles: a dedicated
+  `RegistrationType` enum {`Student`, `DepartmentFellow`}, only a registration choice, never a
+  role or permission; server-side rejection of undefined values; no privileged role from public
+  registration; `Registrations.Review` for Fellow approve/reject; approval applies only the
+  configured member permissions; soft-delete rule unchanged. Recorded as **D-56** (design
+  Approved, implementation not approved); refines D-54.
+- Code review (read-only): no registration code, view or `Registrations.*` permission exists yet;
+  the only role dropdown is the staff `Users` Create/Edit page (`RoleManager.Roles` in the
+  controller, all roles incl. `Admin`). The user still accepts `IRoleService` / `RoleService` /
+  `RoleReadRepository` for role operations; that refactor is not started.
+- Finding raised as Q-S21-4: any holder of `Users.Create`/`Users.Edit` can assign `Admin`.
+- Open: Q-S21-1 … Q-S21-4 (PROJECT_DECISIONS §9). Docs only; nothing staged or committed.
+
+### 59. Session 21 — Q-S21-1 … Q-S21-4 answered (2026-10-14)
+User decisions, recorded under D-56 (implementation not approved; docs only):
+- **Q-S21-1:** separate System Admin-configured, non-privileged default roles for `Student` and
+  `DepartmentFellow`; the configuration is validated server-side so a privileged role cannot be
+  a registration default. Refines Q-S19-17 (Student only).
+- **Q-S21-2:** `RegistrationType` stored on the registration application record; a business
+  classification, not an authorization role, claim or permission.
+- **Q-S21-3:** dropdown populated from the `RegistrationType` enum, server-side validation of the
+  submitted value. **Supersedes** the radio control in D-54 item 1 (choices unchanged).
+- **Q-S21-4:** option (b) — `UserService` enforces server-side that only an `Admin` may assign or
+  remove the `Admin` role; prevents privilege escalation incl. self-promotion; existing
+  authorization checks (`HasPermission`, D-37, D-31 fallback) stay.
+- New open questions from these answers: Q-S21-5 "privileged role" definition, Q-S21-6 how
+  `Admin` is identified (configured `Seed:Admin:Role`), Q-S21-7 last-`Admin` protection,
+  Q-S21-8 restriction scope + timing.
+
+### 60. Session 21 — Q-S21-5 … Q-S21-8 answered (2026-10-14)
+User decisions, recorded under D-56 (implementation not approved; docs only):
+- **Q-S21-5:** a role is privileged if it has permissions outside the approved member-permission
+  allowlist; the allowlist is defined when member-portal permissions are designed.
+- **Q-S21-6:** Admin-specific security checks use the literal role name `"Admin"` (the assistant's
+  recommendation — configured seed role name — not taken).
+- **Q-S21-7:** the last effective Admin is protected server-side against privileged-role removal,
+  deactivation and soft deletion; concurrent operations must be accounted for.
+- **Q-S21-8:** the Q-S21-4 restriction applies to **all privileged roles** (the assistant had
+  recommended `Admin` only); built in Gate 3 (0.9) with the `UsersController` role-list refactor.
+- Conflicts / gaps flagged, not resolved (PROJECT_DECISIONS §9): **Q-S21-9** literal `"Admin"` vs
+  the configurable `Seed:Admin:Role` (`appsettings.json`, `SeedAdminOptions`); **Q-S21-10** the
+  allowlist is empty until the member portal, so in Gate 3 every role with a permission is
+  privileged; **Q-S21-11** whether a locked-out Admin counts as effective; **Q-S21-12** role-side
+  escalation (`Roles.Edit`/`Roles.Delete` can make a role privileged or remove the `Admin` role).
+- No earlier decision was changed: Q-S21-4 is marked "scope extended by Q-S21-8", not rewritten.
+
+### 61. Session 21 — Q-S21-9 … Q-S21-12 answered (2026-10-14)
+User decisions, recorded under D-56 (implementation not approved; docs only):
+- **Q-S21-9 (Option A):** fixed Admin constant; `Seed:Admin:Role` removed, or kept only with
+  startup validation that fails on a mismatch; a mismatch is never silently allowed. Resolves
+  the Q-S21-6 conflict.
+- **Q-S21-10 (Option A):** until the member-permission allowlist exists, every role with one or
+  more permissions is privileged.
+- **Q-S21-11 (Option B):** an `Admin` with `Status = Active` counts as effective even during a
+  temporary authentication lockout.
+- **Q-S21-12 (Option A):** `RoleService` enforces the rules server-side in Gate 3: no privilege
+  escalation through permission changes, no `Admin`-role deletion, no permission removal that
+  undermines the last-effective-Admin protection, within the existing decision scope.
+- Ambiguities flagged, not decided (PROJECT_DECISIONS §9): **Q-S21-13** remove vs validate
+  `Seed:Admin:Role`; **Q-S21-14** which `Admin`-role permission removals are refused (identity is
+  the role name, so a stripped `Admin` role is still "effective"); **Q-S21-15** renaming `Admin`
+  or renaming another role to `Admin` (`RoleService.UpdateAsync` allows renames today).
+
+### 62. Session 21 — Q-S21-13 … Q-S21-15 answered (2026-10-14)
+User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, recorded under D-56
+(implementation not approved; docs only):
+- **Q-S21-13:** `Seed:Admin:Role` is removed; the seeder uses the fixed `"Admin"` constant.
+- **Q-S21-14:** the `Admin` role always holds every permission; removing any is refused.
+- **Q-S21-15:** renaming the `Admin` role, or renaming another role to `Admin`, is refused.
+- No Q-S21 question remains open. All Q-S21 rules are built in Gate 3 (0.9) with the
+  `UsersController` role-list refactor (Q-S21-8, Q-S21-12), each step on its own approval.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

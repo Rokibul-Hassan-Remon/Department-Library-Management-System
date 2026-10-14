@@ -7,6 +7,18 @@
 - **Next action:** item 4 of the Session 20 list below — `UsersController` role list
   (`RoleManager.Roles` → `IRoleService`), then Gate 3 `/code-review` + `/ponytail-review`, 0.10,
   0.11, 0.12, Gate 3 report (each step / commit on its own "ok").
+- **D-56 recorded (docs only, uncommitted, §58):** public registration choice = `RegistrationType`
+  enum {`Student`, `DepartmentFellow`}, never DB roles. **Q-S21-1 … 4 answered (§59):** per-type
+  non-privileged default roles (validated), type stored on the application record, enum dropdown,
+  only `Admin` may assign/remove `Admin` (`UserService`). **Q-S21-5 … 8 answered (§60):**
+  privileged = permissions outside the member allowlist; literal `"Admin"`; last effective Admin
+  protected (role removal, deactivation, soft delete; concurrency-safe); restriction covers all
+  privileged roles; built in Gate 3 (0.9) with the role-list refactor. **Q-S21-9 … 12 answered
+  (§61):** fixed `"Admin"` constant (no silent seed-role mismatch); every role with ≥ 1 permission
+  privileged until the allowlist exists; `Active` Admin counts during lockout; same rules enforced
+  in `RoleService` in Gate 3. **Q-S21-13 … 15 answered (§62):** `Seed:Admin:Role` removed;
+  `Admin` role always holds all permissions; renaming to/from `Admin` refused. No Q-S21 open.
+  Nothing implemented; implementation plan for Gate 3 (0.9) needs approval first.
 
 ## Session 20 (2026-10-14) — superseded by the Session 21 block above where they differ
 Session 20 closed at the user's request (conversation too long) — Session 21 started here.
