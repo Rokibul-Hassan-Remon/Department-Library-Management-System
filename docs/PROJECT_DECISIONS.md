@@ -1036,18 +1036,37 @@ is explained before execution, and needs separate explicit approval.
 
 ## 4. Security and error handling
 
-### D-31 Security baseline — Approved; default values Proposed
+### D-31 Security baseline — Approved; password + lockout values and access design Approved (Session 19); other default values Proposed
 Approved (M3 item 6): secure password policy, configurable lockout, authenticated-by-default
 authorization, explicit `[AllowAnonymous]` only where required, effective deactivation,
 server-side authorization, safe error responses, security auditing. Values must be configurable
 and documented, not hard-coded.
+**Approved Session 19 (2026-10-14, DECISION_LOG §52) — password and lockout values:** password
+min length **10**, at least **one digit**; lockout after **5** failed attempts for **15 minutes**;
+`PasswordSignInAsync(..., lockoutOnFailure: true)`. Still **Proposed** (not covered by this
+approval): security-stamp validation interval, cookie settings, global antiforgery.
+**Approved Session 19 (DECISION_LOG §52) — 0.9 access design** (supersedes the Session 13
+Q-M9-10 answer "all pages authenticated except Login, AccessDenied, Error"):
+- `Home.Index` is **public** and is the CSE Library landing page, with **Login** and
+  **Registration** links in the top-right corner.
+- `Home.Privacy` stays **public** (general information page).
+- Login and Registration endpoints are reachable **anonymously**.
+- All other pages and operations require **authentication and the appropriate
+  authorization/permission checks**.
+- `FallbackPolicy` + class-level `[Authorize]` applied consistently (approach items 1–3 below);
+  explicit `[AllowAnonymous]` **only** on the intended public endpoints.
+- Public Registration **must not grant privileged roles automatically**.
+- Open (not decided by this approval): Q-S19-1 registration scope, Q-S19-2 anonymous access to
+  `Error` / status-code / `AccessDenied` (section 9).
+**Approved Session 20 (DECISION_LOG §55) — Q-S19-2:** generic error / status-code responses work
+for anonymous requests; the authorization rules of protected resources stay unchanged.
 Proposed defaults (bound from `appsettings` `Identity` section to `IdentityOptions`): password
 min length 10 + digit; lockout 5 failures / 15 min with `lockoutOnFailure: true`; security-stamp
 validation interval 5 min (`Security:StampValidationMinutes`); `FallbackPolicy` =
 authenticated user; `[AllowAnonymous]` only on Login, AccessDenied, Error, StatusCode pages;
 global `AutoValidateAntiforgeryToken`; cookie HttpOnly, `Secure=Always`, `SameSite=Lax`,
 8 h sliding.
-**M9 extension (FR-M9-05) — Proposed.** Requirement in `requirements.md`.
+**M9 extension (FR-M9-05) — Approved Session 19 (access design above; §52).** Requirement in `requirements.md`.
 Code inventory (read-only, Session 4, `DefaultTemplate/DefaultTemplate/`):
 - **No controller has a class-level `[Authorize]`; no `FallbackPolicy` is configured**
   (`Program.cs` registers only `PermissionPolicyProvider` + `PermissionAuthorizationHandler`).
@@ -1063,7 +1082,9 @@ Proposed approach (both layers; they do not conflict):
 1. **Class-level `[Authorize]` on every controller** (explicit, as M9 requires), with
    `[AllowAnonymous]` only on the allowlist: `Account.Login` (GET/POST), `Account.AccessDenied`,
    `Home.Error`, status-code page (0.10). Whether `Home.Index`/`Home.Privacy` are public is
-   Q-M9-10 (D-31 default above makes them authenticated).
+   Q-M9-10 (D-31 default above makes them authenticated). **Session 19: superseded —
+   `Home.Index`, `Home.Privacy` and Registration are public (access design above); the
+   Error/status-code/AccessDenied entries are Q-S19-2.**
 2. **`FallbackPolicy` = authenticated user** stays as the safety net for any endpoint without
    authorization metadata (e.g. a future controller that forgets step 1). Fallback applies only
    where no `[Authorize]`/`[AllowAnonymous]` exists, so it is not redundant with step 1 and does
@@ -1074,11 +1095,16 @@ Proposed approach (both layers; they do not conflict):
 4. Error/status pages show only the Reference ID (D-34; tests B1/B2).
 **Verify:** A1, A2, A4, A6–A8, A10, A11 (step 0.9), B1/B2 (step 0.10).
 
-### D-32 Effective deactivation — Approved (principle); mechanism Proposed
+### D-32 Effective deactivation — Approved (principle); mechanism Approved (Session 19)
 Set `IsActive=false` + `UpdateSecurityStampAsync` (session invalid within the validation
 interval); move the `IsActive` login check from `AccountController` into a
 `SignInManager.CanSignInAsync` override. Permission-protected actions are denied immediately via
 the per-request `IsActive` check (D-37). Verify: test A4.
+**Approved Session 19 (2026-10-14, DECISION_LOG §52):** the proposed design above — an inactive
+user cannot sign in again; deactivating a user calls `UpdateSecurityStampAsync`; existing-cookie
+validation and protected-page access are verified by automated tests (A4). This approval does
+**not** approve any other security setting (the stamp validation interval value stays D-31
+Proposed). In code the flag is `ApplicationUser.Status` (`RecordStatus.Active`/`Inactive`).
 
 ### D-33 Permission claims via `UserClaimsPrincipalFactory` — Superseded by D-37
 Original proposal: a custom `UserClaimsPrincipalFactory` adds permission claims to the cookie at
@@ -1119,6 +1145,11 @@ Design:
 Cost: one small query per authorized request — acceptable for this application's traffic.
 **Done only when tests pass:** A4, A7, A8, A9 (grant, revoke, role change, deactivation,
 old-cookie behavior), using real SQL and the real authorization pipeline.
+**Session 19 (DECISION_LOG §53) — authorization fix implemented (uncommitted, user request):**
+handler no longer reads cookie permission claims, checks the DB every request with a
+request-local `HttpContext.Items` cache; login no longer writes `AspNetUserClaims`. Tests A7
+(revoke + legacy claim row), A8, A9 green (52/52); A4 comes with D-32. Legacy-row cleanup:
+criteria reported, **not run** (separate approval).
 
 ### D-34 Error handling — Approved (standard); `Result` type Approved (Session 17)
 **Session 17 (DECISION_LOG §45):** user approved `Result { Succeeded, ErrorCode, Error }` /
@@ -1521,6 +1552,127 @@ holds duplicate emails; clean them first.
 **Source:** user, Session 18 (DECISION_LOG §50); closes the D-14 rule 3 duplicate-email gap (§48).
 **Implemented: yes — `70bad0f`, merged into `develop` `e9a0536` (Session 18, §50);** migration
 `UniqueUserEmail`, test: two users with one email → `DuplicateKeyException`.
+**Session 19 note:** the "users are hard-deleted" premise no longer holds once D-53 is implemented —
+a soft-deleted user keeps the email in the unique index (open question Q-S19-16).
+
+### D-53 User records are never physically deleted — Approved (Session 19, user requirement); implementation not approved
+- Never physically delete a row from `AspNetUsers`. Deleting a user in the application keeps the
+  row and sets `Status = Deleted` (`RecordStatus.Deleted` = 3 already exists; no schema change).
+- A deleted user cannot sign in or reach protected functionality (regardless of registration
+  type or approval state, D-54); the user's ID and historical relationships are preserved.
+- Distinct from the D-37 cleanup of legacy permission rows in `AspNetUserClaims` (no
+  `AspNetUsers` row is deleted by that cleanup).
+**Findings (read-only inspection, Session 19, DECISION_LOG §53):**
+1. `UserService.DeleteAsync` calls `UserManager.DeleteAsync` → **physical `DELETE` of the
+   `AspNetUsers` row**; Identity's cascade also removes the user's `AspNetUserRoles`,
+   `AspNetUserClaims`, `AspNetUserLogins`, `AspNetUserTokens` rows. Reached from
+   `UsersController.DeleteConfirmed` (`Users.Delete` permission). This is the only code path
+   that deletes users (seeder and tests do not).
+2. `AuditColumnsInterceptor` turns deletes into soft deletes only for `BaseEntity` (D-51);
+   `ApplicationUser` is not a `BaseEntity`, so there is no safety net today.
+3. `UserService.UpdateAsync` sets `Status = dto.IsActive ? Active : Inactive` — editing a
+   soft-deleted user would **reactivate** it; needs a guard.
+4. Sign-in: `AccountController.Login` rejects `Status != Active` (so `Deleted` is rejected);
+   permission checks require `Status = Active` (`PermissionRepository.GetNamesForUserAsync`).
+   An existing cookie still reaches authenticated-only pages until the security stamp changes →
+   delete must also call `UpdateSecurityStampAsync` (same mechanism as D-32).
+5. `UserReadRepository` lists all users with no status filter — deleted users would appear in the
+   Users list (Q-S19-15).
+6. Not in scope but same pattern: `RoleService.DeleteAsync` physically deletes roles.
+**Approved Session 20 (2026-10-14, DECISION_LOG §55):** Q-S19-15 — `Deleted` users are **hidden
+by default** in the normal Users list; an authorized admin view may show them when needed.
+Q-S19-16 — a deleted user's email **cannot be reused for now**; the D-52 unique index stays
+unchanged. The code change still needs a separate execution approval.
+**Proposed implementation (needs approval):** `DeleteAsync` sets `Status = Deleted` + stamp update
+via `UserManager.UpdateAsync` in one transaction; `UpdateAsync` refuses to change a deleted user;
+tests: row kept, sign-in refused, existing cookie denied, edit cannot resurrect.
+
+### D-54 Self-registration (Q-S19-1) — design Approved (Session 19); implementation not approved
+**Source:** user, Session 19 (DECISION_LOG §53). Recorded as a design decision; building it needs
+separate approval.
+1. **Form:** one Registration form with a radio choice **`Student`** / **`Dept. Fellow`**.
+2. **Student:** a successful registration immediately creates an **Active** account, subject to
+   the agreed account-security rules (D-31). Choosing `Student` grants **no** privileged role or
+   permission; access follows the configured authorization policy.
+3. **Dept. Fellow:** a successful submission creates an account/application in **Pending**
+   state. A Librarian reviews it manually and **approves** or **rejects** it. `Pending` and
+   `Rejected` cannot log in. After approval the account may become `Active` and log in, provided
+   it is not `Deleted` and all other sign-in checks pass. Approval grants **no** automatic access
+   to all resources; access follows the permissions configured by the System Admin.
+4. **Retention:** user rows are never physically deleted (D-53); a `Deleted` account cannot log
+   in regardless of registration type or approval state.
+5. **Separate workflows, shared logic:** Student and Dept. Fellow registration are separate,
+   explicit workflow methods. Both reuse common internal logic where it is genuinely shared
+   (validation, identity creation, …); workflow-specific validation, status transitions and
+   approval rules stay separate so future Dept. Fellow rules can change without affecting Student
+   registration. **No Dept. Fellow special rules are invented now** — discussed later.
+6. Selecting a registration type never grants privileged roles or resource permissions;
+   authorization stays governed by the configured permissions (D-37).
+**Status model gap (decision required, no schema invented):** `ApplicationUser.Status` is
+`RecordStatus` {`Active`, `Inactive`, `Deleted`} — the **account** state. It cannot represent
+**registration approval** (`Pending`, `Approved`, `Rejected`), and folding those into
+`RecordStatus` would mix two meanings (e.g. a rejected fellow later deleted). Registration
+approval needs its own representation (e.g. a separate approval-state field on the user, or a
+separate registration-application record) — Q-S19-8. Sign-in (`CanSignInAsync`, D-32) must then
+require account `Active` **and** approval not `Pending`/`Rejected`.
+**Approved details Session 20 (2026-10-14, DECISION_LOG §55)** — implementation still not approved:
+- **Q-S19-3 Fields / identity:** the necessary identity and credential fields; **email
+  confirmation will be considered** (not decided yet; the exact field list is set at design time).
+- **Q-S19-4 Fellow activation:** Librarian approval makes the Fellow account **Active**, subject to
+  the other security checks.
+- **Q-S19-5 Member link:** if a `Member` record already exists, validate it and link it; **no
+  duplicate member record is created automatically**.
+- **Q-S19-6 Approvers:** a dedicated **`Registrations.Review`** permission.
+- **Q-S19-7 Resubmission:** a rejected applicant **may apply again**, but never as a duplicate
+  account or duplicate application.
+- **Q-S19-8 Approval state:** kept **separate from `RecordStatus`** (exact schema still needs a
+  design + approval).
+- **Q-S19-9 Phase:** Registration is implemented **outside Phase 0**.
+- **Q-S19-17 Student default access:** a **System Admin-configured default member role**, with no
+  privileged permission.
+Items 1–6 above stay in force (Student → Active; Fellow → Pending → Librarian review; separate
+workflow methods with shared logic; no physical `AspNetUsers` delete, `Status = Deleted`).
+
+### D-55 UI notifications and error handling — design Approved (Session 19); implementation not approved
+**Source:** user, Session 19 (DECISION_LOG §53).
+1. **One reusable toast mechanism** for the whole application (shared component/service, not
+   per-page logic), top-right:
+   - **Success:** green, auto-dismiss ≈ 3 s, close (`×`) button.
+   - **Error:** red, auto-dismiss ≈ 5 s, close (`×`) button, safe user-friendly message only.
+   - **Warning / info:** distinct accessible styles; durations by importance (values open, Q-S19-12).
+2. **Validation:** an overall toast when useful **plus** field-level messages beside the fields;
+   important feedback never only in a temporary toast; entered data preserved where appropriate.
+3. **Authorization:** the server always rejects an operation without the permission; the user
+   sees a red toast with a generic message ("You don't have permission to perform this
+   action."), **not** a redirect to a separate AccessDenied page when the current page can handle
+   the response. Authentication-required requests still follow the login / session-expiry flow.
+   A toast never replaces server-side authentication or authorization.
+4. **Errors:** expected application errors → user-friendly notifications; unexpected errors →
+   centralized exception handling; never stack traces, DB details, connection strings or other
+   sensitive data in user-facing text; diagnostics logged server-side (D-34, Serilog); a fallback
+   response stays for cases where the original page cannot be rendered.
+5. **Consistency / accessibility:** limit simultaneous toasts; readable, accessible text; never
+   colour alone (text or icon too); consistent timers and close buttons.
+**Reconciliation with existing decisions:**
+- **D-31 access design / Q-S19-2:** public `Home.Index`/`Privacy` unaffected. `AccessDenied`
+  stops being the normal way to show a permission failure; it may remain only as the fallback
+  when there is no page to return to (e.g. a forbidden URL typed directly) — Q-S19-10.
+- **D-34:** the Error page with Reference ID only remains the fallback for unexpected errors;
+  whether an error toast also shows the Reference ID is Q-S19-11.
+- **Test A2** ("authenticated without permission → AccessDenied/403") and the existing test that
+  expects a redirect to `/Account/AccessDenied` will change when D-55 is implemented.
+- Today controllers already put messages in `TempData["Success"]` / `TempData["Error"]`; the
+  toast mechanism can render these (reuse, no new message channel needed).
+**Approved details Session 20 (2026-10-14, DECISION_LOG §55)** — built in step 0.10:
+- **Q-S19-10 No page to return to:** go back to a **safe local** return location if there is one,
+  otherwise Home, with the toast; AJAX/API requests get the appropriate **401/403**; **open
+  redirects are prevented** (local URLs only).
+- **Q-S19-11:** the error toast **shows the Reference ID**.
+- **Q-S19-12:** warning ≈ **5 s**, info ≈ **3 s**; at most **3** toasts at once; the timer
+  **pauses on hover/focus**.
+- **Q-S19-13:** verify the existing implementation first, then use **Bootstrap's toast** and the
+  **current `TempData` keys**.
+- **Q-S19-14:** implemented in **step 0.10**, together with the **test A2** update.
 
 ---
 
@@ -1536,7 +1688,26 @@ holds duplicate emails; clean them first.
 | ~~Gate 2 start~~ **Resolved Session 17 (§44): started; 0.6–0.8 committed (`51e189a`, `48a9acf`, `0d01e4e`)** | Begin steps 0.6–0.8 (incl. D-50, D-51) on `feature/phase-0-gate-2` | — |
 | ~~Gate 2 review findings (§47)~~ **Resolved Session 18 (`8cd5f53`, §48)** | Which of CR1–CR9 / P1–P3 to fix before the Gate 2 report | One correction commit: CR1, CR3, CR4, CR5, CR7, CR8, CR9, CR2 permission-lookup filter, P1–P3; CR2 cookie part → 0.9; CR6 keep |
 | ~~Gate 2 report~~ **Resolved Session 18: approved, merged `798ccbd` (§49)** | After the correction commit: D-14 per-use-case duplicate-operation assessment, docs, report; then approval + merge → `develop` (separate approvals) | — |
-| **Gate 3 start — open, ask at the start of Session 19** | Begin steps 0.9–0.12 on `feature/phase-0-gate-3` from `develop` | Includes CR2 cookie part (D-32/D-37) and the `UsersController` role list (0.9) |
+| ~~Session 19 work review (§53, §54)~~ **Session 20 (§55): Q-S19-2…17 answered; still separate approvals: D-37 commit, D-37 cleanup (target DB → read-only count → rows + rollback → delete), D-53 code, D-31 stamp/cookie/antiforgery values** | Review the uncommitted D-37 fix + docs; then separately: commit, D-37 cleanup target DB + read-only count, D-53 implementation, open values below | Commit the D-37 fix first (tests 52/52) |
+| ~~Gate 3 start~~ **Resolved Session 19 (§52): started on `feature/phase-0-gate-3`** | Begin steps 0.9–0.12 on `feature/phase-0-gate-3` from `develop` | Includes CR2 cookie part (D-32/D-37) and the `UsersController` role list (0.9) |
+| ~~Q-S19-1 Registration scope (Session 19, §52)~~ **Design answered Session 19 (§53) → D-54**; details open as Q-S19-3 … Q-S19-9, Q-S19-17 | Public Registration is approved as an anonymous endpoint that grants no privileged role — but who may register (students/fellows only? institutional email?), what the account gets (no role / a member role), link to the member record, staff approval/activation, and the phase it is built in are not decided. No registration endpoint exists today | Decide before Registration is implemented; 0.9 only reserves it in the anonymous allowlist |
+| ~~Q-S19-2 Infrastructure pages (Session 19, §52; see D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | The approved access design names Login, Registration, `Home.Index`, `Home.Privacy` as public; the earlier allowlist also had `Account.AccessDenied`, `Home.Error`, status-code page (0.10) | Keep `Error` + status-code page anonymous (an anonymous visitor's error would otherwise redirect to Login); `AccessDenied` only as D-55 fallback (Q-S19-10). Needs the user's confirmation |
+| **D-37 cleanup (Session 19, §53)** | Delete legacy rows `AspNetUserClaims.ClaimType = 'Permission'` (exact, case-sensitive); other claim types kept. Which database, row count (read-only `SELECT COUNT` needs approval to run), backup table + rollback | Report given §53; **nothing deleted** until the user approves that specific operation |
+| ~~Q-S19-3 Registration fields / identity (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Required fields per type (student ID, session, designation, phone, …) and how identity is verified (institutional email domain, email confirmation — `RequireConfirmedEmail` is `false` today, staff check) | Decide before Registration is built |
+| ~~Q-S19-4 Fellow activation (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Does Librarian approval make the account `Active` directly, or is a further activation step needed (e.g. email confirmation, admin role assignment)? | Decide with Q-S19-8 |
+| ~~Q-S19-5 Member link (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | How a registered Student / approved Fellow is linked to a `Member` record (created at registration, at approval, or linked to an existing staff-entered member; matching rule) | Before the Members phase |
+| ~~Q-S19-6 Approvers (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Which Librarian role(s)/permission approve or reject Fellow applications | A dedicated permission (e.g. `Registrations.Review`) assigned by the System Admin — not approved |
+| ~~Q-S19-7 Resubmission (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Can a rejected applicant resubmit? Same account or new application; any waiting period | — |
+| ~~Q-S19-8 Approval-state model (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Represent registration approval (`Pending`/`Approved`/`Rejected`) separately from account status `RecordStatus` — field on the user vs separate application record | Separate from `RecordStatus`; exact schema needs a design + approval |
+| ~~Q-S19-9 Registration phase + tests (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Which phase implements Registration and its tests | Not Phase 0 (0.9 only allowlists the endpoint when it exists) |
+| ~~Q-S19-10 Forbidden page without a "current page" (D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | A forbidden URL opened directly (no page to return to): keep `AccessDenied` as fallback, or redirect to `Home.Index`/referrer with the red toast? Also AJAX: 401/403 status instead of a redirect | Redirect to a safe local page (referrer if local, else Home) with the toast; AJAX gets 401/403 |
+| ~~Q-S19-11 Reference ID in error toast (D-55, D-34)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Should the red toast for an unexpected error show the Reference ID? | Yes (D-34 shows only the Reference ID) |
+| ~~Q-S19-12 Toast values (D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Warning/info durations; maximum simultaneous toasts; pause on hover/focus | Warning ≈ 5 s, info ≈ 3 s, max 3, pause on hover/focus (WCAG 2.2.1) |
+| ~~Q-S19-13 Toast implementation (D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Bootstrap's built-in toast component (already shipped) + `TempData` vs a custom script | Bootstrap toast + existing `TempData["Success"/"Error"]` keys |
+| ~~Q-S19-14 Toast timing in the plan (D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Built in Phase 0 (0.9 permission response, 0.10 error handling) or Phase 1 (first UI work) | 0.10, with test A2 updated |
+| ~~Q-S19-15 Deleted users in the Users list (D-53)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Hide `Deleted` users, or show them with their status (filter) | Hide by default |
+| ~~Q-S19-16 Email of a deleted user (D-52, D-53)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Unique email index still covers soft-deleted users → the same email cannot register again. Keep (email belongs to the retained record) or filter the index by `Status <> Deleted` | Keep for now |
+| ~~Q-S19-17 Student default access (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Does a newly registered Student get a default role (configured by the System Admin) or no role until assigned? | A configurable default member role with no privileged permissions |
 | CR5 cascade part (§48) | Soft delete of a principal still hard-deletes tracked non-`BaseEntity` dependents | Decide when the first such relation is built (Phase 2/3); no current code path |
 | D-49 O1–O5 | Available count, `Issued` in `CopyStatus`, member subtypes, history name, loan id type (`database.md` §6) | Before the phase that builds the tables (Phase 2/3); recommendations in `database.md` |
 | ~~Merged branch~~ **Resolved Session 18 (§50): `gate-1` and `gate-2` deleted with `-d`** | Delete `feature/phase-0-gate-1` (merged into `develop`)? | Any time; needs the user's OK (Session 17: asked together with the Gate 2 start; the bare "ok" counted for Gate 2 only) |
@@ -1548,7 +1719,8 @@ holds duplicate emails; clean them first.
 Approved), D-07 T1 scope (`.gitattributes` + hash check), D-07 T1-EOL (LF), D-07 T4 (replaced by
 R1 recovery source), step 0.1 (authorized), D-47 / Q-M9-9 (`CseLibrary.*`), D-41 tooling, D-40
 connection string, Q-M9-8 (keep offset paging), Q-M9-10 (all pages authenticated except Login,
-AccessDenied, Error), Q-M9-11 (yes), D-14 `ReadCommitted` (deferred to Phase 3), D-16 (Approved).
+AccessDenied, Error — **Superseded Session 19 (§52): `Home.Index`, `Home.Privacy`, Registration
+public; see D-31 access design**), Q-M9-11 (yes), D-14 `ReadCommitted` (deferred to Phase 3), D-16 (Approved).
 **Still open, decided by review at their gate (no discussion round needed):** D-13 signatures,
 D-15/D-34 types (0.7), D-14 per-use-case assessment (0.8), D-31 values + D-32 (0.9), D-37 claims
 cleanup (separate data approval), D-21/24/25/27 details + D-29/D-30 (0.11). Lending-phase items
@@ -1576,10 +1748,11 @@ documentation package", which was stale after §18.)_
 | D-14 | Per-use-case ambiguous-commit assessment: risk, mechanism, tests, limitations (approach approved M8 §3; assessment presented at Gate 2) | 0.8 |
 | D-15 | Proposed details: `PageRequest`/`PagedResult<T>`, page size max 100, bounded-table exception | 0.7 |
 | D-34 | `Result`/`Result<T>` + `ErrorCode` type | 0.7 |
-| D-31 | Default security values (password, lockout, stamp interval, cookie) | 0.9 |
-| D-31 (M9) | Controller-level `[Authorize]` + `FallbackPolicy` approach; `Home.Index`/`Privacy` public or not (Q-M9-10) | 0.9 |
-| D-32 | Deactivation mechanism (`CanSignInAsync` override + stamp update) | 0.9 |
-| D-37 | Cleanup of existing permission rows in `AspNetUserClaims` (data change — separate approval) | 0.9 |
+| D-31 | Default security values: ~~password, lockout~~ (**Approved Session 19**, §52); stamp interval, cookie, global antiforgery still Proposed | 0.9 |
+| ~~D-31 (M9)~~ | **Approved Session 19 (§52):** controller-level `[Authorize]` + `FallbackPolicy`; `Home.Index`/`Privacy`/Registration public (Q-M9-10 superseded); open: Q-S19-1, Q-S19-2 | 0.9 |
+| ~~D-32~~ | **Approved Session 19 (§52):** deactivation mechanism (`CanSignInAsync` override + stamp update) | 0.9 |
+| D-37 | Cleanup of existing permission rows in `AspNetUserClaims` (data change — separate approval; deletion criteria reported Session 19 §53, not run). Authorization fix implemented Session 19 (uncommitted) | 0.9 |
+| D-53 | Soft delete of users: implementation approval (findings + proposal Session 19 §53) | 0.9 (recommended, with D-32) |
 | D-21/D-24/D-25/D-27 | Audit schema, security event list, bulk-write rule, consistency table (Proposed details) | 0.11 |
 | D-29 | HiLo: isolated demonstration + migration/script diff, then approval | 0.11 |
 | D-30 | Confirm no template-created DB holds data to keep; regenerate baseline migration (new DB only) | 0.11 |
@@ -1596,7 +1769,7 @@ documentation package", which was stale after §18.)_
 | Q-M9-7 | Listing UX: Load More button, infinite scroll or numbered pages? | Load More *(recommended)* — D-46 | Phase 1 |
 | Q-M9-8 | Keep the Users list on offset count-and-page (Approved D-15/D1) rather than keyset? | keep *(recommended)* | 0.8 |
 | Q-M9-9 | Project prefix: keep `CseLibrary.*` (D-41) or switch to `LibraryManagement.*`? | — (both valid; structure identical) — D-47 | **0.3** |
-| Q-M9-10 | Should `Home.Index` / `Home.Privacy` be public? | authenticated *(D-31 default)* | 0.9 |
+| Q-M9-10 | Should `Home.Index` / `Home.Privacy` be public? **Answered Session 19 (§52): both public** (supersedes the Session 13 answer) | authenticated *(D-31 default)* | 0.9 |
 | Q-M9-11 | Approve seeding `requirements.md` / `business-rules.md` now (before step 0.2)? | — | 0.2 |
 
 ### M10/M11 questions — borrowing policy (D-48): can wait until the Lending phase

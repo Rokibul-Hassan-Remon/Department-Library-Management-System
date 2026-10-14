@@ -1770,6 +1770,114 @@ filtered unique index on `NormalizedEmail` — a schema decision for the user (p
   action only (docs commit, then Gate 2, then merge, then the next commit) — each asked again.
 - Next: Gate 3 (0.9–0.12) start needs the user's explicit approval.
 
+### 52. Session 19 — Gate 3 start; 0.9 security decisions (2026-10-14)
+- Verified: Session 18 close-out already committed (`408b625`) and merged (`5bb43bc`); branch
+  deleted. User "ok" → Gate 3 started; branch `feature/phase-0-gate-3` created from `develop`.
+- Assistant presented the 0.9 plan (three commits: D-37 DB-only permissions, D-31 baseline,
+  D-32 deactivation) and four questions: D-31 values, D-31 M9 approach + Q-M9-10, D-32 mechanism,
+  D-37 claim-row cleanup. Recommendation for Q-M9-10 was "authenticated"; the user chose otherwise.
+- **User decisions (each recorded as stated, nothing else upgraded):**
+  1. **0.9 access design — Approved** (D-31 M9 extension; supersedes the Session 13 Q-M9-10
+     answer): `Home.Index` public — CSE Library landing page with Login and Registration links
+     top-right; `Home.Privacy` public; Login and Registration anonymous; everything else needs
+     authentication + the appropriate authorization/permission checks; `FallbackPolicy` +
+     class-level `[Authorize]` applied consistently, `[AllowAnonymous]` only on the intended
+     public endpoints; public Registration must not grant privileged roles automatically.
+  2. **D-31 password + lockout values — Approved:** min length 10, one digit, lockout 5 failures /
+     15 min, `lockoutOnFailure: true`. Stamp interval, cookie settings, global antiforgery stay
+     Proposed.
+  3. **D-32 mechanism — Approved:** inactive user cannot sign in again; deactivation calls
+     `UpdateSecurityStampAsync`; existing-cookie validation and protected-page access verified by
+     automated tests. Explicitly approves no other security setting.
+- Not answered: D-37 cleanup of existing `AspNetUserClaims` permission rows (still needs separate
+  approval; assistant recommends deferring — the new handler will not read them).
+- **New open questions from decision 1:** Q-S19-1 registration scope (no registration endpoint
+  exists; who may register, what the account gets, link to member record, staff activation,
+  phase — note the archive's "Student Registration" is a staff form, not self-registration);
+  Q-S19-2 whether `Error` / status-code / `AccessDenied` stay anonymous (recommended: yes for
+  `Error` + status-code page).
+- Documentation-only change (PROJECT_DECISIONS, this log, SESSION_HANDOFF); no code, Git state,
+  staging or commits changed.
+
+### 53. Session 19 — D-37 fix, user retention, registration, notifications (2026-10-14)
+User sent five requests in one message:
+1. **D-37 (both tasks).** Inspection: the only legacy claim type is `Permission`
+   (`Permissions.ClaimType`), written by the old `AccountController.AddPermissionClaimsAsync`
+   (value = permission name); no other code writes `AspNetUserClaims`. **Authorization fix
+   implemented** (user request; uncommitted): handler ignores cookie permission claims and checks
+   the DB per request (request-local cache); login writes no claims; `IPermissionService` removed
+   from `AccountController`. Tests: A9 flipped (login writes no claims), A7 flipped (revoked
+   permission denied on the next request **and** after re-login), new A7 legacy-row test (a
+   `Permission` row in `AspNetUserClaims` reaches the cookie but grants nothing), new A8 (removed
+   from role → denied next request). Build 0/0, tests 52/52. Mutation check: re-adding the
+   cookie-claim shortcut fails the legacy-row test.
+   **Cleanup — reported, not run:** criteria `ClaimType = N'Permission'` exact, case-sensitive;
+   every other claim type kept; no `AspNetUsers` row touched. Target database not chosen: the
+   `CseLibrary` dev DB on `.\SQLEXPRESS` has never been migrated by this project (Session 18
+   evidence), the user's `DefaultTemplate` DB is off-limits (CLAUDE.md), test DBs are disposable.
+   Row count needs a read-only `SELECT COUNT(*)` on the chosen DB — not run without approval.
+   Rollback: copy matching rows to a backup table inside the same transaction before the
+   `DELETE`; restore with `SET IDENTITY_INSERT` + `INSERT … SELECT`. Since the handler ignores the
+   rows, the cleanup is hygiene only (rows still ride along in the cookie until removed).
+2. **User retention → D-53 (Approved requirement).** Findings: `UserService.DeleteAsync` →
+   `UserManager.DeleteAsync` physically deletes the user (+ cascade of roles, claims, logins,
+   tokens); no interceptor safety net (`ApplicationUser` is not a `BaseEntity`); `UpdateAsync`
+   could resurrect a deleted user; deleted users would show in the Users list; existing cookie
+   needs a stamp update; `RoleService.DeleteAsync` also hard-deletes (out of scope). Code not
+   changed — user asked for findings first.
+3. **Registration design → D-54** (Q-S19-1 answered): Student → Active immediately; Dept. Fellow
+   → Pending, Librarian approves/rejects; Pending/Rejected/Deleted cannot log in; no privileged
+   roles from the registration type. Status-model gap recorded (approval ≠ `RecordStatus`,
+   Q-S19-8); open details Q-S19-3 … Q-S19-9, Q-S19-17.
+4. **Separate registration workflows with shared logic** (added to D-54 item 5): explicit
+   Student and Dept. Fellow workflow methods, shared internals reused, workflow rules separate,
+   no Fellow special rules invented now. Design decision, not implementation approval.
+5. **UI notifications and error handling → D-55.** Reconciled with D-31 access design, Q-S19-2,
+   D-34 and test A2; open Q-S19-10 … Q-S19-14. Also recorded D-52 conflict (Q-S19-16).
+- Docs updated: PROJECT_DECISIONS (D-37 note, D-52 note, D-53–D-55, section 9), this log,
+  PHASE_0_PLAN (0.9 / 0.10 notes), SESSION_HANDOFF. No database, migration, branch, staging or
+  commit change.
+
+### 54. Session 19 — close-out
+- User asked to switch sessions (conversation too long) and to record this session's decisions,
+  discussion and findings in the existing docs. SESSION_HANDOFF Session 19 block rewritten
+  (state table of uncommitted files, decisions, findings, ordered next action, lessons), this
+  log, PROJECT_DECISIONS section 9 note.
+- Nothing committed this session: the D-37 fix (3 files) and all docs are uncommitted on
+  `feature/phase-0-gate-3`; the user has not yet reviewed the §53 report. Close-out made in the
+  working tree (no close-out branch: switching branches would carry the uncommitted code and
+  was not approved).
+- Next: Session 20 starts with the review of §53, then separate approvals (D-37 commit, cleanup
+  target DB + count, D-53 implementation, open values).
+
+### 55. Session 20 — Q-S19-2 … Q-S19-17 answered (2026-10-14)
+- Verified first: branch `feature/phase-0-gate-3`, 7 files uncommitted as in §54, build 0 errors,
+  tests 52/52.
+- Assistant listed Q-S19-2 … Q-S19-17 with recommendations. **User approved (recorded as stated):**
+  - **D-54:** Q-S19-3 necessary identity + credential fields, email confirmation *to be
+    considered* (not decided); Q-S19-4 Librarian approval → Fellow `Active`, subject to other
+    security checks; Q-S19-5 validate + link an existing `Member`, no automatic duplicate;
+    Q-S19-6 dedicated `Registrations.Review` permission; Q-S19-7 rejected applicant may re-apply,
+    no duplicate account/application; Q-S19-8 approval state separate from `RecordStatus`;
+    Q-S19-9 outside Phase 0; Q-S19-17 System Admin-configured default member role, no privileged
+    permission. Earlier D-54 items (Student → Active, Fellow → Pending → Librarian review,
+    separate workflow methods, no physical `AspNetUsers` delete) confirmed.
+  - **D-55:** Q-S19-10 safe local return location else Home with toast, AJAX/API 401/403, open
+    redirect prevented; Q-S19-11 Reference ID in error toast; Q-S19-12 warning ≈ 5 s, info ≈ 3 s,
+    max 3, pause on hover/focus; Q-S19-13 verify existing code, Bootstrap toast + current
+    `TempData` keys; Q-S19-14 step 0.10 with test A2 update.
+  - **D-53/D-52:** Q-S19-15 deleted users hidden by default, visible from an authorized admin
+    view when needed; Q-S19-16 email of a deleted user not reusable for now, unique index stays.
+  - **Q-S19-2:** generic error/status responses work for anonymous requests; protected-resource
+    authorization unchanged.
+- **Explicitly not approved by this message** (each still a separate gate): D-37 commit (staged
+  list + exact message first); D-37 cleanup (confirm target DB → read-only count → affected rows
+  + rollback plan → separate delete approval); D-53 code changes (execution approval before any
+  edit); D-31 stamp interval, cookie settings, global antiforgery (show values compared with the
+  current configuration — the Session 19 approval covered only password/lockout).
+- Docs updated: PROJECT_DECISIONS (D-31, D-53, D-54, D-55, section 9), this log, PHASE_0_PLAN
+  note, SESSION_HANDOFF. No code, database, staging or commit change.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
@@ -1789,11 +1897,14 @@ connection string and D-47 below are **resolved** (§29); kept as history.
 | D-13 signatures | Contract approved; exact signatures reviewed at Gate 2 |
 | D-14 ambiguous commits | Approach approved (M8); per-use-case assessment (risk, mechanism, tests, limitations) due at Gate 2 |
 | D-15 / D-34 details | `PageRequest` limits, `Result` type — Proposed |
-| D-31 values / D-32 mechanism | Baseline approved; default numbers and `CanSignInAsync` mechanism not confirmed |
-| D-37 cleanup | Removing existing permission rows from `AspNetUserClaims` needs separate approval |
+| D-31 values / D-32 mechanism | Baseline approved; **Session 19 (§52): password + lockout values and D-32 mechanism Approved**; stamp interval, cookie settings, global antiforgery still Proposed |
+| Q-S19-1 / Q-S19-2 (§52) | ~~Registration scope~~ answered → D-54 (§53); anonymous `Error` / status-code / `AccessDenied` pages (now tied to D-55 Q-S19-10) |
+| ~~Q-S19-2 … Q-S19-17 (§53)~~ | **Answered Session 20 (§55)** — registration details (D-54), toast/forbidden-page details (D-55), deleted users in list + email reuse (D-53/D-52), anonymous error pages |
+| D-53 implementation (§53) | Requirement approved; code change (soft delete + stamp + no resurrection) awaits approval |
+| D-37 cleanup | Removing existing permission rows from `AspNetUserClaims` needs separate approval. **Session 19 (§53): criteria, environment and rollback reported; target DB + count not yet approved** |
 | D-21/24/25/27 details | Audit schema, event list, bulk-write rule, consistency table — Proposed |
 | D-47 naming (M9) | `LibraryManagement.*` vs Approved `CseLibrary.*`; blocks 0.3 (Q-M9-9) |
 | ~~D-45 outstanding-loan rule (M9)~~ | Superseded by D-48 (M10) — conflict resolved as configuration; no request workflow |
 | D-48 borrowing policy (M10–M12) | Wholly Proposed; reviewed before the Lending phase, not now. Architecture, settings, constraints, defaults/overrides, activation, permission holder (conflict with archive roles table), due-date edit (would amend FR-06), category change (Q-M10-1, -2, -4..-9); P17 mechanism; member status on the member row (Phase 2); values Pending user/department (Q-M10-3); lost/cancelled counting Q-M9-3; lowering limit Q-M9-5; explicit `ReadCommitted` in D-14 (optional at 0.8) |
-| D-46 / D-15 M9 / D-31 M9 | Proposed designs for AJAX loading, keyset paging, controller authorization; values Q-M9-6..8, Q-M9-10 (D-44 superseded by D-48) |
+| D-46 / D-15 M9 / D-31 M9 | Proposed designs for AJAX loading, keyset paging, controller authorization; values Q-M9-6..8, Q-M9-10 (D-44 superseded by D-48). **Session 19 (§52): D-31 M9 + Q-M9-10 Approved/answered** |
 | Domain policies | Fellow definition, limits, durations, renewals, Lost status, SMTP, portal accounts, hosting, retention — department/user input needed in later phases |

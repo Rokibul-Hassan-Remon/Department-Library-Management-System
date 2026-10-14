@@ -1,6 +1,110 @@
 # Session Handoff
 
-## ▶ Session 18 (2026-10-13/14) — read first; overrides older blocks where they differ
+## ▶ Session 20 (2026-10-14) — read first, then the Session 19 block below
+- Verified: `feature/phase-0-gate-3`, same 7 uncommitted files as the Session 19 table; build
+  0 errors; tests **52/52**.
+- **Q-S19-2 … Q-S19-17 answered and recorded** (DECISION_LOG §55; PROJECT_DECISIONS D-31, D-53,
+  D-54, D-55, section 9). Highlights: Registration outside Phase 0, `Registrations.Review`
+  permission, approval state separate from `RecordStatus`; D-55 toast in step 0.10 with test A2;
+  error/status pages anonymous; deleted users hidden by default; deleted emails not reusable.
+- **Separate approvals (one ok = one approval):**
+  1. ~~D-37 commit~~ **Done: `fab1af1`** on `feature/phase-0-gate-3` (3 files, user "ok"; build 0
+     errors, tests 52/52 before commit).
+  2. D-37 cleanup — confirm target DB → read-only count → affected rows + rollback → delete approval.
+  3. D-53 soft-delete code — execution approval before any edit.
+  4. D-31 stamp interval / cookie / global antiforgery — compare with the current config, then ask.
+- Docs only changed this session (uncommitted); no code, DB, staging or commit change.
+
+## Session 19 (2026-10-14) — superseded by the Session 20 block above where they differ
+Session 19 closed at the user's request (conversation too long) — **Session 20 starts here.**
+
+### State (verified 2026-10-14)
+- Session 18 close-out committed (`408b625`) and merged into `develop` (`5bb43bc`); close-out
+  branch deleted. **Gate 3 started** on the user's "ok": branch **`feature/phase-0-gate-3`** from
+  `develop` @ `5bb43bc` — **no commit on it yet.**
+- **Everything below is uncommitted** in the working tree of `feature/phase-0-gate-3`:
+  | File | Content | Log |
+  |---|---|---|
+  | `src/CseLibrary.Web/Authorization/PermissionAuthorizationHandler.cs` | D-37: DB-only check, request-local cache, cookie claims ignored | §53 |
+  | `src/CseLibrary.Web/Controllers/AccountController.cs` | D-37: login writes no claims; `IPermissionService` removed | §53 |
+  | `tests/CseLibrary.Tests/Integration/CharacterizationTests.cs` | A9 + A7 flipped; new A7 legacy-row test, new A8 | §53 |
+  | `docs/PROJECT_DECISIONS.md`, `DECISION_LOG.md`, `PHASE_0_PLAN.md`, this file | §52–§54 decisions, D-53–D-55, Q-S19-1…17 | §52–§54 |
+- Evidence (working tree): build 0 errors / 0 warnings; tests **52/52**; mutation check (cookie-claim
+  shortcut re-added → legacy-row test fails, then restored). No database touched (test LocalDB
+  only), no migration, `.\SQLEXPRESS` untouched.
+- Code not yet reviewed with `/code-review` + `/ponytail-review` (due before the Gate 3 report).
+
+### Decisions this session (details: PROJECT_DECISIONS D-31/D-32/D-37/D-53–D-55, DECISION_LOG §52–§53)
+- **0.9 access design Approved** (D-31 M9; supersedes Session 13 Q-M9-10): `Home.Index` public
+  landing page with Login + Registration links top-right; `Home.Privacy` public; Login and
+  Registration anonymous; everything else authenticated + permission-checked; `FallbackPolicy` +
+  class-level `[Authorize]`, `[AllowAnonymous]` only on intended public endpoints; Registration
+  never grants privileged roles automatically.
+- **D-31 password + lockout Approved:** min 10 + one digit; lockout 5 failures / 15 min;
+  `lockoutOnFailure: true`. Stamp interval, cookie settings, global antiforgery: **still Proposed**.
+- **D-32 mechanism Approved:** inactive user cannot sign in; deactivation →
+  `UpdateSecurityStampAsync`; cookie validation + protected-page access covered by tests (A4).
+  Approves no other security setting.
+- **D-37:** user asked for both tasks; authorization fix done (above). Legacy-row cleanup
+  (`ClaimType = 'Permission'` only): criteria + rollback reported, **not run** — target DB and a
+  read-only count need approval.
+- **D-53 Approved (requirement):** never physically delete `AspNetUsers` rows; delete = `Status =
+  Deleted`; deleted users cannot sign in. Today `UserService.DeleteAsync` hard-deletes — code
+  change awaits approval.
+- **D-54 Approved (design, not implementation):** registration — Student → Active; Dept. Fellow →
+  Pending → Librarian approve/reject; separate workflow methods with shared internals; no
+  privileged roles from the type. Approval state ≠ `RecordStatus` (Q-S19-8).
+- **D-55 Approved (design, not implementation):** central toast notifications (success green 3 s,
+  error red 5 s, `×`), field-level validation, permission failure as toast instead of an
+  AccessDenied redirect, centralized error handling.
+
+- Status note: D-53 is recorded **Approved** as the user's stated requirement, D-54/D-55 as
+  **approved designs** — none of them is approved for implementation. The user has not yet
+  reacted to the §53 report (code diff, doc diff, open questions).
+
+### Findings this session (details: DECISION_LOG §53, PROJECT_DECISIONS D-53)
+- Only legacy claim type in `AspNetUserClaims` is `Permission`; no other code writes claims.
+- The default `UserClaimsPrincipalFactory` copies `AspNetUserClaims` rows into the cookie — legacy
+  rows still ride along until cleaned, but the new handler ignores them.
+- `UserService.DeleteAsync` hard-deletes users (+ cascade roles/claims/logins/tokens); no
+  soft-delete safety net for `ApplicationUser`; `UpdateAsync` could resurrect a deleted user;
+  Users list has no status filter; `RoleService.DeleteAsync` also hard-deletes (out of scope).
+- `RecordStatus` {Active, Inactive, Deleted} cannot hold registration approval
+  (Pending/Approved/Rejected) — Q-S19-8. D-52's "users are hard-deleted" premise conflicts with
+  D-53 (Q-S19-16).
+
+### ⛔ Next action (Session 20), in order
+1. Verify read-only: `git branch --show-current` (= `feature/phase-0-gate-3`), `git status` (7 files
+   modified, see table), `dotnet build CseLibrary.sln` + `dotnet test CseLibrary.sln` (expect 52/52).
+2. Ask the user for review of the Session 19 work (§53). Then, **each as a separate approval**
+   (one ok = one approval):
+   a. Commit the D-37 fix (3 code/test files) — show staged list + message, e.g.
+      `Check permissions in the database on every request (D-37)`. Docs: commit separately
+      (`Record Session 19 decisions (docs)`) or with it — ask.
+   b. D-37 legacy-row cleanup: which database, then a read-only `SELECT COUNT(*)` there; the
+      `DELETE` (with backup table) only after a further explicit approval.
+   c. D-53 implementation (soft delete + stamp update + no resurrection + tests) — recommended
+      inside the D-32 commit.
+   d. Open values: D-31 stamp interval / cookie / antiforgery; Q-S19-2; Q-S19-3 … Q-S19-17
+      (PROJECT_DECISIONS section 9, each with a recommendation).
+3. Remaining 0.9 commits: D-31 baseline (IdentityOptions from config, lockout, fallback policy,
+   class `[Authorize]`, allowlist incl. public `Home.Index`/`Privacy`), D-32 deactivation; also the
+   `UsersController` role list (`RoleManager.Roles` → `IRoleService`). D-55 timing per Q-S19-14.
+- Still open (unchanged): D-49 O1–O5, `EF Tools` package, UI brand text, CR5 cascade part.
+
+### Learned in Session 19
+- The user may paste several requests in one message, each with its own scope and stop rule
+  ("documentation only", "report before changing code"). Handle each by its own rule and say
+  which one changed code.
+- A user decision may differ from the recommendation (Q-M9-10 → public pages): record it as
+  stated and mark the older answer `Superseded`, never delete it.
+- In Git Bash, `grep -c $'\r'` inside a command with other quoting can miscount (it reported CRLF
+  where files were LF). Check line endings with `tr -cd '\r' < f | wc -c` and confirm with
+  `git diff --stat` — a whole-file diff means the endings were changed; revert at once.
+- Mutation-check a security fix by re-adding the removed shortcut temporarily (copy to `$TEMP`,
+  patch, run the filtered tests, restore, confirm `git diff --stat`).
+
+## Session 18 (2026-10-13/14) — superseded by the Session 19 block above where they differ
 Session 18 closed at the user's request (conversation too long) — **Session 19 starts here.**
 
 ### State (verified 2026-10-14)

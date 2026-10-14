@@ -107,6 +107,19 @@ cookie part and the `UsersController` role list (0.9)._
 | [ ] 0.11 | Audit: `AuditLog` entity + config + indexes, `IAuditable`, `.Audited()`/`.NotAudited()` property classification (D-23), `ICurrentUser` (Web impl), `TimeProvider`, `AuditSaveChangesInterceptor`, `ISecurityAuditService` events, key strategy per approved D-29, migration per approved D-30. | D-21–D-27, **D-29/D-30 approval from 0.11a** | `Core/Entities/AuditLog.cs`, `Core/Interfaces/*`, `Data/Interceptors/*`, `Data/Configurations/*`, `Services/Security/*`, `Web/Infrastructure/HttpCurrentUser.cs`, `Migrations/*` | Tests C1–C7 |
 | [ ] 0.12 | Manual smoke test (admin login, create/deactivate user, lockout, error page, audit row) + docs: `status.md`, `SESSION_HANDOFF.md`, `PROJECT_DECISIONS.md`, `DECISION_LOG.md`. | 0.9–0.11 | `docs/**` | Smoke results recorded; Phase 0 exit criteria met |
 
+_Session 19 notes (DECISION_LOG §52–§53):_
+- _0.9: access design (D-31 M9), password/lockout values (D-31) and D-32 mechanism Approved. D-37
+  authorization fix implemented (uncommitted; A7, A8, A9 green, 52/52); legacy `AspNetUserClaims`
+  cleanup reported, not run. D-53 (users never physically deleted) Approved as a requirement;
+  soft-delete code awaits approval (recommended in the D-32 commit). Registration (D-54) is
+  **not** built in Phase 0 — Q-S19-9._
+- _0.9/0.10: D-55 (toast notifications, no AccessDenied redirect when the page can respond)
+  changes test A2 and the AccessDenied/Error flow; timing Q-S19-14, fallback Q-S19-10._
+- _Session 20 (§55): Q-S19-2 … 17 answered. 0.10 builds the D-55 toast (Bootstrap toast +
+  existing `TempData` keys, Reference ID in error toast, safe local return else Home, AJAX
+  401/403) and updates test A2; `Error`/status-code pages anonymous. Registration stays outside
+  Phase 0. D-53: deleted users hidden from the Users list by default._
+
 **⛔ Gate 3 review — stop and wait for user approval before Phase 1.**
 
 ## Acceptance tests
