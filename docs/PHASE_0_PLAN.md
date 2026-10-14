@@ -125,6 +125,12 @@ _Session 19 notes (DECISION_LOG §52–§53):_
 - _Session 21 (§57): D-32 + test A4 done `c63854b` (65/65). A4 uses a test-only stamp interval
   of 0 (shared options instance, restored) instead of advancing `TimeProvider`. Still open in
   0.9: `UsersController` role list, Gate 3 reviews._
+- _Session 21 (§58–§63): D-56 recorded `add844a`. Added to 0.9 (implementation plan needs
+  approval first): fixed `"Admin"` constant (remove `Seed:Admin:Role`), privileged-role
+  assign/remove rule in `UserService`, last-effective-Admin guard (role removal, deactivation,
+  soft delete; concurrency-safe), `RoleService` rules (Admin-only privileged edits/deletes,
+  `Admin` role undeletable, keeps all permissions, no rename to/from `Admin`), together with the
+  `UsersController` role-list refactor. Registration itself stays outside Phase 0._
 
 **⛔ Gate 3 review — stop and wait for user approval before Phase 1.**
 

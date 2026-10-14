@@ -2013,6 +2013,35 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - No Q-S21 question remains open. All Q-S21 rules are built in Gate 3 (0.9) with the
   `UsersController` role-list refactor (Q-S21-8, Q-S21-12), each step on its own approval.
 
+### 63. Session 21 — close-out (2026-10-14)
+- Commits this session (each on its own user "ok"): `c63854b` D-32 code + test A4; `3c9b5a3` docs
+  (D-32, Session 20 follow-up note); `add844a` docs (D-56, §58–§62). Branch
+  `feature/phase-0-gate-3`, 8 commits, not merged. Tests 65/65 at `c63854b`.
+- The `UsersController` role-list step was **planned but not started**: the assistant proposed
+  `IRoleService.GetNamesAsync` (name-only projection; `GetAllAsync` also loads `PermissionIds`)
+  and a private helper replacing the six `_roleManager.Roles.Select(...)` calls. The user then
+  turned the discussion to D-56; the refactor now goes into one Gate 3 (0.9) plan with the
+  Q-S21 rules (SESSION_HANDOFF next action 3). The plan needs approval before code.
+- Findings (code-verified, read-only):
+  1. `SignInManager.CanSignInAsync` runs at sign-in only; the cookie's stamp validator does not
+     call it, so ending existing sessions relies on the stamp change (hence D-32's stamp update).
+  2. `PasswordSignInAsync` refuses a non-`Active` user with `NotAllowed` before checking the
+     password, so no failed-attempt count is added; the UI shows the same generic error.
+  3. `IOptions<SecurityStampValidatorOptions>.Value` is one shared mutable instance; test A4 sets
+     the interval to 0 and restores it in `finally` (tests in the `app` collection run serially).
+  4. MVC model binding accepts undefined enum numbers (e.g. `"7"`) — D-56 requires
+     `Enum.IsDefined` on the server.
+  5. `UsersController` Create/Edit list **all** roles incl. `Admin` → any `Users.Create`/
+     `Users.Edit` holder could assign `Admin` (incl. to themselves) — answered by Q-S21-4/8.
+  6. `RoleService.UpdateAsync` allows renaming any role (Q-S21-15); `DbSeeder` restores all
+     permissions to the admin role at startup only (Q-S21-14).
+  7. `Seed:Admin:Role` (`appsettings.json`, `SeedAdminOptions.Role`) made the admin role name
+     configurable — to be removed (Q-S21-13).
+  8. `RoleService.DeleteAsync` deletes roles **physically** (`RoleManager.DeleteAsync`); D-53
+     soft delete covers users only. No decision yet — raise with the Gate 3 plan if relevant.
+- Close-out docs (this section, SESSION_HANDOFF Session 21 block, PHASE_0_PLAN note,
+  PROJECT_DECISIONS §9 "Session 22 start" row) are uncommitted unless the user asks to commit.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

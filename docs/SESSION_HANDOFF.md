@@ -1,13 +1,52 @@
 # Session Handoff
 
 ## ▶ Session 21 (2026-10-14) — read first; overrides the Session 20 block where they differ
-- **D-32 done:** approved by the user, implemented `c63854b` (`ActiveUserSignInManager`, stamp
-  update on deactivation, test A4). Build 0/0, tests **65/65**, mutation-checked (DECISION_LOG §57).
-- Docs commit after `c63854b` records this (user "ok"). Working tree clean after it.
-- **Next action:** item 4 of the Session 20 list below — `UsersController` role list
-  (`RoleManager.Roles` → `IRoleService`), then Gate 3 `/code-review` + `/ponytail-review`, 0.10,
-  0.11, 0.12, Gate 3 report (each step / commit on its own "ok").
-- **D-56 recorded (docs only, uncommitted, §58):** public registration choice = `RegistrationType`
+Session 21 closed at the user's request (conversation too long) — **Session 22 starts here.**
+
+### State (verified 2026-10-14)
+- Branch **`feature/phase-0-gate-3`** (from `develop` @ `5bb43bc`), **8 commits, not merged**:
+  `fab1af1` D-37 · `9234229` docs · `8550c00` D-53 · `215d75e` D-31 · `b81dfee` docs ·
+  **`c63854b` D-32** · **`3c9b5a3`** docs (D-32 + Session 20 follow-up) · **`add844a`** docs (D-56).
+- Evidence (at `c63854b`): build 0 errors / 0 warnings; tests **65/65**; mutation checks for D-32
+  (no stamp update → A4 fails; no `CanSignInAsync` check → A4 + inactive-login test fail). Later
+  commits are docs only. No migration; no non-test database touched.
+- Working tree clean after `add844a`, except this close-out (docs, uncommitted unless the user
+  asks to commit it).
+
+### Done this session (details: DECISION_LOG §57–§63)
+- **D-32 implemented** `c63854b`: `ActiveUserSignInManager` (`CanSignInAsync` = `Active` only,
+  `AddSignInManager` in `CseLibrary.Data/DependencyInjection.cs`; check removed from
+  `AccountController`); `UserService.UpdateAsync` calls `UpdateSecurityStampAsync` on Active →
+  Inactive; test A4 `Deactivated_user_loses_existing_sessions` (`DataLayerTests`).
+- **D-56 recorded** `add844a` (design Approved, implementation not approved), Q-S21-1 … 15 all
+  answered — summary in the bullet below.
+
+### ⛔ Next action (Session 22), in order
+1. Verify read-only: branch `feature/phase-0-gate-3`, `git log --oneline -3` (top `add844a` or a
+   close-out docs commit after it), `git status`, `dotnet build` + `dotnet test` (65/65).
+2. If this close-out is uncommitted, ask the user before committing it.
+3. **Propose (do not code yet) the Gate 3 (0.9) implementation plan** for D-56 Q-S21-4 … 15 together
+   with the `UsersController` role-list refactor: `"Admin"` Core constant + remove
+   `Seed:Admin:Role`; `IRoleService` role list (projection, no `RoleManager` in the controller);
+   privileged-role check (any permission = privileged for now); `UserService` assign/remove rule
+   + last-effective-Admin guard on role removal, deactivation, soft delete (concurrency-safe,
+   D-14); `RoleService` rules (privileged edits/deletes Admin-only, `Admin` role undeletable,
+   keeps all permissions, no rename to/from `Admin`); tests incl. mutation checks. Plan → "ok" →
+   code → build/test/mutation → diff → commit "ok" (each separate).
+4. Then: Gate 3 `/code-review` + `/ponytail-review`, step 0.10 (D-55 toast, status-code page,
+   test A2), 0.11 audit, 0.12 smoke, Gate 3 report → approval → merge (each separate).
+- Still open (unchanged): D-49 O1–O5, `EF Tools` package, UI brand text, CR5 cascade part.
+  New finding without a decision: `RoleService.DeleteAsync` deletes roles physically (D-53 covers
+  users only) — DECISION_LOG §63.
+
+### Learned in Session 21
+- The user may ask for a **proposed diff before any edit** ("do not edit any file yet"): build it
+  on scratchpad copies (`git diff --no-index`), then `git apply` after the "ok".
+- Record answered questions by striking the §9 row and adding an "Approved details" block —
+  never rewrite earlier decisions; mark them "refined/superseded/extended by …".
+- One "ok" still = one action (decision approval ≠ applying docs ≠ commit).
+
+- **D-56 recorded (`add844a`, §58–§62):** public registration choice = `RegistrationType`
   enum {`Student`, `DepartmentFellow`}, never DB roles. **Q-S21-1 … 4 answered (§59):** per-type
   non-privileged default roles (validated), type stored on the application record, enum dropdown,
   only `Admin` may assign/remove `Admin` (`UserService`). **Q-S21-5 … 8 answered (§60):**
@@ -18,7 +57,7 @@
   privileged until the allowlist exists; `Active` Admin counts during lockout; same rules enforced
   in `RoleService` in Gate 3. **Q-S21-13 … 15 answered (§62):** `Seed:Admin:Role` removed;
   `Admin` role always holds all permissions; renaming to/from `Admin` refused. No Q-S21 open.
-  Nothing implemented; implementation plan for Gate 3 (0.9) needs approval first.
+  Nothing implemented; implementation plan for Gate 3 (0.9) needs approval first (next action 3).
 
 ## Session 20 (2026-10-14) — superseded by the Session 21 block above where they differ
 Session 20 closed at the user's request (conversation too long) — Session 21 started here.
