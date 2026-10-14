@@ -1,19 +1,28 @@
 # Session Handoff
 
-## ▶ Session 20 (2026-10-14) — read first; overrides older blocks where they differ
-Session 20 closed at the user's request (conversation too long) — **Session 21 starts here.**
+## ▶ Session 21 (2026-10-14) — read first; overrides the Session 20 block where they differ
+- **D-32 done:** approved by the user, implemented `c63854b` (`ActiveUserSignInManager`, stamp
+  update on deactivation, test A4). Build 0/0, tests **65/65**, mutation-checked (DECISION_LOG §57).
+- Docs commit after `c63854b` records this (user "ok"). Working tree clean after it.
+- **Next action:** item 4 of the Session 20 list below — `UsersController` role list
+  (`RoleManager.Roles` → `IRoleService`), then Gate 3 `/code-review` + `/ponytail-review`, 0.10,
+  0.11, 0.12, Gate 3 report (each step / commit on its own "ok").
+
+## Session 20 (2026-10-14) — superseded by the Session 21 block above where they differ
+Session 20 closed at the user's request (conversation too long) — Session 21 started here.
 
 ### State (verified 2026-10-14)
-- Branch **`feature/phase-0-gate-3`** (from `develop` @ `5bb43bc`), **4 commits, not merged**:
+- Branch **`feature/phase-0-gate-3`** (from `develop` @ `5bb43bc`), **5 commits, not merged**:
   | Commit | Content |
   |---|---|
   | `fab1af1` | D-37: permissions checked in the DB every request; login writes no claims |
   | `9234229` | Docs: Session 19–20 decisions |
   | `8550c00` | D-53: users soft-deleted (`Status = Deleted` + stamp); hidden from list/details |
   | `215d75e` | D-31: password/lockout from appsettings, stamp 5 min, cookie flags, global antiforgery, `FallbackPolicy` + class `[Authorize]` + allowlist |
+  | `b81dfee` | Docs: Session 20 close-out (user "ok commit") |
 - Evidence: build 0 errors / 0 warnings; tests **64/64**; mutation checks for D-37, D-53, D-31
   (each fails when the fix is undone). No migration; no non-test database touched.
-- Only this close-out (docs) is uncommitted.
+- Working tree clean after `b81dfee`, except this small follow-up note (docs) if not yet committed.
 - Local `.claude/settings.local.json` (excluded via `.git/info/exclude`) allows `git add`,
   `git commit`, `git status` — granted by the user after the classifier blocked an approved commit.
 
@@ -39,10 +48,11 @@ Session 20 closed at the user's request (conversation too long) — **Session 21
 - Python is not installed; edit docs with the Edit tool or `sed`.
 
 ### ⛔ Next action (Session 21), in order
-1. Verify read-only: branch = `feature/phase-0-gate-3`, `git log --oneline -5` (top `215d75e` or a
-   close-out docs commit), `dotnet build` + `dotnet test` (expect 64/64).
-2. Ask the user whether to commit this close-out (docs) — if not already done.
-3. **D-32 — execution approval pending** (proposed at the end of Session 20): custom
+1. Verify read-only: branch = `feature/phase-0-gate-3`, `git log --oneline -6` (top `b81dfee` or
+   a follow-up docs commit after it), `git status` clean, `dotnet build` + `dotnet test` (64/64).
+2. ~~Commit the close-out~~ **Done: `b81dfee`.** If `git status` shows the follow-up note to
+   SESSION_HANDOFF/DECISION_LOG uncommitted, ask the user before committing it.
+3. ~~D-32~~ **Done Session 21: `c63854b`.** (Was: execution approval pending:) custom
    `SignInManager.CanSignInAsync` (only `Active`; move the check out of `AccountController`),
    `UpdateSecurityStampAsync` when `UpdateAsync` turns a user `Inactive`, test A4 (stamp changes;
    old cookie denied on a permission page and, with a test-only interval 0, on a login-only page;

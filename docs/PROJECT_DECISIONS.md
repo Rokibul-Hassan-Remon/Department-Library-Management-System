@@ -1117,6 +1117,10 @@ Proposed). In code the flag is `ApplicationUser.Status` (`RecordStatus.Active`/`
 **Session 20 (DECISION_LOG §56):** not implemented yet; the stamp interval it relies on is now
 5 min (D-31, `215d75e`). Implementation plan proposed (section 9, "Session 21 start"); execution
 approval pending.
+**Session 21 (DECISION_LOG §57): implemented `c63854b`** — `ActiveUserSignInManager`
+(`CanSignInAsync` = `Active` only, registered via `AddSignInManager`; check removed from
+`AccountController`); `UserService.UpdateAsync` calls `UpdateSecurityStampAsync` on Active →
+Inactive. Test A4 `Deactivated_user_loses_existing_sessions`; 65/65; mutation-checked.
 
 ### D-33 Permission claims via `UserClaimsPrincipalFactory` — Superseded by D-37
 Original proposal: a custom `UserClaimsPrincipalFactory` adds permission claims to the cookie at
@@ -1711,7 +1715,7 @@ workflow methods with shared logic; no physical `AspNetUsers` delete, `Status = 
 | ~~Gate 2 start~~ **Resolved Session 17 (§44): started; 0.6–0.8 committed (`51e189a`, `48a9acf`, `0d01e4e`)** | Begin steps 0.6–0.8 (incl. D-50, D-51) on `feature/phase-0-gate-2` | — |
 | ~~Gate 2 review findings (§47)~~ **Resolved Session 18 (`8cd5f53`, §48)** | Which of CR1–CR9 / P1–P3 to fix before the Gate 2 report | One correction commit: CR1, CR3, CR4, CR5, CR7, CR8, CR9, CR2 permission-lookup filter, P1–P3; CR2 cookie part → 0.9; CR6 keep |
 | ~~Gate 2 report~~ **Resolved Session 18: approved, merged `798ccbd` (§49)** | After the correction commit: D-14 per-use-case duplicate-operation assessment, docs, report; then approval + merge → `develop` (separate approvals) | — |
-| **Session 21 start — D-32 execution approval (§56)** | Implement D-32: custom `SignInManager.CanSignInAsync` (only `Active`; check moved out of `AccountController`), `UpdateSecurityStampAsync` when `UpdateAsync` turns a user `Inactive`, test A4 (stamp changes, old cookie denied on permission page and — with a test-only interval 0 — on a login-only page, re-login refused) | Proposed to the user at the end of Session 20; not yet approved. Then `UsersController` role list, Gate 3 `/code-review` + `/ponytail-review`, 0.10 |
+| ~~Session 21 start — D-32 execution approval (§56)~~ **Resolved Session 21 (§57): approved, implemented `c63854b`** | Implement D-32: custom `SignInManager.CanSignInAsync` (only `Active`; check moved out of `AccountController`), `UpdateSecurityStampAsync` when `UpdateAsync` turns a user `Inactive`, test A4 (stamp changes, old cookie denied on permission page and — with a test-only interval 0 — on a login-only page, re-login refused) | Done (65/65, mutation-checked). Next: `UsersController` role list, Gate 3 `/code-review` + `/ponytail-review`, 0.10 |
 | ~~Session 19 work review (§53, §54)~~ **Session 20 (§55): Q-S19-2…17 answered; still separate approvals: D-37 commit, D-37 cleanup (target DB → read-only count → rows + rollback → delete), D-53 code, D-31 stamp/cookie/antiforgery values** | Review the uncommitted D-37 fix + docs; then separately: commit, D-37 cleanup target DB + read-only count, D-53 implementation, open values below | Commit the D-37 fix first (tests 52/52) |
 | ~~Gate 3 start~~ **Resolved Session 19 (§52): started on `feature/phase-0-gate-3`** | Begin steps 0.9–0.12 on `feature/phase-0-gate-3` from `develop` | Includes CR2 cookie part (D-32/D-37) and the `UsersController` role list (0.9) |
 | ~~Q-S19-1 Registration scope (Session 19, §52)~~ **Design answered Session 19 (§53) → D-54**; details open as Q-S19-3 … Q-S19-9, Q-S19-17 | Public Registration is approved as an anonymous endpoint that grants no privileged role — but who may register (students/fellows only? institutional email?), what the account gets (no role / a member role), link to the member record, staff approval/activation, and the phase it is built in are not decided. No registration endpoint exists today | Decide before Registration is implemented; 0.9 only reserves it in the anonymous allowlist |

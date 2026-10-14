@@ -1922,7 +1922,22 @@ User sent five requests in one message:
   4. `UpdateSecurityStampAsync` saves the whole user, so setting `Status` first and calling it
      stores both in one write (used by D-53 delete; reusable for D-32 deactivation).
   5. The dev DB `CseLibrary` on `.\SQLEXPRESS` does not exist; the app has never run against it.
-- This close-out is uncommitted (docs only) unless the user asks to commit it.
+- Close-out committed `b81dfee` (docs, user "ok commit"); handoff then updated to record it.
+
+### 57. Session 21 — D-32 implemented (2026-10-14)
+- User: "D-32-এর approval দিয়ে শুরু করতে পারবে" → taken as D-32 execution approval (code only).
+- Implemented as proposed in §56: `ActiveUserSignInManager.CanSignInAsync` (only `Active`, every
+  sign-in path; `AccountController` keeps only the null-user check, same generic error);
+  `UserService.UpdateAsync` uses `UpdateSecurityStampAsync` instead of `UpdateAsync` when an
+  Active user is deactivated (one write). Reactivation does not change the stamp.
+- Test A4 `Deactivated_user_loses_existing_sessions`: stamp changes; old cookie → redirect on
+  `/GeneralConfig` at once; with the stamp interval set to 0 (test-only, shared
+  `IOptions<SecurityStampValidatorOptions>` instance, restored in `finally`) → `/Account/Login`
+  on `/Account/ChangePassword`; re-login refused. Deviation from PHASE_0_PLAN A4 wording
+  ("advance `TimeProvider`"): interval 0 was the approved approach (§56).
+- Evidence: build 0/0; tests 65/65; mutation: no stamp update → A4 fails; no `CanSignInAsync`
+  check → A4 + `Inactive_user_cannot_log_in_and_has_no_permissions` fail.
+- Commits (each on its own user "ok"): `c63854b` code; docs commit after it.
 
 ## Unresolved decisions and why
 

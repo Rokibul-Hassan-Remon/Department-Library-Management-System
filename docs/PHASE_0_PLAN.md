@@ -122,6 +122,9 @@ _Session 19 notes (DECISION_LOG §52–§53):_
 - _Session 20 progress on 0.9 (`feature/phase-0-gate-3`, 64/64): D-37 `fab1af1`, D-53 soft
   delete `8550c00`, D-31 baseline `215d75e` (tests A1, A5, A7, A8, A9). Still open in 0.9: D-32
   (test A4), `UsersController` role list, Gate 3 reviews. 0.9 stays unchecked until then._
+- _Session 21 (§57): D-32 + test A4 done `c63854b` (65/65). A4 uses a test-only stamp interval
+  of 0 (shared options instance, restored) instead of advancing `TimeProvider`. Still open in
+  0.9: `UsersController` role list, Gate 3 reviews._
 
 **⛔ Gate 3 review — stop and wait for user approval before Phase 1.**
 
