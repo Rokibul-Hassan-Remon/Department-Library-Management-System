@@ -368,6 +368,45 @@ public class DataLayerTests(AppFactory app)
         Assert.Contains("Invalid login attempt.", await response.Content.ReadAsStringAsync());
     }
 
+    [Fact] // D-53: delete keeps the row, blocks login and the old cookie, cannot be undone by an edit, hides the user
+    public async Task Deleted_user_is_kept_but_locked_out_and_hidden()
+    {
+        var permissionId = (await app.WithServiceAsync(sp => sp.GetRequiredService<IPermissionService>().GetAllAsync()))
+            .Single(p => p.Name == CseLibrary.Core.Constants.Permissions.GeneralConfig.View).Id;
+        var (email, roleName) = await CreateUserWithRole(permissionId);
+        var before = (await FindUserAsync(email))!;
+        var client = await app.LoggedInClient(email, UserPassword);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/GeneralConfig")).StatusCode);
+        var totalBefore = (await UsersPage()).TotalCount;
+
+        var delete = await app.WithServiceAsync(sp => sp.GetRequiredService<IUserService>().DeleteAsync(before.Id));
+        Assert.True(delete.Succeeded, delete.Error);
+
+        var after = (await FindUserAsync(email))!;
+        Assert.Equal(RecordStatus.Deleted, after.Status);
+        Assert.NotEqual(before.SecurityStamp, after.SecurityStamp);
+        Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/GeneralConfig")).StatusCode);
+
+        var login = await AppFactory.PostFormAsync(app.NewClient(), "/Account/Login", "/Account/Login", new()
+        {
+            ["Email"] = email, ["Password"] = UserPassword, ["RememberMe"] = "false"
+        });
+        Assert.Contains("Invalid login attempt.", await login.Content.ReadAsStringAsync());
+
+        var edit = await app.WithServiceAsync(sp => sp.GetRequiredService<IUserService>().UpdateAsync(new UpdateUserDto
+        {
+            Id = before.Id, Email = email, IsActive = true, Roles = [roleName]
+        }));
+        Assert.Equal(ErrorCodes.NotFound, edit.ErrorCode);
+        Assert.Equal(RecordStatus.Deleted, (await FindUserAsync(email))!.Status);
+
+        Assert.Null(await app.WithServiceAsync(sp => sp.GetRequiredService<IUserService>().GetByIdAsync(before.Id)));
+        Assert.Equal(totalBefore - 1, (await UsersPage()).TotalCount);
+    }
+
+    private Task<PagedResult<UserDto>> UsersPage() =>
+        app.WithServiceAsync(sp => sp.GetRequiredService<IUserService>().GetPageAsync(new PageRequest(1, 1)));
+
     private async Task<int> CountUsersPageCommands()
     {
         app.Commands.Reset();

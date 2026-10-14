@@ -40,7 +40,7 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
     public Task<Result> UpdateAsync(UpdateUserDto dto, CancellationToken ct = default) =>
         uow.ExecuteInTransactionAsync(async _ =>
         {
-            var user = await userManager.FindByIdAsync(dto.Id);
+            var user = await FindLiveAsync(dto.Id);
             if (user == null) return NotFound();
 
             user.Email = dto.Email;
@@ -60,20 +60,27 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
             return toAdd.Count > 0 ? (await userManager.AddToRolesAsync(user, toAdd)).ToResult() : Result.Success();
         }, ct: ct).OnDuplicate(Taken());
 
+    // D-53: users are never physically deleted. The stamp update saves the status in the same write
+    // and invalidates existing cookies; roles and history stay attached to the kept row.
     public async Task<Result> DeleteAsync(string id, CancellationToken ct = default)
     {
-        var user = await userManager.FindByIdAsync(id);
+        var user = await FindLiveAsync(id);
         if (user == null) return NotFound();
-        return (await userManager.DeleteAsync(user)).ToResult();
+        user.Status = RecordStatus.Deleted;
+        return (await userManager.UpdateSecurityStampAsync(user)).ToResult();
     }
 
     public async Task<Result> ResetPasswordAsync(string id, string newPassword, CancellationToken ct = default)
     {
-        var user = await userManager.FindByIdAsync(id);
+        var user = await FindLiveAsync(id);
         if (user == null) return NotFound();
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
         return (await userManager.ResetPasswordAsync(user, token, newPassword)).ToResult();
     }
+
+    // A deleted user is "not found" for every write, so an edit cannot bring it back (D-53).
+    private async Task<ApplicationUser?> FindLiveAsync(string id) =>
+        await userManager.FindByIdAsync(id) is { Status: not RecordStatus.Deleted } user ? user : null;
 
     private static Result NotFound() => Result.Failure(ErrorCodes.NotFound, "User not found");
     private static Result Taken() => Result.Failure(ErrorCodes.Duplicate, "User name or email is already taken.");

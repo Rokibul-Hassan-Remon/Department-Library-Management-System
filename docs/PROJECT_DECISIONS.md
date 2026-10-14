@@ -1150,6 +1150,10 @@ handler no longer reads cookie permission claims, checks the DB every request wi
 request-local `HttpContext.Items` cache; login no longer writes `AspNetUserClaims`. Tests A7
 (revoke + legacy claim row), A8, A9 green (52/52); A4 comes with D-32. Legacy-row cleanup:
 criteria reported, **not run** (separate approval).
+**Session 20 (DECISION_LOG §55):** fix committed `fab1af1`. Cleanup target `CseLibrary` on
+`.\SQLEXPRESS` checked read-only (user-approved): **the database does not exist** — no legacy
+rows to delete, cleanup **not needed**. Test DBs are recreated per run. Re-check only if a
+pre-`fab1af1` build is ever run against a real database.
 
 ### D-34 Error handling — Approved (standard); `Result` type Approved (Session 17)
 **Session 17 (DECISION_LOG §45):** user approved `Result { Succeeded, ErrorCode, Error }` /
@@ -1583,7 +1587,14 @@ a soft-deleted user keeps the email in the unique index (open question Q-S19-16)
 by default** in the normal Users list; an authorized admin view may show them when needed.
 Q-S19-16 — a deleted user's email **cannot be reused for now**; the D-52 unique index stays
 unchanged. The code change still needs a separate execution approval.
-**Proposed implementation (needs approval):** `DeleteAsync` sets `Status = Deleted` + stamp update
+**Implemented Session 20 (execution approved, uncommitted; DECISION_LOG §55):** `DeleteAsync` sets
+`Status = Deleted` and saves it through `UpdateSecurityStampAsync` (one write, stamp changed);
+`UpdateAsync`/`DeleteAsync`/`ResetPasswordAsync` treat a deleted user as not found;
+`UserReadRepository` hides deleted users from list + details. No admin "show deleted" view yet
+(built when needed). Test `Deleted_user_is_kept_but_locked_out_and_hidden`; 53/53; mutation check
+(hard delete restored → test fails). Limit: an old cookie on an authenticated-only page (no
+permission check) lasts until stamp validation — interval is D-31 (Proposed 5 min, default 30).
+**Proposed implementation (original text):** `DeleteAsync` sets `Status = Deleted` + stamp update
 via `UserManager.UpdateAsync` in one transaction; `UpdateAsync` refuses to change a deleted user;
 tests: row kept, sign-in refused, existing cookie denied, edit cannot resurrect.
 
@@ -1692,7 +1703,7 @@ workflow methods with shared logic; no physical `AspNetUsers` delete, `Status = 
 | ~~Gate 3 start~~ **Resolved Session 19 (§52): started on `feature/phase-0-gate-3`** | Begin steps 0.9–0.12 on `feature/phase-0-gate-3` from `develop` | Includes CR2 cookie part (D-32/D-37) and the `UsersController` role list (0.9) |
 | ~~Q-S19-1 Registration scope (Session 19, §52)~~ **Design answered Session 19 (§53) → D-54**; details open as Q-S19-3 … Q-S19-9, Q-S19-17 | Public Registration is approved as an anonymous endpoint that grants no privileged role — but who may register (students/fellows only? institutional email?), what the account gets (no role / a member role), link to the member record, staff approval/activation, and the phase it is built in are not decided. No registration endpoint exists today | Decide before Registration is implemented; 0.9 only reserves it in the anonymous allowlist |
 | ~~Q-S19-2 Infrastructure pages (Session 19, §52; see D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | The approved access design names Login, Registration, `Home.Index`, `Home.Privacy` as public; the earlier allowlist also had `Account.AccessDenied`, `Home.Error`, status-code page (0.10) | Keep `Error` + status-code page anonymous (an anonymous visitor's error would otherwise redirect to Login); `AccessDenied` only as D-55 fallback (Q-S19-10). Needs the user's confirmation |
-| **D-37 cleanup (Session 19, §53)** | Delete legacy rows `AspNetUserClaims.ClaimType = 'Permission'` (exact, case-sensitive); other claim types kept. Which database, row count (read-only `SELECT COUNT` needs approval to run), backup table + rollback | Report given §53; **nothing deleted** until the user approves that specific operation |
+| ~~D-37 cleanup (Session 19, §53)~~ **Closed Session 20 (§55): target `CseLibrary` does not exist on `.\SQLEXPRESS` — nothing to delete** | Delete legacy rows `AspNetUserClaims.ClaimType = 'Permission'` (exact, case-sensitive); other claim types kept. Which database, row count (read-only `SELECT COUNT` needs approval to run), backup table + rollback | Report given §53; **nothing deleted** until the user approves that specific operation |
 | ~~Q-S19-3 Registration fields / identity (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Required fields per type (student ID, session, designation, phone, …) and how identity is verified (institutional email domain, email confirmation — `RequireConfirmedEmail` is `false` today, staff check) | Decide before Registration is built |
 | ~~Q-S19-4 Fellow activation (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Does Librarian approval make the account `Active` directly, or is a further activation step needed (e.g. email confirmation, admin role assignment)? | Decide with Q-S19-8 |
 | ~~Q-S19-5 Member link (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | How a registered Student / approved Fellow is linked to a `Member` record (created at registration, at approval, or linked to an existing staff-entered member; matching rule) | Before the Members phase |

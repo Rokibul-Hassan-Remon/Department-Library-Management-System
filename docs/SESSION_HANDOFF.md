@@ -10,8 +10,10 @@
 - **Separate approvals (one ok = one approval):**
   1. ~~D-37 commit~~ **Done: `fab1af1`** on `feature/phase-0-gate-3` (3 files, user "ok"; build 0
      errors, tests 52/52 before commit).
-  2. D-37 cleanup — confirm target DB → read-only count → affected rows + rollback → delete approval.
-  3. D-53 soft-delete code — execution approval before any edit.
+  2. ~~D-37 cleanup~~ **Closed:** read-only check — `CseLibrary` does not exist on `.\SQLEXPRESS`;
+     nothing to delete. Docs commit `9234229` done; this note is uncommitted.
+  3. D-53 soft-delete code — **implemented, uncommitted** (`UserService`, `UserReadRepository`,
+     `DataLayerTests`); 53/53; commit awaits its own approval.
   4. D-31 stamp interval / cookie / global antiforgery — compare with the current config, then ask.
 - Docs only changed this session (uncommitted); no code, DB, staging or commit change.
 
