@@ -69,7 +69,7 @@ public class ArchitectureTests
     public void Only_the_allowlisted_entities_are_auditable()
     {
         var auditable = AuditableTypes().Select(t => t.ClrType).ToList();
-        Assert.Equal(["Book", "BookCopy", "GeneralConfig", "Permission"], auditable.Select(t => t.Name).Order());
+        Assert.Equal(["Book", "BookCopy", "GeneralConfig", "Loan", "Member", "Permission"], auditable.Select(t => t.Name).Order());
         Assert.DoesNotContain(auditable, t => t.Namespace!.StartsWith("Microsoft.AspNetCore.Identity")
                                               || t == typeof(Core.Entities.ApplicationUser) || t == typeof(Core.Entities.ApplicationRole)
                                               || t == typeof(Core.Entities.RolePermission));

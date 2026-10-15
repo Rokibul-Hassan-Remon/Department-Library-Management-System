@@ -18,6 +18,8 @@ public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
     private AuditLogRepository? _auditLogs;
     private BookRepository? _books;
     private BookCopyRepository? _bookCopies;
+    private MemberRepository? _members;
+    private LoanRepository? _loans;
     private GeneralConfigRepository? _generalConfigs;
     private PermissionRepository? _permissions;
     private RoleReadRepository? _roles;
@@ -27,6 +29,8 @@ public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
     public IAuditLogRepository AuditLogs => _auditLogs ??= new(db);
     public IBookRepository Books => _books ??= new(db);
     public IBookCopyRepository BookCopies => _bookCopies ??= new(db);
+    public IMemberRepository Members => _members ??= new(db);
+    public ILoanRepository Loans => _loans ??= new(db);
     public IGeneralConfigRepository GeneralConfigs => _generalConfigs ??= new(db);
     public IPermissionRepository Permissions => _permissions ??= new(db);
     public IRoleReadRepository Roles => _roles ??= new(db);
@@ -91,16 +95,18 @@ public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
 
     public const string AdminGuardLock = "CseLibrary.AdminGuard";
 
-    public async Task AcquireAdminGuardLockAsync(CancellationToken ct = default)
+    public Task AcquireAdminGuardLockAsync(CancellationToken ct = default) => AcquireLockAsync(AdminGuardLock, ct);
+
+    public async Task AcquireLockAsync(string resource, CancellationToken ct = default)
     {
         if (db.Database.CurrentTransaction is null)
-            throw new InvalidOperationException("The admin guard lock is held by a transaction; none is active.");
+            throw new InvalidOperationException("An application lock is held by a transaction; none is active.");
 
         // Waits up to the command timeout; a negative result means the lock was not granted.
         var result = new SqlParameter("@result", System.Data.SqlDbType.Int) { Direction = System.Data.ParameterDirection.Output };
         await db.Database.ExecuteSqlRawAsync(
             "EXEC @result = sp_getapplock @Resource = @resource, @LockMode = 'Exclusive', @LockOwner = 'Transaction'",
-            [result, new SqlParameter("@resource", AdminGuardLock)], ct);
+            [result, new SqlParameter("@resource", resource)], ct);
         if ((int)result.Value < 0) throw new InvalidOperationException($"sp_getapplock returned {result.Value}.");
     }
 

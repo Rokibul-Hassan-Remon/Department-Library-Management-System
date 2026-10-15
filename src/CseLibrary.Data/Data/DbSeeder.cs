@@ -102,12 +102,16 @@ public static class DbSeeder
 
     private static async Task SeedDefaultGeneralConfigsAsync(ApplicationDbContext db)
     {
-        if (await db.GeneralConfigs.AnyAsync()) return;
-
-        await db.GeneralConfigs.AddRangeAsync(
-            new GeneralConfig { Key = "Site.Name", Value = "Default Template", Group = "Site" },
-            new GeneralConfig { Key = "Site.SupportEmail", Value = "support@local", Group = "Site" }
-        );
+        // Adds only missing keys, so an existing database gets new defaults without losing edits.
+        GeneralConfig[] defaults =
+        [
+            new() { Key = "Site.Name", Value = "Default Template", Group = "Site" },
+            new() { Key = "Site.SupportEmail", Value = "support@local", Group = "Site" },
+            .. LendingConfigKeys.Defaults.Select(d => new GeneralConfig { Key = d.Key, Value = d.Value, Group = "Lending" })
+        ];
+        var existing = await db.GeneralConfigs.IgnoreQueryFilters().Select(c => c.Key).ToListAsync();
+        foreach (var config in defaults.Where(d => !existing.Contains(d.Key)))
+            await db.GeneralConfigs.AddAsync(config); // async: HiLo (D-29)
         await db.SaveChangesAsync();
     }
 }

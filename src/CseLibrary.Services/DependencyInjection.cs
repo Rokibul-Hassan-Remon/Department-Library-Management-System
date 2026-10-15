@@ -13,6 +13,8 @@ public static class DependencyInjection
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IGeneralConfigService, GeneralConfigService>();
         services.AddScoped<IBookService, BookService>();
+        services.AddScoped<IMemberService, MemberService>();
+        services.AddScoped<ILendingService, LendingService>();
         services.AddScoped<ISecurityAuditService, SecurityAuditService>();
 
         return services;

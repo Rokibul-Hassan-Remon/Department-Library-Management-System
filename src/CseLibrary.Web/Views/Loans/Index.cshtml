@@ -1,0 +1,42 @@
+@model CseLibrary.Core.Paging.PagedResult<LoanDto>
+@{
+    ViewData["Title"] = "Loans";
+    var search = ViewData["Search"] as string;
+    var filter = (LoanFilter)ViewData["Filter"]!;
+}
+
+<h2>Loans</h2>
+
+<div class="card mb-4"><div class="card-body">
+    <h5 class="card-title">Issue a book</h5>
+    <form asp-action="Issue" method="post" class="row g-2 align-items-end">
+        <div class="col-md-4"><label class="form-label">Member code</label><input name="MemberCode" class="form-control" required maxlength="30" autofocus /></div>
+        <div class="col-md-4"><label class="form-label">Accession no.</label><input name="AccessionNumber" class="form-control" required maxlength="50" /></div>
+        <div class="col-md-2"><button class="btn btn-primary">Issue</button></div>
+    </form>
+</div></div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-2">
+        <select name="filter" class="form-select" asp-items="Html.GetEnumSelectList<LoanFilter>().Select(i => new SelectListItem(i.Text, ((LoanFilter)int.Parse(i.Value)).ToString(), i.Text == filter.ToString()))"></select>
+    </div>
+    <div class="col-md-5"><input name="search" value="@search" class="form-control" placeholder="Member code or name, book title or accession number" /></div>
+    <div class="col-auto"><button class="btn btn-outline-primary">Show</button></div>
+</form>
+
+<partial name="_LoanTable" model="Model.Items" />
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Loan pages" class="d-flex justify-content-between align-items-center">
+        <span>Page @Model.Page of @Model.TotalPages (@Model.TotalCount loans)</span>
+        <ul class="pagination mb-0">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-filter="@filter" asp-route-search="@search">Previous</a>
+            </li>
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-filter="@filter" asp-route-search="@search">Next</a>
+            </li>
+        </ul>
+    </nav>
+}

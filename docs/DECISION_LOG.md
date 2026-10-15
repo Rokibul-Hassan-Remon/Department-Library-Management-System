@@ -2328,6 +2328,22 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - Evidence: build 0/0; tests 108/108 (`CatalogTests` ×3; audit allowlist and HiLo sequence
   expectations extended).
 
+### 78. Session 23 — lending slice: policy defaults approved, implemented (2026-10-15)
+- **User decision (AskUserQuestion):** Student max 3 active loans / 14 days, Fellow 5 / 30, one
+  renewal, a member with an overdue loan gets no new issue; values in GeneralConfig
+  (`Lending.{Type}.MaxLoans`, `Lending.{Type}.LoanDays`, `Lending.MaxRenewals`), seeded per
+  missing key. This settles the D-48 values for v1; D-48's remaining Proposed parts (per-member
+  overrides, category rules) stay open. Catalog merged into `develop` on the user's "yes".
+- Implementation: `Members`, `Loans` (HiLo, audited, migration `AddLending`); issue runs in
+  `ExecuteInTransactionAsync` under a per-member `sp_getapplock` (`IUnitOfWork.AcquireLockAsync`,
+  the admin guard now uses it) so the limit holds under concurrency (P12); filtered unique index
+  `UX_Loans_ActiveCopy` makes a concurrent issue of one copy fail as `LENDING.COPY_UNAVAILABLE`
+  (D-35); return sets the copy Available; renew refused when overdue or at the limit; member
+  delete refused while holding books. "Today" = server local date. `Lending.*` / `Members.*`
+  permissions.
+- Evidence: tests 114/114 (`LendingTests` ×6 incl. two concurrency tests); mutation — member lock
+  removed → the per-member limit test failed 3/3, restored → green.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

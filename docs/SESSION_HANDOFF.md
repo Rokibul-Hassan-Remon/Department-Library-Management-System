@@ -12,9 +12,13 @@
 - Phase 1 first slice: book titles + physical copies CRUD on `feature/phase-1-catalog` (§77):
   `Books`/`BookCopies` (HiLo, audited, migration `AddCatalog`), `Books.*` permissions, search
   (title/author/ISBN/accession) + paging, copy counts, Issued status reserved for lending,
-  title delete refused while copies exist. Build 0/0, tests **108/108**. Not committed yet.
-- **Not built (need decisions/inputs first):** members (Student/Fellow), issue/return + history,
-  member portal, due/overdue email (D-48, domain policies, SMTP still Proposed/Pending).
+  title delete refused while copies exist. Committed `b2e793b`, merged into `develop` `0ef6674`.
+- **Lending slice (§78)** on `feature/phase-1-lending`: Members (Student/Fellow, active flag),
+  issue/return/renew, loan history, overdue list, copy holder on the book page. Policy in
+  GeneralConfig (user-chosen defaults: Student 3 books/14 days, Fellow 5/30, 1 renewal, overdue
+  blocks new issues). Build 0/0, tests **114/114**.
+- **Not built yet:** member self-service portal (login per member), due/overdue email reminders
+  (SMTP host/sender undecided), reports.
 
 ## Session 22 (2026-10-14 → 2026-10-15) — superseded by the Session 23 block above where they differ
 Session 22 closed at the user's request (conversation too long) — Session 23 started here.

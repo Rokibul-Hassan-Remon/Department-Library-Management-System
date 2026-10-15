@@ -17,4 +17,5 @@ public interface IBookCopyRepository : IRepository<BookCopy>
 {
     Task<BookCopyDto?> GetDetailsAsync(int id, CancellationToken ct = default);
     Task<bool> AccessionExistsAsync(string accessionNumber, int? excludeId, CancellationToken ct = default);
+    Task<BookCopy?> FindByAccessionForUpdateAsync(string accessionNumber, CancellationToken ct = default);
 }

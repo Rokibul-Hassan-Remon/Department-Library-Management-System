@@ -12,6 +12,8 @@ public interface IUnitOfWork
     IAuditLogRepository AuditLogs { get; }
     IBookRepository Books { get; }
     IBookCopyRepository BookCopies { get; }
+    IMemberRepository Members { get; }
+    ILoanRepository Loans { get; }
     IGeneralConfigRepository GeneralConfigs { get; }
     IPermissionRepository Permissions { get; }
     IRoleReadRepository Roles { get; }
@@ -38,4 +40,7 @@ public interface IUnitOfWork
     /// check and its write cannot interleave with another (D-56 Q-S21-7). Only inside <see cref="ExecuteInTransactionAsync"/>.
     /// </summary>
     Task AcquireAdminGuardLockAsync(CancellationToken ct = default);
+
+    /// <summary>Exclusive lock on <paramref name="resource"/> until the current transaction ends (e.g. one member's issues, D-48 P12).</summary>
+    Task AcquireLockAsync(string resource, CancellationToken ct = default);
 }
