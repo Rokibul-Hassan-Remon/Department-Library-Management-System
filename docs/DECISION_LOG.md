@@ -2203,6 +2203,16 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   `StartupAndGuardTests` migration id updated; new test that a real `GeneralConfig` gets its id
   at `AddAsync` (+ mutation); spike tests kept. `AuditLog` table is **not** part of this — it
   comes with 0.11 after D-21–D-27 approvals. No `database update` against a non-test DB.
+- **Implemented `88f8a46`:** `UseHiLo` on both ids; seeder `AddAsync`/`AddRangeAsync`; old
+  migrations + snapshot removed with `git rm`; new `20261015031410_InitialCreate` (sequences
+  `GeneralConfigs_HiLo`/`Permissions_HiLo` `INCREMENT BY 10`, `GeneralConfigs.Id`/`Permissions.Id`
+  plain `int NOT NULL`, Status CHECKs, filtered unique indexes, unique email; IDENTITY only on the
+  Identity claim tables). The old migrations' only hand-written SQL was the D-51 data conversion,
+  not needed on an empty baseline. `dotnet ef migrations has-pending-model-changes`: "No changes
+  have been made to the model since the last migration"; full script generated (scratchpad
+  `InitialCreate.sql`). Tests: `MigrationTests.Baseline_matches_the_model_and_migrates_up_and_down`,
+  `DataLayerTests.GeneralConfig_and_Permission_ids_are_known_at_AddAsync`; mutation (no `UseHiLo`
+  on `GeneralConfig`) fails both. Evidence: build 0/0, **94/94**. **0.11a done.**
 
 ## Unresolved decisions and why
 

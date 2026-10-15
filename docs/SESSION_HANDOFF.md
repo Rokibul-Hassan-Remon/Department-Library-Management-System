@@ -10,10 +10,12 @@
   **`42ae3f4` D-55 toasts + A2** · `94865bc` docs · **`d0a8a66` D-34 0.10 scope (B1–B2)** ·
   `ccc191f` docs · **`42d0908` dev SQL logging + enrichers** · `915f667` docs ·
   **`be033f9` 0.11a HiLo demonstration** · `ccd35f4` docs · **`4b0fb10` Pkcs 10.0.13 pin** ·
-  docs commit after it.
-- Evidence at `4b0fb10`: build 0 errors / 0 warnings; tests **93/93**; no vulnerable packages;
-  mutation checks for every new rule (DECISION_LOG §64–§70). No migration in the repository; no non-test database
-  touched. Test host now runs as `Production`.
+  `2759552` docs · `16ab130` docs (D-29/D-30 approval) · **`88f8a46` HiLo + regenerated baseline**
+  · docs commit after it.
+- Evidence at `88f8a46`: build 0 errors / 0 warnings; tests **94/94**; no vulnerable packages; no
+  pending model changes; mutation checks for every new rule (DECISION_LOG §64–§71). **The
+  migrations were regenerated** (one `InitialCreate`); applied only to test databases. Test host
+  runs as `Production`.
 - After the D-56 diff the user gave **blanket permission for the remaining sequence**
   ("don't wait for my approval"); limits kept: no destructive command, no Proposed/Pending
   decision treated as Approved.
@@ -35,12 +37,13 @@
   diff shown; script generation fails on the IDENTITY change → needs D-30.
 
 ### ⛔ Next action — waiting for the user (each a separate approval)
-1. **D-29/D-30 Approved (option (a)) and the baseline plan approved** (§71) → implement:
-   HiLo on `GeneralConfig`/`Permission`, seeder async adds, delete the 3 migrations + snapshot,
-   new `InitialCreate`, rewrite `MigrationTests`, update `StartupAndGuardTests`, HiLo model test.
+1. ~~D-29/D-30~~ **Approved and implemented `88f8a46`** (§71); **0.11a done**.
 2. ~~Vulnerable package~~ **fixed `4b0fb10`** (§70).
-3. Then 0.11 audit (D-21–D-27 approvals), 0.12 smoke (needs approval to run against a
-   non-test DB), Gate 3 report → approval → merge.
+3. **0.11 audit:** needs approval of the Proposed parts of D-21 (schema, change-data policy),
+   D-24 (event list), D-25 (no bulk/raw writes rule), D-27 (consistency table). Propose them as
+   one package; no code before approval.
+4. Then 0.12 smoke (needs approval to run against a non-test DB), Gate 3 report → approval →
+   merge.
 
 ## Session 21 (2026-10-14) — superseded by the Session 22 block above where they differ
 Session 21 closed at the user's request (conversation too long) — Session 22 started here.
