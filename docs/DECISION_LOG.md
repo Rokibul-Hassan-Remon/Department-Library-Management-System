@@ -2308,6 +2308,15 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   3. A locked-out user sees the same "Invalid login attempt." as a wrong password (no account
      enumeration; the audit row says `LockedOut`).
 
+### 76. Session 23 — Gate 3 approved, reviews skipped; Phase 1 catalog started (2026-10-15)
+- The user, low on token budget, asked to "build the features". The assistant explained the
+  full system cannot be done in that budget and that D-48 / domain policies are still
+  Proposed/Pending. **The user chose:** close Gate 3 **without** the `/code-review` +
+  `/ponytail-review` runs (a deliberate exception to D-07 v7's pre-gate review rule), merge into
+  `develop`, then start the first Phase 1 slice — **book titles + physical copies CRUD** — which
+  needs no pending decision. Lending, members, portal and email stay unstarted.
+- Gate 3 evidence: 0.9–0.12 done (§64–§75), build 0/0, tests 105/105.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

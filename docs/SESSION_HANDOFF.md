@@ -7,9 +7,9 @@
   has only `Practice`, `.\SQLEXPRESS` untouched. New findings without a decision: scoped CSS
   404 under `dotnet run` as Production; status pages have no Reference ID (500 page only);
   locked-out message identical to a wrong password.
-- **Next, each a separate approval:** commit these docs → `/code-review` + `/ponytail-review`
-  on the gate diff (`develop..feature/phase-0-gate-3`) → Gate 3 report (0.9–0.12, evidence,
-  open findings) → user approval → `--no-ff` merge into `develop`.
+- **Gate 3 approved by the user without the pre-gate reviews (§76)**; merged into `develop`.
+  The reviews on the Gate 3 diff are still owed — run them when budget allows.
+- Phase 1 first slice: book titles + physical copies CRUD on `feature/phase-1-catalog`.
 
 ## Session 22 (2026-10-14 → 2026-10-15) — superseded by the Session 23 block above where they differ
 Session 22 closed at the user's request (conversation too long) — Session 23 started here.
