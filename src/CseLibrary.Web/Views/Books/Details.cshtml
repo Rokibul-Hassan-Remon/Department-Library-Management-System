@@ -1,0 +1,69 @@
+@model BookDetailsDto
+@{
+    ViewData["Title"] = Model.Title;
+    var statuses = Enum.GetValues<CopyStatus>().Where(s => s != CopyStatus.Issued)
+        .Select(s => new SelectListItem(s.ToString(), s.ToString()));
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h2>@Model.Title</h2>
+        <div class="text-muted">@Model.Authors</div>
+    </div>
+    <div>
+        <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this book?');">
+            <button class="btn btn-outline-danger">Delete</button>
+        </form>
+    </div>
+</div>
+
+<dl class="row">
+    <dt class="col-sm-2">ISBN</dt><dd class="col-sm-4">@Model.Isbn</dd>
+    <dt class="col-sm-2">Category</dt><dd class="col-sm-4">@Model.Category</dd>
+    <dt class="col-sm-2">Publisher</dt><dd class="col-sm-4">@Model.Publisher</dd>
+    <dt class="col-sm-2">Edition / Year</dt><dd class="col-sm-4">@Model.Edition @Model.PublicationYear</dd>
+    @if (!string.IsNullOrEmpty(Model.Description)) { <dt class="col-sm-2">Description</dt><dd class="col-sm-10">@Model.Description</dd> }
+</dl>
+
+<h4>Copies</h4>
+<p>
+    Total <strong>@Model.Copies.Count</strong> ·
+    Available <strong>@Model.AvailableCopies</strong> ·
+    Issued <strong>@Model.IssuedCopies</strong> ·
+    Unavailable <strong>@Model.UnavailableCopies</strong>
+</p>
+
+<table class="table table-sm table-striped">
+    <thead><tr><th>Accession no.</th><th>Shelf</th><th>Acquired</th><th>Status</th><th>Notes</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var c in Model.Copies)
+        {
+            <tr>
+                <td>@c.AccessionNumber</td>
+                <td>@c.ShelfLocation</td>
+                <td>@c.AcquisitionDate</td>
+                <td>@c.CopyStatus</td>
+                <td>@c.Notes</td>
+                <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="EditCopy" asp-route-id="@c.Id">Edit</a>
+                    <form asp-action="DeleteCopy" asp-route-id="@c.Id" asp-route-bookId="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this copy?');">
+                        <button class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h5>Add a copy</h5>
+<form asp-action="AddCopy" method="post" class="row g-2 align-items-end">
+    <input type="hidden" name="BookId" value="@Model.Id" />
+    <div class="col-md-3"><label class="form-label">Accession no.</label><input name="AccessionNumber" class="form-control" required maxlength="50" /></div>
+    <div class="col-md-2"><label class="form-label">Shelf</label><input name="ShelfLocation" class="form-control" maxlength="100" /></div>
+    <div class="col-md-2"><label class="form-label">Acquired</label><input name="AcquisitionDate" type="date" class="form-control" /></div>
+    <div class="col-md-2"><label class="form-label">Status</label><select name="CopyStatus" class="form-select" asp-items="statuses"></select></div>
+    <div class="col-md-2"><button class="btn btn-primary">Add copy</button></div>
+</form>
+
+<p class="mt-4"><a asp-action="Index">Back to books</a></p>

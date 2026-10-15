@@ -1,0 +1,45 @@
+@model CseLibrary.Core.Paging.PagedResult<BookListItemDto>
+@{ ViewData["Title"] = "Books"; var search = ViewData["Search"] as string; }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Books</h2>
+    <a class="btn btn-primary" asp-action="Create">+ New Book</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-6"><input name="search" value="@search" class="form-control" placeholder="Title, author, ISBN or accession number" /></div>
+    <div class="col-auto"><button class="btn btn-outline-primary">Search</button></div>
+    @if (!string.IsNullOrEmpty(search)) { <div class="col-auto"><a class="btn btn-link" asp-action="Index">Clear</a></div> }
+</form>
+
+<table class="table table-striped">
+    <thead><tr><th>Title</th><th>Authors</th><th>ISBN</th><th>Category</th><th class="text-end">Available / Total</th></tr></thead>
+    <tbody>
+        @foreach (var b in Model.Items)
+        {
+            <tr>
+                <td><a asp-action="Details" asp-route-id="@b.Id">@b.Title</a></td>
+                <td>@b.Authors</td>
+                <td>@b.Isbn</td>
+                <td>@b.Category</td>
+                <td class="text-end">@b.AvailableCopies / @b.TotalCopies</td>
+            </tr>
+        }
+        @if (Model.Items.Count == 0) { <tr><td colspan="5" class="text-muted">No books found.</td></tr> }
+    </tbody>
+</table>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Books pages" class="d-flex justify-content-between align-items-center">
+        <span>Page @Model.Page of @Model.TotalPages (@Model.TotalCount books)</span>
+        <ul class="pagination mb-0">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-search="@search">Previous</a>
+            </li>
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-search="@search">Next</a>
+            </li>
+        </ul>
+    </nav>
+}

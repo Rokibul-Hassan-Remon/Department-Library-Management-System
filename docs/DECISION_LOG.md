@@ -2317,6 +2317,17 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   needs no pending decision. Lending, members, portal and email stay unstarted.
 - Gate 3 evidence: 0.9–0.12 done (§64–§75), build 0/0, tests 105/105.
 
+### 77. Session 23 — catalog slice implemented (2026-10-15)
+- Implementation choices (assistant, within archive FR-02/FR-03; review with the slice):
+  `Authors` and `Category` are free text (no `Authors`/`Categories` tables yet); no cover image
+  or language; `CopyStatus` tinyint 1–6 with CHECK; ISBN unique when present (filtered index),
+  accession number unique (filtered, deleted rows reusable, D-51); `Issued` can be neither set
+  nor cleared by catalog edits (`COMMON.INVALID_STATE`); a title with copies cannot be deleted
+  and an issued copy cannot be deleted (`COMMON.IN_USE`); one permission set `Books.*` covers
+  titles and copies; FK `BookCopies → Books` is `Restrict`.
+- Evidence: build 0/0; tests 108/108 (`CatalogTests` ×3; audit allowlist and HiLo sequence
+  expectations extended).
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

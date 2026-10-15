@@ -92,7 +92,7 @@ public class AuditTests(AppFactory app)
         });
 
         Assert.Equal(before, await EntityTypes());
-        Assert.All(before, t => Assert.Contains(t, new[] { nameof(GeneralConfig), nameof(Permission) }));
+        Assert.All(before, t => Assert.Contains(t, new[] { nameof(Book), nameof(BookCopy), nameof(GeneralConfig), nameof(Permission) }));
     }
 
     [Fact] // P1: rows written during a request carry its TraceId (the D-34 Reference ID) as CorrelationId

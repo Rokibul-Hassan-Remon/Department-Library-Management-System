@@ -10,6 +10,8 @@ namespace CseLibrary.Core.Interfaces;
 public interface IUnitOfWork
 {
     IAuditLogRepository AuditLogs { get; }
+    IBookRepository Books { get; }
+    IBookCopyRepository BookCopies { get; }
     IGeneralConfigRepository GeneralConfigs { get; }
     IPermissionRepository Permissions { get; }
     IRoleReadRepository Roles { get; }
