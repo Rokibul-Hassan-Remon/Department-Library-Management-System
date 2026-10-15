@@ -147,6 +147,18 @@ public class CharacterizationTests(AppFactory app)
         Assert.All(sinks, s => Assert.Contains("{TraceId}", s["Args:outputTemplate"]));
     }
 
+    [Fact] // 0.10 (D-34): SQL commands are logged in Development only (no parameter values); no enricher without its package
+    public void Sql_command_logging_is_development_only_and_enrichers_resolve()
+    {
+        IConfiguration Load(params string[] files) => files.Aggregate(new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory), (b, f) => b.AddJsonFile(f, optional: false)).Build();
+        const string key = "Serilog:MinimumLevel:Override:Microsoft.EntityFrameworkCore.Database.Command";
+
+        Assert.Equal("Information", Load("appsettings.json", "appsettings.Development.json")[key]);
+        Assert.Null(Load("appsettings.json")[key]); // production: Microsoft.EntityFrameworkCore stays at Warning
+        Assert.Equal(["FromLogContext"], Load("appsettings.json").GetSection("Serilog:Enrich").GetChildren().Select(c => c.Value));
+    }
+
     [Fact] // B2 (D-34): an unknown URL gets a friendly 404 page; AJAX keeps the bare status.
            // Anonymous callers are sent to Login first (D-31 fallback also covers URLs without an endpoint).
     public async Task Unknown_page_shows_a_friendly_404_page()
