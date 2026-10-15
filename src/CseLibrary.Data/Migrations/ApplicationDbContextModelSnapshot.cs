@@ -506,6 +506,10 @@ namespace CseLibrary.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "Members_HiLo");
 
+                    b.Property<byte>("Approval")
+                        .HasColumnType("tinyint")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2")
                         .HasAnnotation("CseLibrary:Audited", false);
@@ -552,6 +556,11 @@ namespace CseLibrary.Data.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasAnnotation("CseLibrary:Audited", false);
 
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
                     b.HasKey("Id");
 
                     b.HasIndex("FullName");
@@ -559,6 +568,10 @@ namespace CseLibrary.Data.Migrations
                     b.HasIndex("MemberCode")
                         .IsUnique()
                         .HasFilter("[Status] <> 3");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
 
                     b.ToTable("Members", null, t =>
                         {
@@ -782,6 +795,14 @@ namespace CseLibrary.Data.Migrations
                     b.Navigation("BookCopy");
 
                     b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("CseLibrary.Core.Entities.Member", b =>
+                {
+                    b.HasOne("CseLibrary.Core.Entities.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("CseLibrary.Core.Entities.RolePermission", b =>

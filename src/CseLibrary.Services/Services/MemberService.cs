@@ -14,6 +14,9 @@ public class MemberService(IUnitOfWork uow) : IMemberService
 
     public Task<MemberDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default) => uow.Members.GetDetailsAsync(id, ct);
 
+    public async Task<MemberDetailsDto?> GetForUserAsync(string userId, CancellationToken ct = default) =>
+        await uow.Members.FindIdByUserIdAsync(userId, ct) is { } id ? await uow.Members.GetDetailsAsync(id, ct) : null;
+
     public async Task<Result<int>> CreateAsync(MemberDto dto, CancellationToken ct = default)
     {
         var code = dto.MemberCode.Trim();

@@ -44,6 +44,14 @@ public class MemberRepository(ApplicationDbContext db) : Repository<Member>(db),
 
     public Task<bool> CodeExistsAsync(string memberCode, int? excludeId, CancellationToken ct = default) =>
         Db.Members.AnyAsync(m => m.MemberCode == memberCode && m.Id != excludeId, ct);
+
+    public Task<int?> FindIdByUserIdAsync(string userId, CancellationToken ct = default) =>
+        Db.Members.Where(m => m.UserId == userId).Select(m => (int?)m.Id).FirstOrDefaultAsync(ct);
+
+    public async Task<IReadOnlyList<PendingRegistrationDto>> GetPendingAsync(CancellationToken ct = default) =>
+        await Db.Members.Where(m => m.Approval == ApprovalStatus.Pending).OrderBy(m => m.CreatedAt)
+            .Select(m => new PendingRegistrationDto { MemberId = m.Id, MemberCode = m.MemberCode, FullName = m.FullName, Email = m.Email, CreatedAt = m.CreatedAt })
+            .ToListAsync(ct);
 }
 
 public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILoanRepository
@@ -84,6 +92,12 @@ public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILo
 
     public Task<bool> HasActiveAsync(int memberId, CancellationToken ct = default) =>
         Db.Loans.AnyAsync(l => l.MemberId == memberId && l.ReturnedAtUtc == null, ct);
+
+    public async Task<IReadOnlyList<ReminderTarget>> GetReminderTargetsAsync(DateOnly dueOn, DateOnly today, CancellationToken ct = default) =>
+        await Db.Loans.Where(l => l.ReturnedAtUtc == null && (l.DueDate == dueOn || l.DueDate < today) && l.Member.Email != null)
+            .OrderBy(l => l.Id)
+            .Select(l => new ReminderTarget(l.Member.Email!, l.Member.FullName, l.BookCopy.Book.Title, l.BookCopy.AccessionNumber, l.DueDate))
+            .ToListAsync(ct);
 
     public Task<Loan?> GetActiveForUpdateAsync(int id, CancellationToken ct = default) =>
         Db.Loans.Include(l => l.BookCopy).Include(l => l.Member).FirstOrDefaultAsync(l => l.Id == id && l.ReturnedAtUtc == null, ct);

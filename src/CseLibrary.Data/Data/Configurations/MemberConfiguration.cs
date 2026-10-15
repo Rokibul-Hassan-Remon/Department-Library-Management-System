@@ -16,9 +16,13 @@ public class MemberConfiguration : IEntityTypeConfiguration<Member>
         builder.Property(m => m.MemberType).Audited();
         builder.Property(m => m.Email).HasMaxLength(256).Audited();
         builder.Property(m => m.Phone).HasMaxLength(30).Audited();
+        builder.Property(m => m.UserId).HasMaxLength(450).Audited();
+        builder.Property(m => m.Approval).Audited();
         builder.ClassifyBaseColumns();
         builder.HasIndex(m => m.MemberCode).IsUnique().HasFilter(ApplicationDbContext.NotDeletedFilter);
         builder.HasIndex(m => m.FullName);
+        builder.HasIndex(m => m.UserId).IsUnique().HasFilter("[UserId] IS NOT NULL");
+        builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

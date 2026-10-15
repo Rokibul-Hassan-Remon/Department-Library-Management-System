@@ -14,4 +14,5 @@ public static class ErrorCodes
     public const string HasOverdue = "LENDING.HAS_OVERDUE";
     public const string CopyUnavailable = "LENDING.COPY_UNAVAILABLE";
     public const string RenewNotAllowed = "LENDING.RENEW_NOT_ALLOWED";
+    public const string AlreadyRegistered = "REGISTRATION.ALREADY_REGISTERED";
 }

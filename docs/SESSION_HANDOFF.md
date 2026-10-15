@@ -17,8 +17,14 @@
   issue/return/renew, loan history, overdue list, copy holder on the book page. Policy in
   GeneralConfig (user-chosen defaults: Student 3 books/14 days, Fellow 5/30, 1 renewal, overdue
   blocks new issues). Build 0/0, tests **114/114**.
-- **Not built yet:** member self-service portal (login per member), due/overdue email reminders
-  (SMTP host/sender undecided), reports.
+  Committed `1e51202` (not merged).
+- **Portal + reminders (§79)** on `feature/phase-1-portal` (branched from the lending branch):
+  self-registration (D-54: Student active at once, Dept. Fellow Pending → `Registrations.Review`
+  approves/rejects), "My books" page, daily due/overdue reminders written to the log
+  (`LogEmailSender`; swap for SMTP later). Build 0/0, tests **120/120**.
+- **Not built yet:** real SMTP email, reports, D-54 per-type default roles (Q-S21-1), rejected
+  applicant re-applying with the same email (Q-S19-7). Owed: Gate 3 reviews; merges of the
+  lending and portal branches into `develop`.
 
 ## Session 22 (2026-10-14 → 2026-10-15) — superseded by the Session 23 block above where they differ
 Session 22 closed at the user's request (conversation too long) — Session 23 started here.

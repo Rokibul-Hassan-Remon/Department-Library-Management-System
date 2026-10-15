@@ -2344,6 +2344,25 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - Evidence: tests 114/114 (`LendingTests` ×6 incl. two concurrency tests); mutation — member lock
   removed → the per-member limit test failed 3/3, restored → green.
 
+### 79. Session 23 — member portal and log-only reminders (2026-10-15)
+- **User decisions:** members register themselves (this approves building D-54); no mail server
+  yet, so reminder emails are written to the log only.
+- **Implementation choices (for review):** the `Members` row is the registration application
+  record (Q-S19-8 / Q-S21-2): new `Members.UserId` (unique when set, FK to `AspNetUsers`) and
+  `Members.Approval` (`Approved`/`Pending`/`Rejected`, existing rows default `Approved`);
+  `RegistrationType` maps to `MemberType`. Pending/Rejected applicants get account
+  `Status = Inactive`, so the existing D-32 sign-in check refuses them; approval sets account and
+  member Active. An existing member with the same code is linked, never duplicated (Q-S19-5);
+  an already linked code is refused (`REGISTRATION.ALREADY_REGISTERED`). Registration grants no
+  role; "My books" needs only sign-in (allowlisted as authenticated-only); `Portal.Register` is
+  anonymous (allowlisted). Not done: per-type default roles (Q-S21-1), email confirmation
+  (Q-S19-3 "considered"), re-application with the same email after rejection (Q-S19-7).
+- Reminders: `ReminderWorker` (hosted) runs at startup and daily; `ReminderService` mails loans
+  due in `Lending.ReminderDaysBefore` (default 2) days and all overdue loans via `IEmailSender`;
+  `LogEmailSender` writes them to the log. No "already sent" record (ponytail note in code).
+- Evidence: tests 120/120 (`PortalTests` ×6); mutation — Fellow created Active → 2 tests failed,
+  restored → green.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

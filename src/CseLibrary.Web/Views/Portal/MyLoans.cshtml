@@ -1,0 +1,28 @@
+@model MemberDetailsDto?
+@{ ViewData["Title"] = "My books"; var today = DateOnly.FromDateTime(DateTime.Now); }
+
+<h2>My books</h2>
+@if (Model == null)
+{
+    <p class="text-muted">Your login is not linked to a library member.</p>
+}
+else
+{
+    <p>@Model.FullName · @Model.MemberCode · @Model.MemberType · holding <strong>@Model.ActiveLoans</strong></p>
+    <table class="table table-striped">
+        <thead><tr><th>Book</th><th>Accession no.</th><th>Issued</th><th>Due</th><th>Returned</th></tr></thead>
+        <tbody>
+            @foreach (var l in Model.Loans)
+            {
+                <tr class="@(l.IsOverdue(today) ? "table-danger" : "")">
+                    <td>@l.BookTitle</td>
+                    <td>@l.AccessionNumber</td>
+                    <td>@l.IssuedAtUtc.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                    <td>@l.DueDate.ToString("yyyy-MM-dd") @(l.IsOverdue(today) ? "(overdue)" : "")</td>
+                    <td>@l.ReturnedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                </tr>
+            }
+            @if (Model.Loans.Count == 0) { <tr><td colspan="5" class="text-muted">You have not borrowed any books yet.</td></tr> }
+        </tbody>
+    </table>
+}

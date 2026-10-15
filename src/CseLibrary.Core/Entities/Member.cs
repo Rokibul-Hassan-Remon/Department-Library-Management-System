@@ -10,7 +10,24 @@ public class Member : BaseEntity, IAuditable
     public MemberType MemberType { get; set; } = MemberType.Student;
     public string? Email { get; set; }
     public string? Phone { get; set; }
+    public string? UserId { get; set; } // the portal login, set by self-registration (D-54 Q-S19-5)
+    public ApprovalStatus Approval { get; set; } = ApprovalStatus.Approved;
     public ICollection<Loan> Loans { get; set; } = new List<Loan>();
+}
+
+/// <summary>Registration review state (D-54 Q-S19-8), separate from the account Status.</summary>
+public enum ApprovalStatus : byte
+{
+    Approved = 1,
+    Pending = 2,
+    Rejected = 3
+}
+
+/// <summary>The applicant's choice on the public form (D-54 Session 21). Never a role or permission.</summary>
+public enum RegistrationType : byte
+{
+    Student = 1,
+    DepartmentFellow = 2
 }
 
 public enum MemberType : byte

@@ -60,6 +60,11 @@ public static class Permissions
         public const string Return = "Lending.Return";
     }
 
+    public static class Registrations
+    {
+        public const string Review = "Registrations.Review";
+    }
+
     public static IEnumerable<(string Name, string Module)> All()
     {
         yield return (Users.View, "Users");
@@ -96,5 +101,7 @@ public static class Permissions
         yield return (Lending.View, "Lending");
         yield return (Lending.Issue, "Lending");
         yield return (Lending.Return, "Lending");
+
+        yield return (Registrations.Review, "Registrations");
     }
 }

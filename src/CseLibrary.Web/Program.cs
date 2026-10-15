@@ -25,6 +25,7 @@ try
 
     builder.Services.AddRepositoryLayer(builder.Configuration);
     builder.Services.AddServiceLayer();
+    builder.Services.AddHostedService<CseLibrary.Web.Infrastructure.ReminderWorker>();
 
     builder.Services.ConfigureApplicationCookie(options =>
     {

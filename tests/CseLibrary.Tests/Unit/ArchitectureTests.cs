@@ -34,8 +34,8 @@ public class ArchitectureTests
            // every other action has [HasPermission] unless it is authenticated-only
     public void Every_controller_requires_login_and_only_the_allowlist_is_anonymous()
     {
-        string[] allowlist = ["Account.AccessDenied", "Account.Login", "Home.Error", "Home.HttpStatus", "Home.Index", "Home.Privacy"];
-        string[] authenticatedOnly = ["Account.ChangePassword", "Account.Logout"];
+        string[] allowlist = ["Account.AccessDenied", "Account.Login", "Home.Error", "Home.HttpStatus", "Home.Index", "Home.Privacy", "Portal.Register"]; // Register: D-54 public form
+        string[] authenticatedOnly = ["Account.ChangePassword", "Account.Logout", "Portal.MyLoans"]; // MyLoans: own data only
 
         var controllers = Web.GetTypes().Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract).ToList();
         Assert.Empty(controllers.Where(c => !c.IsDefined(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false)).Select(c => c.Name));
