@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using CseLibrary.Core.Entities;
+using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -11,11 +13,18 @@ public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IUserService _userService;
+    private readonly ISecurityAuditService _securityAudit;
+    private readonly ILogger<AccountController> _logger;
 
-    public AccountController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager)
+    public AccountController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager,
+        IUserService userService, ISecurityAuditService securityAudit, ILogger<AccountController> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
+        _userService = userService;
+        _securityAudit = securityAudit;
+        _logger = logger;
     }
 
     [HttpGet, AllowAnonymous]
@@ -30,11 +39,15 @@ public class AccountController : Controller
         var user = await _userManager.FindByEmailAsync(model.Email);
         if (user == null)
         {
+            // D-24: log only, never the typed value (people type passwords into the email field).
+            _logger.LogWarning("Login attempt for an unknown account");
             ModelState.AddModelError(string.Empty, "Invalid login attempt.");
             return View(model);
         }
 
         var result = await _signInManager.PasswordSignInAsync(user, model.Password, model.RememberMe, lockoutOnFailure: true);
+        await _securityAudit.RecordSignInEventAsync(user.Id,
+            result.Succeeded ? "LoginSucceeded" : result.IsLockedOut ? "LockedOut" : "LoginFailed");
         if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, "Invalid login attempt.");
@@ -49,6 +62,8 @@ public class AccountController : Controller
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        if (User.FindFirstValue(ClaimTypes.NameIdentifier) is { } userId)
+            await _securityAudit.RecordSignInEventAsync(userId, "Logout");
         await _signInManager.SignOutAsync();
         return RedirectToAction("Login");
     }
@@ -63,16 +78,16 @@ public class AccountController : Controller
     public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
     {
         if (!ModelState.IsValid) return View(model);
-        var user = await _userManager.GetUserAsync(User);
-        if (user == null) return RedirectToAction("Login");
+        if (User.FindFirstValue(ClaimTypes.NameIdentifier) is not { } userId) return RedirectToAction("Login");
 
-        var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+        var result = await _userService.ChangeOwnPasswordAsync(userId, model.CurrentPassword, model.NewPassword);
         if (!result.Succeeded)
         {
-            foreach (var err in result.Errors) ModelState.AddModelError(string.Empty, err.Description);
+            ModelState.AddModelError(string.Empty, result.Error ?? "Failed to change password.");
             return View(model);
         }
-        await _signInManager.RefreshSignInAsync(user);
+        // The change gave the user a new security stamp; re-issue the cookie so this session stays signed in.
+        if (await _userManager.FindByIdAsync(userId) is { } user) await _signInManager.RefreshSignInAsync(user);
         TempData["Success"] = "Password changed successfully.";
         return RedirectToAction("Index", "Home");
     }

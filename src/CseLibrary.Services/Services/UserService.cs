@@ -34,8 +34,10 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
             };
             userId = user.Id;
             var create = (await userManager.CreateAsync(user, dto.Password)).ToResult();
-            if (!create.Succeeded || dto.Roles.Count == 0) return create;
-            return (await userManager.AddToRolesAsync(user, dto.Roles)).ToResult();
+            if (!create.Succeeded) return create;
+            if (dto.Roles.Count > 0 && (await userManager.AddToRolesAsync(user, dto.Roles)).ToResult() is { Succeeded: false } roles) return roles;
+            await AddEventAsync(user.Id, "UserCreated", new { Roles = dto.Roles }, attemptCt);
+            return Result.Success();
         }, verifySucceeded: async c => await uow.Users.GetDetailsAsync(userId!, c) != null, ct: ct)
         .OnDuplicate(Taken());
     }
@@ -58,6 +60,11 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
             if ((deactivated || toRemove.Contains(SystemRoles.Admin))
                 && await GuardLastAdminAsync(user.Id, attemptCt) is { } lastAdmin) return lastAdmin;
 
+            var activated = user.Status == RecordStatus.Inactive && dto.IsActive;
+            var changedFields = new List<string>();
+            if (user.Email != dto.Email) changedFields.Add("Email");
+            if (user.FullName != dto.FullName) changedFields.Add("FullName");
+
             user.Email = dto.Email;
             user.FullName = dto.FullName;
             // D-32: deactivation changes the stamp (same single write), so existing cookies stop working.
@@ -65,12 +72,15 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
             var update = (await (deactivated ? userManager.UpdateSecurityStampAsync(user) : userManager.UpdateAsync(user))).ToResult();
             if (!update.Succeeded) return update;
 
-            if (toRemove.Count > 0)
-            {
-                var removed = (await userManager.RemoveFromRolesAsync(user, toRemove)).ToResult();
-                if (!removed.Succeeded) return removed;
-            }
-            return toAdd.Count > 0 ? (await userManager.AddToRolesAsync(user, toAdd)).ToResult() : Result.Success();
+            if (toRemove.Count > 0 && (await userManager.RemoveFromRolesAsync(user, toRemove)).ToResult() is { Succeeded: false } removed) return removed;
+            if (toAdd.Count > 0 && (await userManager.AddToRolesAsync(user, toAdd)).ToResult() is { Succeeded: false } added) return added;
+
+            // D-24: in the same transaction as the change; field names only, never values.
+            if (changedFields.Count > 0) await AddEventAsync(user.Id, "UserUpdated", new { Fields = changedFields }, attemptCt);
+            if (deactivated) await AddEventAsync(user.Id, "UserDeactivated", null, attemptCt);
+            if (activated) await AddEventAsync(user.Id, "UserActivated", null, attemptCt);
+            if (toAdd.Count + toRemove.Count > 0) await AddEventAsync(user.Id, "UserRolesChanged", new { Added = toAdd, Removed = toRemove }, attemptCt);
+            return Result.Success();
         }, ct: ct).OnDuplicate(Taken());
 
     // D-53: users are never physically deleted. The stamp update saves the status in the same write
@@ -83,17 +93,33 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
             if (await CheckPrivilegedTargetAsync(await userManager.GetRolesAsync(user), attemptCt) is { } denied) return denied;
             if (await GuardLastAdminAsync(user.Id, attemptCt) is { } lastAdmin) return lastAdmin;
             user.Status = RecordStatus.Deleted;
+            await AddEventAsync(user.Id, "UserDeleted", null, attemptCt); // saved by the stamp update below
             return (await userManager.UpdateSecurityStampAsync(user)).ToResult();
         }, ct: ct);
 
-    public async Task<Result> ResetPasswordAsync(string id, string newPassword, CancellationToken ct = default)
-    {
-        var user = await FindLiveAsync(id);
-        if (user == null) return NotFound();
-        if (await CheckPrivilegedTargetAsync(await userManager.GetRolesAsync(user), ct) is { } denied) return denied;
-        var token = await userManager.GeneratePasswordResetTokenAsync(user);
-        return (await userManager.ResetPasswordAsync(user, token, newPassword)).ToResult();
-    }
+    public Task<Result> ResetPasswordAsync(string id, string newPassword, CancellationToken ct = default) =>
+        uow.ExecuteInTransactionAsync(async attemptCt =>
+        {
+            var user = await FindLiveAsync(id);
+            if (user == null) return NotFound();
+            if (await CheckPrivilegedTargetAsync(await userManager.GetRolesAsync(user), attemptCt) is { } denied) return denied;
+            await AddEventAsync(user.Id, "PasswordResetByAdmin", null, attemptCt);
+            var token = await userManager.GeneratePasswordResetTokenAsync(user);
+            return (await userManager.ResetPasswordAsync(user, token, newPassword)).ToResult();
+        }, ct: ct);
+
+    // Self-service, for the signed-in user; the event shares the transaction with the change (D-24).
+    public Task<Result> ChangeOwnPasswordAsync(string userId, string currentPassword, string newPassword, CancellationToken ct = default) =>
+        uow.ExecuteInTransactionAsync(async attemptCt =>
+        {
+            var user = await FindLiveAsync(userId);
+            if (user == null) return NotFound();
+            await AddEventAsync(user.Id, "PasswordChanged", null, attemptCt);
+            return (await userManager.ChangePasswordAsync(user, currentPassword, newPassword)).ToResult();
+        }, ct: ct);
+
+    private Task AddEventAsync(string userId, string action, object? details, CancellationToken ct) =>
+        uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, userId, action, details), ct);
 
     // D-56 Q-S21-4/8: only an effective Admin may assign or remove a privileged role (self-promotion included).
     private async Task<Result?> CheckRoleChangeAsync(ICollection<string> changed, CancellationToken ct) =>

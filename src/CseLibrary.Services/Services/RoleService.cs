@@ -41,6 +41,7 @@ public class RoleService(RoleManager<ApplicationRole> roleManager, IUnitOfWork u
 
             await uow.RolePermissions.AddRangeAsync(
                 permissionIds.Select(pid => new RolePermission { RoleId = role.Id, PermissionId = pid }), attemptCt);
+            await AddEventAsync(role.Id, "RoleCreated", new { role.Name, PermissionIds = permissionIds }, attemptCt);
             return Result<string>.Success(role.Id);
         }, verifySucceeded: async c => await uow.Roles.GetDetailsAsync(roleId!, c) != null, ct: ct)
         .OnDuplicate(Result<string>.Failure(ErrorCodes.Duplicate, NameTaken));
@@ -62,26 +63,41 @@ public class RoleService(RoleManager<ApplicationRole> roleManager, IUnitOfWork u
             if ((desired.Count > 0 || await IsPrivilegedAsync(role, attemptCt)) && !await CallerIsAdminAsync(attemptCt))
                 return Result.Failure(ErrorCodes.Forbidden, AdminOnly);
 
+            var changedFields = new List<string>();
+            if (role.Name != dto.Name) changedFields.Add("Name");
+            if (role.Description != dto.Description) changedFields.Add("Description");
             role.Name = dto.Name;
             role.Description = dto.Description;
             var update = (await roleManager.UpdateAsync(role)).ToResult();
             if (!update.Succeeded) return update;
 
             var current = await uow.RolePermissions.GetForRoleForUpdateAsync(role.Id, attemptCt);
-            uow.RolePermissions.RemoveRange(current.Where(rp => !desired.Contains(rp.PermissionId)));
-            await uow.RolePermissions.AddRangeAsync(desired.Except(current.Select(rp => rp.PermissionId))
-                .Select(pid => new RolePermission { RoleId = role.Id, PermissionId = pid }), attemptCt);
+            var removed = current.Where(rp => !desired.Contains(rp.PermissionId)).ToList();
+            var added = desired.Except(current.Select(rp => rp.PermissionId)).ToList();
+            uow.RolePermissions.RemoveRange(removed);
+            await uow.RolePermissions.AddRangeAsync(added.Select(pid => new RolePermission { RoleId = role.Id, PermissionId = pid }), attemptCt);
+
+            // D-24: in the same transaction as the change.
+            if (changedFields.Count > 0) await AddEventAsync(role.Id, "RoleUpdated", new { Fields = changedFields }, attemptCt);
+            if (added.Count + removed.Count > 0)
+                await AddEventAsync(role.Id, "RolePermissionsChanged",
+                    new { Added = added, Removed = removed.Select(rp => rp.PermissionId) }, attemptCt);
             return Result.Success();
         }, ct: ct).OnDuplicate(Result.Failure(ErrorCodes.Duplicate, NameTaken));
 
-    public async Task<Result> DeleteAsync(string id, CancellationToken ct = default)
-    {
-        var role = await roleManager.FindByIdAsync(id);
-        if (role == null) return Result.Failure(ErrorCodes.NotFound, "Role not found");
-        if (IsAdminName(role.Name)) return Result.Failure(ErrorCodes.Forbidden, "The Admin role cannot be deleted.");
-        if (await IsPrivilegedAsync(role, ct) && !await CallerIsAdminAsync(ct)) return Result.Failure(ErrorCodes.Forbidden, AdminOnly);
-        return (await roleManager.DeleteAsync(role)).ToResult();
-    }
+    public Task<Result> DeleteAsync(string id, CancellationToken ct = default) =>
+        uow.ExecuteInTransactionAsync(async attemptCt =>
+        {
+            var role = await roleManager.FindByIdAsync(id);
+            if (role == null) return Result.Failure(ErrorCodes.NotFound, "Role not found");
+            if (IsAdminName(role.Name)) return Result.Failure(ErrorCodes.Forbidden, "The Admin role cannot be deleted.");
+            if (await IsPrivilegedAsync(role, attemptCt) && !await CallerIsAdminAsync(attemptCt)) return Result.Failure(ErrorCodes.Forbidden, AdminOnly);
+            await AddEventAsync(role.Id, "RoleDeleted", new { role.Name }, attemptCt); // saved with the delete below
+            return (await roleManager.DeleteAsync(role)).ToResult();
+        }, ct: ct);
+
+    private Task AddEventAsync(string roleId, string action, object details, CancellationToken ct) =>
+        uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.Role, roleId, action, details), ct);
 
     private static bool IsAdminName(string? name) => string.Equals(name, SystemRoles.Admin, StringComparison.OrdinalIgnoreCase);
 
