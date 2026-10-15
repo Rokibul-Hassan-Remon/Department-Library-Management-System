@@ -2191,6 +2191,19 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   project) and no leftover `CseLibrary_Test_*`. No other server or backup was checked — the user
   must confirm that no copy elsewhere (another machine, a backup, a deployment) holds data to keep.
 
+### 71. Session 22 — D-29/D-30 approved; baseline plan approved (2026-10-15)
+- User: "option a. approved" → **D-29 Approved for migration changes** (condition 3) and
+  **D-30 Approved**; taken as the requested data confirmation (no database anywhere holds data
+  to keep).
+- Baseline plan proposed and approved ("ok"), **including deleting** the three migrations
+  (`InitialCreate`, `RecordStatusAndAuditColumns`, `UniqueUserEmail`) and the model snapshot
+  with `git rm` (history keeps them): `UseHiLo` on `GeneralConfig`/`Permission` ids; seeder
+  `Add`/`AddRange` → `AddAsync`/`AddRangeAsync`; new single `InitialCreate`; `MigrationTests`
+  rewritten (its D-51 data-conversion path disappears with the old migrations);
+  `StartupAndGuardTests` migration id updated; new test that a real `GeneralConfig` gets its id
+  at `AddAsync` (+ mutation); spike tests kept. `AuditLog` table is **not** part of this — it
+  comes with 0.11 after D-21–D-27 approvals. No `database update` against a non-test DB.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
@@ -2203,8 +2216,8 @@ connection string and D-47 below are **resolved** (§29); kept as history.
 | D-07 T1-EOL | LF for new authored text files — Pending, separate explicit confirmation needed before step 0.2; not confirmed by D-07 approval |
 | D-07 T4 backup root | **Resolved Session 12 (§28):** `<backup-root>` = `H:/Internship Project/DLMS-Backups/` with write authorization (approval (D)). T4 level (c) not yet exercised |
 | Step 0.1 | Documentation approved (§18), but step 0.1 needs D-07/T1 scope/T4 resolved and its own explicit approval |
-| D-29 HiLo | Preferred candidate; needs demonstration in `CseLibrary_Test_{guid}` + migration/script diff + approval (0.11a) |
-| D-30 Baseline migration regeneration | Depends on D-29 and on confirming that no template-created DB holds data to keep |
+| ~~D-29 HiLo~~ | **Resolved Session 22 (§69, §71):** demonstrated, diff shown, approved (option (a)) |
+| ~~D-30 Baseline migration regeneration~~ | **Resolved Session 22 (§70, §71):** data confirmed by the user, approved |
 | D-41 tooling | `global.json` + local `dotnet-ef` manifest were not covered by the layout approval |
 | D-40 connection string | Location of the `CseLibrary` dev connection string and seed password not decided |
 | D-13 signatures | Contract approved; exact signatures reviewed at Gate 2 |

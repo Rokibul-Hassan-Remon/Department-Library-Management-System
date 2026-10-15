@@ -35,10 +35,9 @@
   diff shown; script generation fails on the IDENTITY change → needs D-30.
 
 ### ⛔ Next action — waiting for the user (each a separate approval)
-1. **D-29 condition 3 / D-30:** the user recommends **(a) HiLo + regenerated baseline**, pending
-   data confirmation. Read-only check (§70): no user DB on `.\SQLEXPRESS`; LocalDB only
-   `Practice`. Waiting for the user to confirm no copy elsewhere holds data to keep → then
-   approve (a) explicitly → then plan the baseline regeneration (separate approval).
+1. **D-29/D-30 Approved (option (a)) and the baseline plan approved** (§71) → implement:
+   HiLo on `GeneralConfig`/`Permission`, seeder async adds, delete the 3 migrations + snapshot,
+   new `InitialCreate`, rewrite `MigrationTests`, update `StartupAndGuardTests`, HiLo model test.
 2. ~~Vulnerable package~~ **fixed `4b0fb10`** (§70).
 3. Then 0.11 audit (D-21–D-27 approvals), 0.12 smoke (needs approval to run against a
    non-test DB), Gate 3 report → approval → merge.

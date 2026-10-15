@@ -1003,7 +1003,7 @@ No purge until a retention policy, backup/restore and archive-integrity procedur
 volume small (SQL Express 10 GB DB limit is ample). Later options: yearly archive table/DB keyed
 by EntityType/EntityId; DB-level `DENY UPDATE, DELETE` on `AuditLogs` (Phase 7). No partitioning.
 
-### D-29 HiLo identifiers for audited entities — **Conditionally approved as preferred candidate (M6 A4); not approved for migration changes**
+### D-29 HiLo identifiers for audited entities — **Approved for migration changes (Session 22, option (a) with D-30)**; was conditionally approved (M6 A4)
 Problem: for Added entities with SQL identity keys, `EntityId` is unknown during
 `SavingChanges`, so the audit row cannot carry it in the same SaveChanges.
 Candidate: EF Core HiLo, one sequence per `IAuditable` table, block size 10, **only** on
@@ -1027,9 +1027,10 @@ sequential GUID keys (larger keys/indexes, unreadable ids).
 (`be033f9`, spike model on a disposable test DB); migration diff shown. The SQL script cannot be
 generated for the existing tables ("To change the IDENTITY property of a column, the column
 needs to be dropped and recreated"), so applying D-29 needs D-30 (regenerated baseline) or a
-table rebuild. **Condition 3 open:** D-29 still not approved for migration changes.
+table rebuild. **Condition 3 met Session 22 (DECISION_LOG §71):** the user approved option (a) — HiLo (block 10,
+`GeneralConfig` + `Permission` now; later audited entities as listed) with a regenerated baseline (D-30).
 
-### D-30 Regenerate baseline migration — Pending
+### D-30 Regenerate baseline migration — **Approved Session 22** (option (a); data confirmed by the user, read-only check DECISION_LOG §70)
 Proposed together with D-29 and the rename (D-41): regenerate `InitialCreate` instead of
 altering identity columns. Requires user confirmation that **no database created from the
 template holds data that must be kept.** The existing `DefaultTemplate` DB is never touched.
