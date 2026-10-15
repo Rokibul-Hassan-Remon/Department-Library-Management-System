@@ -2273,6 +2273,41 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   untested best-effort sign-in event failure path (§73); older items D-49 O1–O5, EF Tools
   package, UI brand text, CR5 cascade part.
 
+### 75. Session 23 — 0.12 smoke run on a disposable database (2026-10-15)
+- **Read-only check:** branch `feature/phase-0-gate-3`, build 0/0, tests 105/105. Session 22
+  close-out committed on the user's "ok" (`efb8a68`).
+- **Smoke setup (option (খ), §74):** `dotnet run --no-launch-profile --urls https://localhost:7259`
+  with `ASPNETCORE_ENVIRONMENT=Production`, `ConnectionStrings__DefaultConnection` → LocalDB
+  `CseLibrary_Test_1cad9ca5d094426085f3abcbccf828c6`, random `Seed__Admin__Password` — process
+  environment only, no file or user-secrets change. Startup migrated and seeded it (19 seed
+  audit rows). https is required because the auth cookie is `SecurePolicy = Always`; the dev
+  certificate is untrusted (browser warning accepted, not trusted system-wide).
+- **Results.** The user drove the browser (admin login, role `Student` + user create, login/
+  logout as the student) and reported "everything works"; DB and log showed deactivate,
+  lockout and the toast had not run yet, so the assistant ran those with `curl` against the
+  same database (user `smoke2@local`):
+
+  | Item | Evidence | Result |
+  |---|---|---|
+  | Admin login | `LoginSucceeded` #20, #30 | Pass |
+  | Create user | `RoleCreated` #21; `UserCreated` #22, #31 (`{"Roles":["Student"]}`) | Pass |
+  | Deactivate user | POST `/Users/Edit` 302; `Status` 1 → 2; `UserDeactivated` #39 | Pass |
+  | Lockout after 5 failures | `LoginFailed` #33–#36, `LockedOut` #37–#38, `LockoutEnd` +15 min; correct password then refused | Pass |
+  | Permission failure toast | Student GET `/Users` → 302 `/`, toast "…permission to perform this action." | Pass |
+  | 404 page | `/does-not-exist` → 404 "Page not found", status code shown | Pass |
+  | Entity + security audit | `Permission`/`GeneralConfig` `Created` with JSON changes (#1–#19); user/role/sign-in events (#20–#39) | Pass |
+
+- **Cleanup:** app stopped; database name checked against `^CseLibrary_Test_[0-9a-f]{32}$`,
+  then dropped; LocalDB has only `Practice`; `.\SQLEXPRESS` untouched; working tree clean.
+- **Findings (no decision):**
+  1. `/CseLibrary.Web.styles.css` returns 404 on every page when run as `Production` via
+     `dotnet run` (static web assets are a Development-only feature; expected to be served
+     after `dotnet publish` — not verified).
+  2. The 404/403 status page shows no Reference ID; only the 500 `Error` page does. The 500
+     path was not triggered manually (covered by tests B1–B2).
+  3. A locked-out user sees the same "Invalid login attempt." as a wrong password (no account
+     enumeration; the audit row says `LockedOut`).
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

@@ -1,7 +1,18 @@
 # Session Handoff
 
-## ▶ Session 22 (2026-10-14 → 2026-10-15) — read first; overrides the Session 21 block where they differ
-Session 22 closed at the user's request (conversation too long) — **Session 23 starts here.**
+## ▶ Session 23 (2026-10-15) — read first; overrides the Session 22 block where they differ
+- Read-only check passed (build 0/0, 105/105). Session 22 close-out committed `efb8a68`.
+- **0.12 smoke done (DECISION_LOG §75):** all items passed on disposable LocalDB
+  `CseLibrary_Test_1cad9ca5…` (env vars only, Production, https); database dropped, LocalDB
+  has only `Practice`, `.\SQLEXPRESS` untouched. New findings without a decision: scoped CSS
+  404 under `dotnet run` as Production; status pages have no Reference ID (500 page only);
+  locked-out message identical to a wrong password.
+- **Next, each a separate approval:** commit these docs → `/code-review` + `/ponytail-review`
+  on the gate diff (`develop..feature/phase-0-gate-3`) → Gate 3 report (0.9–0.12, evidence,
+  open findings) → user approval → `--no-ff` merge into `develop`.
+
+## Session 22 (2026-10-14 → 2026-10-15) — superseded by the Session 23 block above where they differ
+Session 22 closed at the user's request (conversation too long) — Session 23 started here.
 
 ### State (verified 2026-10-15)
 - Branch **`feature/phase-0-gate-3`** (from `develop` @ `5bb43bc`), **32 commits, not merged**.

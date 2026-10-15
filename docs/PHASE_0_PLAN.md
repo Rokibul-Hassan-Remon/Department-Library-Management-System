@@ -153,6 +153,10 @@ _Session 19 notes (DECISION_LOG §52–§53):_
 - _Session 22 (§74): **0.12 target approved = option (খ), a disposable `CseLibrary_Test_*`
   LocalDB database** (env-var connection string + seed password, dropped afterwards; the dev
   database is not created). Not yet run — first task of Session 23, then the Gate 3 report._
+- _Session 23 (§75): **0.12 smoke run and passed** on disposable `CseLibrary_Test_1cad9ca5…`
+  (admin login, create/deactivate user, lockout, permission toast, 404 page, entity + security
+  audit rows); database dropped. 0.12 stays unchecked until the Gate 3 report confirms the
+  Phase 0 exit criteria._
 
 **⛔ Gate 3 review — stop and wait for user approval before Phase 1.**
 
