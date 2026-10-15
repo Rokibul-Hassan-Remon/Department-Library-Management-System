@@ -35,6 +35,7 @@ public static class DbSeeder
         await SeedAdminRoleAsync(db, roleManager, SystemRoles.Admin);
         await SeedAdminUserAsync(userManager, admin);
         await SeedDefaultGeneralConfigsAsync(db);
+        await SeedLibraryPoliciesAsync(db);
     }
 
     private static async Task SeedPermissionsAsync(ApplicationDbContext db)
@@ -98,6 +99,20 @@ public static class DbSeeder
         {
             await userManager.AddToRoleAsync(user, SystemRoles.Admin);
         }
+    }
+
+    /// <summary>Session 23 defaults: Student 3 books / 14 days, Fellow 5 / 30, one renewal. Only missing types are added.</summary>
+    private static async Task SeedLibraryPoliciesAsync(ApplicationDbContext db)
+    {
+        var existing = await db.LibraryPolicies.Select(p => p.MemberCategory).ToListAsync();
+        LibraryPolicy[] defaults =
+        [
+            new() { MemberCategory = MemberType.Student, MaxActiveLoans = 3, LoanDays = 14, MaxRenewals = 1 },
+            new() { MemberCategory = MemberType.Fellow, MaxActiveLoans = 5, LoanDays = 30, MaxRenewals = 1 }
+        ];
+        foreach (var policy in defaults.Where(p => !existing.Contains(p.MemberCategory)))
+            await db.LibraryPolicies.AddAsync(policy); // async: HiLo (D-29)
+        await db.SaveChangesAsync();
     }
 
     private static async Task SeedDefaultGeneralConfigsAsync(ApplicationDbContext db)

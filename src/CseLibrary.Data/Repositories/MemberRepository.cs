@@ -25,7 +25,7 @@ public class MemberRepository(ApplicationDbContext db) : Repository<Member>(db),
             {
                 Id = m.Id, MemberCode = m.MemberCode, FullName = m.FullName, MemberType = m.MemberType, Email = m.Email,
                 Phone = m.Phone, IsActive = m.Status == RecordStatus.Active,
-                ActiveLoans = m.Loans.Count(l => l.ReturnedAtUtc == null)
+                ActiveLoans = m.Loans.Count(l => l.TransactionStatus == LendingStatus.Issued)
             }).ToListAsync(ct);
         return new PagedResult<MemberDto>(items, total, page.Page, page.PageSize);
     }
@@ -35,8 +35,8 @@ public class MemberRepository(ApplicationDbContext db) : Repository<Member>(db),
         {
             Id = m.Id, MemberCode = m.MemberCode, FullName = m.FullName, MemberType = m.MemberType, Email = m.Email,
             Phone = m.Phone, IsActive = m.Status == RecordStatus.Active,
-            ActiveLoans = m.Loans.Count(l => l.ReturnedAtUtc == null),
-            Loans = m.Loans.OrderByDescending(l => l.IssuedAtUtc).Take(100).AsQueryable().Select(LoanRepository.ToDto).ToList()
+            ActiveLoans = m.Loans.Count(l => l.TransactionStatus == LendingStatus.Issued),
+            Loans = m.Loans.OrderByDescending(l => l.IssueDateUtc).Take(100).AsQueryable().Select(LoanRepository.ToDto).ToList()
         }).FirstOrDefaultAsync(ct);
 
     public Task<int?> FindIdByCodeAsync(string memberCode, CancellationToken ct = default) =>
@@ -46,7 +46,7 @@ public class MemberRepository(ApplicationDbContext db) : Repository<Member>(db),
         Db.Members.AnyAsync(m => m.MemberCode == memberCode && m.Id != excludeId, ct);
 
     public Task<int?> FindIdByUserIdAsync(string userId, CancellationToken ct = default) =>
-        Db.Members.Where(m => m.UserId == userId).Select(m => (int?)m.Id).FirstOrDefaultAsync(ct);
+        Db.Members.Where(m => m.IdentityUserId == userId).Select(m => (int?)m.Id).FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<PendingRegistrationDto>> GetPendingAsync(CancellationToken ct = default) =>
         await Db.Members.Where(m => m.Approval == ApprovalStatus.Pending).OrderBy(m => m.CreatedAt)
@@ -60,15 +60,15 @@ public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILo
     {
         Id = l.Id, MemberId = l.MemberId, MemberCode = l.Member.MemberCode, MemberName = l.Member.FullName,
         BookId = l.BookCopy.BookId, BookTitle = l.BookCopy.Book.Title, AccessionNumber = l.BookCopy.AccessionNumber,
-        IssuedAtUtc = l.IssuedAtUtc, DueDate = l.DueDate, ReturnedAtUtc = l.ReturnedAtUtc, RenewCount = l.RenewCount
+        IssueDateUtc = l.IssueDateUtc, DueDate = l.DueDate, ReturnDateUtc = l.ReturnDateUtc, RenewCount = l.RenewCount
     };
 
     public async Task<PagedResult<LoanDto>> GetPageAsync(PageRequest page, LoanFilter filter, string? search, DateOnly today, CancellationToken ct = default)
     {
         var loans = filter switch
         {
-            LoanFilter.Active => Db.Loans.Where(l => l.ReturnedAtUtc == null),
-            LoanFilter.Overdue => Db.Loans.Where(l => l.ReturnedAtUtc == null && l.DueDate < today),
+            LoanFilter.Active => Db.Loans.Where(l => l.TransactionStatus == LendingStatus.Issued),
+            LoanFilter.Overdue => Db.Loans.Where(l => l.TransactionStatus == LendingStatus.Issued && l.DueDate < today),
             _ => Db.Loans
         };
         if (!string.IsNullOrWhiteSpace(search))
@@ -79,26 +79,26 @@ public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILo
         }
         var total = await loans.CountAsync(ct);
         page = page.ClampTo(total);
-        var items = await (filter == LoanFilter.All ? loans.OrderByDescending(l => l.IssuedAtUtc) : loans.OrderBy(l => l.DueDate))
+        var items = await (filter == LoanFilter.All ? loans.OrderByDescending(l => l.IssueDateUtc) : loans.OrderBy(l => l.DueDate))
             .ThenBy(l => l.Id).Skip(page.Skip).Take(page.PageSize).Select(ToDto).ToListAsync(ct);
         return new PagedResult<LoanDto>(items, total, page.Page, page.PageSize);
     }
 
     public Task<int> CountActiveAsync(int memberId, CancellationToken ct = default) =>
-        Db.Loans.CountAsync(l => l.MemberId == memberId && l.ReturnedAtUtc == null, ct);
+        Db.Loans.CountAsync(l => l.MemberId == memberId && l.TransactionStatus == LendingStatus.Issued, ct);
 
     public Task<bool> HasOverdueAsync(int memberId, DateOnly today, CancellationToken ct = default) =>
-        Db.Loans.AnyAsync(l => l.MemberId == memberId && l.ReturnedAtUtc == null && l.DueDate < today, ct);
+        Db.Loans.AnyAsync(l => l.MemberId == memberId && l.TransactionStatus == LendingStatus.Issued && l.DueDate < today, ct);
 
     public Task<bool> HasActiveAsync(int memberId, CancellationToken ct = default) =>
-        Db.Loans.AnyAsync(l => l.MemberId == memberId && l.ReturnedAtUtc == null, ct);
+        Db.Loans.AnyAsync(l => l.MemberId == memberId && l.TransactionStatus == LendingStatus.Issued, ct);
 
     public async Task<IReadOnlyList<ReminderTarget>> GetReminderTargetsAsync(DateOnly dueOn, DateOnly today, CancellationToken ct = default) =>
-        await Db.Loans.Where(l => l.ReturnedAtUtc == null && (l.DueDate == dueOn || l.DueDate < today) && l.Member.Email != null)
+        await Db.Loans.Where(l => l.TransactionStatus == LendingStatus.Issued && (l.DueDate == dueOn || l.DueDate < today) && l.Member.Email != null)
             .OrderBy(l => l.Id)
-            .Select(l => new ReminderTarget(l.Member.Email!, l.Member.FullName, l.BookCopy.Book.Title, l.BookCopy.AccessionNumber, l.DueDate))
+            .Select(l => new ReminderTarget(l.Id, l.Member.Email!, l.Member.FullName, l.BookCopy.Book.Title, l.BookCopy.AccessionNumber, l.DueDate))
             .ToListAsync(ct);
 
     public Task<Loan?> GetActiveForUpdateAsync(int id, CancellationToken ct = default) =>
-        Db.Loans.Include(l => l.BookCopy).Include(l => l.Member).FirstOrDefaultAsync(l => l.Id == id && l.ReturnedAtUtc == null, ct);
+        Db.Loans.Include(l => l.BookCopy).Include(l => l.Member).FirstOrDefaultAsync(l => l.Id == id && l.TransactionStatus == LendingStatus.Issued, ct);
 }

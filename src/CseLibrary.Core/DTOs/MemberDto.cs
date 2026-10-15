@@ -30,11 +30,11 @@ public class LoanDto
     public int BookId { get; set; }
     public string BookTitle { get; set; } = string.Empty;
     public string AccessionNumber { get; set; } = string.Empty;
-    public DateTime IssuedAtUtc { get; set; }
+    public DateTime IssueDateUtc { get; set; }
     public DateOnly DueDate { get; set; }
-    public DateTime? ReturnedAtUtc { get; set; }
+    public DateTime? ReturnDateUtc { get; set; }
     public int RenewCount { get; set; }
-    public bool IsOverdue(DateOnly today) => ReturnedAtUtc == null && DueDate < today;
+    public bool IsOverdue(DateOnly today) => ReturnDateUtc == null && DueDate < today;
 }
 
 public class IssueDto
@@ -66,4 +66,4 @@ public class PendingRegistrationDto
 }
 
 /// <summary>One reminder email: a loan due soon or overdue.</summary>
-public record ReminderTarget(string Email, string MemberName, string BookTitle, string AccessionNumber, DateOnly DueDate);
+public record ReminderTarget(int LoanId, string Email, string MemberName, string BookTitle, string AccessionNumber, DateOnly DueDate);

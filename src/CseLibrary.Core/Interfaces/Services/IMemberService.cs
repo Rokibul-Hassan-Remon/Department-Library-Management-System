@@ -1,4 +1,5 @@
 using CseLibrary.Core.DTOs;
+using CseLibrary.Core.Entities;
 using CseLibrary.Core.Paging;
 using CseLibrary.Core.Results;
 
@@ -19,6 +20,8 @@ public interface ILendingService
 {
     Task<PagedResult<LoanDto>> GetPageAsync(PageRequest page, LoanFilter filter, string? search, CancellationToken ct = default);
     Task<Result> IssueAsync(IssueDto dto, CancellationToken ct = default);
-    Task<Result> ReturnAsync(int loanId, CancellationToken ct = default);
+    Task<Result> ReturnAsync(int loanId, ReturnCondition condition = ReturnCondition.Good, CancellationToken ct = default);
+    Task<IReadOnlyList<LibraryPolicyDto>> GetPoliciesAsync(CancellationToken ct = default);
+    Task<Result> UpdatePolicyAsync(LibraryPolicyDto dto, CancellationToken ct = default);
     Task<Result> RenewAsync(int loanId, CancellationToken ct = default);
 }

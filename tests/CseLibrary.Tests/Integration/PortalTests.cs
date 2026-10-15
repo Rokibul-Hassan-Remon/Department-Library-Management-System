@@ -133,5 +133,6 @@ public class PortalTests(AppFactory app)
         Assert.Contains(targets, t => t.AccessionNumber == soon);
         Assert.DoesNotContain(targets, t => t.AccessionNumber == later); // due in 30 days
         Assert.True(await app.WithServiceAsync(sp => sp.GetRequiredService<IReminderService>().SendDueRemindersAsync()) >= 1);
+        Assert.Equal(0, await app.WithServiceAsync(sp => sp.GetRequiredService<IReminderService>().SendDueRemindersAsync())); // idempotency key: never twice
     }
 }

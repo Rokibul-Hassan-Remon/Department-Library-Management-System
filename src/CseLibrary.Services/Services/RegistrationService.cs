@@ -33,7 +33,7 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, IUnit
             var code = dto.MemberCode.Trim();
             var existingId = await uow.Members.FindIdByCodeAsync(code, attemptCt);
             var member = existingId == null ? null : await uow.Members.GetForUpdateAsync(existingId.Value, attemptCt);
-            if (member?.UserId != null)
+            if (member?.IdentityUserId != null)
                 return Result.Failure(ErrorCodes.AlreadyRegistered, "This ID is already registered. Sign in instead.");
 
             var active = approval == ApprovalStatus.Approved;
@@ -54,7 +54,7 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, IUnit
             member.FullName = dto.FullName.Trim();
             member.Email = dto.Email.Trim();
             member.MemberType = type;
-            member.UserId = user.Id;
+            member.IdentityUserId = user.Id;
             member.Approval = approval;
             member.Status = active ? RecordStatus.Active : RecordStatus.Inactive;
             await uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, user.Id, "UserRegistered", new { Type = type.ToString(), Approval = approval.ToString() }), attemptCt);
@@ -73,9 +73,9 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, IUnit
         uow.ExecuteInTransactionAsync(async attemptCt =>
         {
             var member = await uow.Members.GetForUpdateAsync(memberId, attemptCt);
-            if (member is not { Approval: ApprovalStatus.Pending, UserId: not null })
+            if (member is not { Approval: ApprovalStatus.Pending, IdentityUserId: not null })
                 return Result.Failure(ErrorCodes.NotFound, "Pending registration not found.");
-            var user = await userManager.FindByIdAsync(member.UserId);
+            var user = await userManager.FindByIdAsync(member.IdentityUserId);
             if (user == null || user.Status == RecordStatus.Deleted) return Result.Failure(ErrorCodes.NotFound, "The applicant's account no longer exists.");
 
             member.Approval = decision;

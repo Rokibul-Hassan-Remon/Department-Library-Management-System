@@ -33,6 +33,27 @@ public class CatalogTests(AppFactory app)
         });
     }
 
+    [Fact] // database model M15: Authors + BookAuthors, Categories
+    public async Task Authors_and_category_are_shared_rows_found_by_name()
+    {
+        await app.WithServiceAsync(async sp =>
+        {
+            var books = sp.GetRequiredService<IBookService>();
+            var (author, category) = (Unique("Knuth "), Unique("Algorithms "));
+            var first = (await books.CreateAsync(new BookFormDto { Title = "TAOCP 1", Authors = $"{author}, Co Author, {author.ToUpperInvariant()}", Category = category })).Value;
+            var second = (await books.CreateAsync(new BookFormDto { Title = "TAOCP 2", Authors = " " + author + " ", Category = category })).Value;
+
+            Assert.Equal($"{author}, Co Author", (await books.GetDetailsAsync(first))!.Authors); // trimmed, de-duplicated, ordered
+            var categoryId = Assert.Single(await books.GetCategoriesAsync(), c => c.Name == category).Id; // one row for both books
+            var page = await books.GetPageAsync(new PageRequest(1, 100), author, categoryId);
+            Assert.Equal([first, second], page.Items.Select(b => b.Id).Order());
+
+            Assert.True((await books.UpdateAsync(new BookFormDto { Id = second, Title = "TAOCP 2", Authors = "Someone Else" })).Succeeded);
+            var updated = (await books.GetDetailsAsync(second))!;
+            Assert.Equal(("Someone Else", (string?)null), (updated.Authors, updated.Category));
+        });
+    }
+
     [Fact]
     public async Task Duplicate_isbn_and_accession_number_are_refused()
     {

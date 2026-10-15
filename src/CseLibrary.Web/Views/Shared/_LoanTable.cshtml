@@ -12,16 +12,17 @@
                 <td><a asp-controller="Members" asp-action="Details" asp-route-id="@l.MemberId">@l.MemberCode</a> @l.MemberName</td>
                 <td><a asp-controller="Books" asp-action="Details" asp-route-id="@l.BookId">@l.BookTitle</a></td>
                 <td>@l.AccessionNumber</td>
-                <td>@l.IssuedAtUtc.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                <td>@l.IssueDateUtc.ToLocalTime().ToString("yyyy-MM-dd")</td>
                 <td>@l.DueDate.ToString("yyyy-MM-dd") @(l.IsOverdue(today) ? "(overdue)" : "") @(l.RenewCount > 0 ? $"· renewed {l.RenewCount}" : "")</td>
-                <td>@l.ReturnedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                <td>@l.ReturnDateUtc?.ToLocalTime().ToString("yyyy-MM-dd")</td>
                 <td class="text-end text-nowrap">
-                    @if (l.ReturnedAtUtc == null)
+                    @if (l.ReturnDateUtc == null)
                     {
                         <form asp-controller="Loans" asp-action="Renew" asp-route-id="@l.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
                             <button class="btn btn-sm btn-outline-secondary">Renew</button>
                         </form>
-                        <form asp-controller="Loans" asp-action="Return" asp-route-id="@l.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                        <form asp-controller="Loans" asp-action="Return" asp-route-id="@l.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline-flex gap-1">
+                            <select name="condition" class="form-select form-select-sm w-auto"><option value="Good">Good</option><option value="Damaged">Damaged</option></select>
                             <button class="btn btn-sm btn-success">Return</button>
                         </form>
                     }

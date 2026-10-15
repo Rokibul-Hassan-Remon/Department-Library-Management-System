@@ -14,6 +14,10 @@ public interface IUnitOfWork
     IBookCopyRepository BookCopies { get; }
     IMemberRepository Members { get; }
     ILoanRepository Loans { get; }
+    ICategoryRepository Categories { get; }
+    IAuthorRepository Authors { get; }
+    ILibraryPolicyRepository LibraryPolicies { get; }
+    IEmailNotificationLogRepository EmailNotificationLogs { get; }
     IGeneralConfigRepository GeneralConfigs { get; }
     IPermissionRepository Permissions { get; }
     IRoleReadRepository Roles { get; }

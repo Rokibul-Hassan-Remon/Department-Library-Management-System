@@ -16,6 +16,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<BookCopy> BookCopies => Set<BookCopy>();
     public DbSet<Member> Members => Set<Member>();
     public DbSet<Loan> Loans => Set<Loan>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Author> Authors => Set<Author>();
+    public DbSet<LibraryPolicy> LibraryPolicies => Set<LibraryPolicy>();
+    public DbSet<EmailNotificationLog> EmailNotificationLogs => Set<EmailNotificationLog>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder builder)
