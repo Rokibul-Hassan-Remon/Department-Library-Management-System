@@ -21,7 +21,12 @@ try
     builder.Host.UseSerilog((ctx, services, cfg) => cfg
         .ReadFrom.Configuration(ctx.Configuration)
         .ReadFrom.Services(services)
-        .Enrich.FromLogContext());
+        .Enrich.FromLogContext()
+        // No mail server yet: every email LogEmailSender "sends" also goes to its own file, kept indefinitely.
+        .WriteTo.Logger(emails => emails
+            .Filter.ByIncludingOnly(Serilog.Filters.Matching.FromSource<CseLibrary.Services.Services.LogEmailSender>())
+            .WriteTo.File("Logs/emails-.txt", rollingInterval: RollingInterval.Day, retainedFileCountLimit: null,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss zzz} {Message:lj}{NewLine}{NewLine}")));
 
     builder.Services.AddRepositoryLayer(builder.Configuration);
     builder.Services.AddServiceLayer();

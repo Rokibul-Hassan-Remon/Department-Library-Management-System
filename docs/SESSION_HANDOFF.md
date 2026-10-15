@@ -26,6 +26,7 @@
   Authors/BookAuthors/Categories, LendingTransactions, LibraryPolicies, EmailNotificationLogs;
   three unapplied migrations replaced by `AddLibraryCore`. Tests **122/122**. Lending and portal
   are merged into `develop` (`f01b4aa`).
+- Emails (log only) also go to their own file `Logs/emails-YYYYMMDD.txt`, kept indefinitely (§80 follow-up).
 - **Not built yet:** real SMTP email, reports, D-54 per-type default roles (Q-S21-1), rejected
   applicant re-applying with the same email (Q-S19-7). Owed: Gate 3 reviews; merges of the
   lending and portal branches into `develop`.
