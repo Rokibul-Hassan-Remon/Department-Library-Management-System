@@ -102,7 +102,7 @@ cookie part and the `UsersController` role list (0.9)._
 | # | Step | Requires | Main files | Done when |
 |---|---|---|---|---|
 | [x] 0.9 | Security baseline: configurable `IdentityOptions`, lockout on, fallback policy, **class-level `[Authorize]` on every controller (FR-M9-05; inventory in D-31 M9 extension: today no controller has it, Home actions and `Account.Logout` are anonymous)**, explicit `[AllowAnonymous]` allowlist, global antiforgery, cookie settings, deactivation (`IsActive` + security stamp + `CanSignInAsync`). Database-backed permission authorization (D-37): no permission claims in the cookie, login writes nothing to `AspNetUserClaims`, handler checks `IsActive` + role membership + permissions per request with request-local cache. Cleanup of existing claim rows only after separate approval. | D-31 values + M9 approach, D-32 mechanism (Proposed); Q-M9-10; D-37 (Approved in principle) | `Web/Identity/*`, `Web/Authorization/*`, all `Controllers/*`, `Program.cs`, `appsettings.json` | Tests A1–A11 |
-| [ ] 0.10 | Error handling and logging: exception handler, status-code pages, Error view with Reference ID only, Serilog TraceId in output, verify enricher config, dev SQL logging. | D-34 | `HomeController`/`ErrorController`, `Views/Shared/Error.cshtml`, `StatusCode.cshtml`, `appsettings*.json` | Tests B1–B2 |
+| [x] 0.10 | Error handling and logging: exception handler, status-code pages, Error view with Reference ID only, Serilog TraceId in output, verify enricher config, dev SQL logging. | D-34 | `HomeController`/`ErrorController`, `Views/Shared/Error.cshtml`, `StatusCode.cshtml`, `appsettings*.json` | Tests B1–B2 |
 | [ ] 0.11a | **HiLo demonstration (no migration change).** In a uniquely named disposable LocalDB database `CseLibrary_Test_{guid}` (D-40 guard; never the `CseLibrary` dev DB — M8 §2): HiLo id generation, audit rows carrying the new `EntityId`, rollback behavior, `EnableRetryOnFailure` compatibility. Produce the migration + `dotnet ef migrations script` diff. **Stop for approval** (D-29, D-30). | D-29 (conditional) | test project, spike migration (not applied to any non-test DB) | Demonstration tests green; diff shown; user approval recorded |
 | [ ] 0.11 | Audit: `AuditLog` entity + config + indexes, `IAuditable`, `.Audited()`/`.NotAudited()` property classification (D-23), `ICurrentUser` (Web impl), `TimeProvider`, `AuditSaveChangesInterceptor`, `ISecurityAuditService` events, key strategy per approved D-29, migration per approved D-30. | D-21–D-27, **D-29/D-30 approval from 0.11a** | `Core/Entities/AuditLog.cs`, `Core/Interfaces/*`, `Data/Interceptors/*`, `Data/Configurations/*`, `Services/Security/*`, `Web/Infrastructure/HttpCurrentUser.cs`, `Migrations/*` | Tests C1–C7 |
 | [ ] 0.12 | Manual smoke test (admin login, create/deactivate user, lockout, error page, audit row) + docs: `status.md`, `SESSION_HANDOFF.md`, `PROJECT_DECISIONS.md`, `DECISION_LOG.md`. | 0.9–0.11 | `docs/**` | Smoke results recorded; Phase 0 exit criteria met |
@@ -140,8 +140,8 @@ _Session 19 notes (DECISION_LOG §52–§53):_
   (approvals needed)._
 - _Session 22 (§67): 0.10 **D-34 approved scope done** `d0a8a66` (status pages, Error view,
   Reference ID = TraceId, `{TraceId}` in logs; B1–B2; 88/88; test host runs as Production).
-  0.10 stays unchecked: dev SQL logging and the package-less enrichers were not in the approved
-  scope._
+  Leftovers done on the user's "ok" `42d0908` (§68): dev SQL command logging, package-less
+  enrichers removed. **0.10 done** (89/89)._
 
 **⛔ Gate 3 review — stop and wait for user approval before Phase 1.**
 

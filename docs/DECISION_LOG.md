@@ -2134,6 +2134,17 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   `Activity.Id` format, AJAX gets HTML → the matching test fails. Evidence: build 0/0, **88/88**.
 - Still open in 0.10 (not in the approved scope): dev SQL logging; enrichers without packages.
 
+### 68. Session 22 — 0.10 leftovers (2026-10-15)
+- User "ok" on the first pending item (both 0.10 leftovers). Choice made by the assistant and
+  reported: **remove** `WithMachineName`/`WithThreadId` from `Serilog:Enrich` (they had no
+  package and did nothing) rather than add two packages; reversible if the values are wanted.
+- `42d0908`: `appsettings.Development.json` sets Serilog override
+  `Microsoft.EntityFrameworkCore.Database.Command = Information` (Development only;
+  `EnableSensitiveDataLogging` is not used, so parameter values are not logged). Config test
+  `Sql_command_logging_is_development_only_and_enrichers_resolve`. Not run against the dev DB
+  (no approval to start the app on a non-test database); verified by configuration only.
+- Evidence: build 0/0, **89/89**. **0.10 done.**
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
