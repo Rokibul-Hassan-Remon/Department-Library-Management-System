@@ -9,7 +9,12 @@
   locked-out message identical to a wrong password.
 - **Gate 3 approved by the user without the pre-gate reviews (§76)**; merged into `develop`.
   The reviews on the Gate 3 diff are still owed — run them when budget allows.
-- Phase 1 first slice: book titles + physical copies CRUD on `feature/phase-1-catalog`.
+- Phase 1 first slice: book titles + physical copies CRUD on `feature/phase-1-catalog` (§77):
+  `Books`/`BookCopies` (HiLo, audited, migration `AddCatalog`), `Books.*` permissions, search
+  (title/author/ISBN/accession) + paging, copy counts, Issued status reserved for lending,
+  title delete refused while copies exist. Build 0/0, tests **108/108**. Not committed yet.
+- **Not built (need decisions/inputs first):** members (Student/Fellow), issue/return + history,
+  member portal, due/overdue email (D-48, domain policies, SMTP still Proposed/Pending).
 
 ## Session 22 (2026-10-14 → 2026-10-15) — superseded by the Session 23 block above where they differ
 Session 22 closed at the user's request (conversation too long) — Session 23 started here.

@@ -1,0 +1,23 @@
+@model BookCopyDto
+@{
+    ViewData["Title"] = "Edit Copy";
+    // Issued is owned by lending; it is shown only when the copy already has it.
+    var statuses = Enum.GetValues<CopyStatus>().Where(s => s != CopyStatus.Issued || Model.CopyStatus == CopyStatus.Issued)
+        .Select(s => new SelectListItem(s.ToString(), s.ToString()));
+}
+
+<h2>Edit Copy <small class="text-muted">@Model.BookTitle</small></h2>
+<form asp-action="EditCopy" method="post" class="col-md-6">
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="BookId" />
+    <input type="hidden" asp-for="BookTitle" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3"><label asp-for="AccessionNumber" class="form-label">Accession no.</label><input asp-for="AccessionNumber" class="form-control" /><span asp-validation-for="AccessionNumber" class="text-danger"></span></div>
+    <div class="mb-3"><label asp-for="ShelfLocation" class="form-label">Shelf</label><input asp-for="ShelfLocation" class="form-control" /></div>
+    <div class="mb-3"><label asp-for="AcquisitionDate" class="form-label">Acquired</label><input asp-for="AcquisitionDate" type="date" class="form-control" /></div>
+    <div class="mb-3"><label asp-for="CopyStatus" class="form-label">Status</label><select asp-for="CopyStatus" class="form-select" asp-items="statuses"></select></div>
+    <div class="mb-3"><label asp-for="Notes" class="form-label"></label><textarea asp-for="Notes" class="form-control" rows="2"></textarea></div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a class="btn btn-secondary" asp-action="Details" asp-route-id="@Model.BookId">Cancel</a>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -37,6 +37,14 @@ public static class Permissions
         public const string Delete = "GeneralConfig.Delete";
     }
 
+    public static class Books
+    {
+        public const string View = "Books.View";
+        public const string Create = "Books.Create";
+        public const string Edit = "Books.Edit";
+        public const string Delete = "Books.Delete";
+    }
+
     public static IEnumerable<(string Name, string Module)> All()
     {
         yield return (Users.View, "Users");
@@ -59,5 +67,10 @@ public static class Permissions
         yield return (GeneralConfig.Create, "GeneralConfig");
         yield return (GeneralConfig.Edit, "GeneralConfig");
         yield return (GeneralConfig.Delete, "GeneralConfig");
+
+        yield return (Books.View, "Books");
+        yield return (Books.Create, "Books");
+        yield return (Books.Edit, "Books");
+        yield return (Books.Delete, "Books");
     }
 }
