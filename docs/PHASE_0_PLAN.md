@@ -136,9 +136,12 @@ _Session 19 notes (DECISION_LOG §52–§53):_
   D-57 `56bb5f0` (76/76). Missing access tests A5/A6/A10/A11 added `2c862e0` (§66). 0.9 done;
   A2 lives with D-55 in 0.10._
 - _Session 22 (§66): 0.10 **D-55 part done** `42ae3f4` (toasts, permission failure → safe local
-  page + toast, AJAX 403, Reference ID toast, test A2; 86/86). 0.10 **D-34 part not started**
-  (Proposed: status-code pages, Error view, Serilog TraceId, enrichers; B1–B2). 0.11a / 0.11 /
-  0.12 not started (approvals needed)._
+  page + toast, AJAX 403, Reference ID toast, test A2; 86/86). 0.11a / 0.11 / 0.12 not started
+  (approvals needed)._
+- _Session 22 (§67): 0.10 **D-34 approved scope done** `d0a8a66` (status pages, Error view,
+  Reference ID = TraceId, `{TraceId}` in logs; B1–B2; 88/88; test host runs as Production).
+  0.10 stays unchecked: dev SQL logging and the package-less enrichers were not in the approved
+  scope._
 
 **⛔ Gate 3 review — stop and wait for user approval before Phase 1.**
 

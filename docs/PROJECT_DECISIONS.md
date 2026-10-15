@@ -1171,7 +1171,16 @@ criteria reported, **not run** (separate approval).
 rows to delete, cleanup **not needed**. Test DBs are recreated per run. Re-check only if a
 pre-`fab1af1` build is ever run against a real database.
 
-### D-34 Error handling — Approved (standard); `Result` type Approved (Session 17)
+### D-34 Error handling — Approved (standard); `Result` type Approved (Session 17); step 0.10 scope Approved and implemented Session 22 (`d0a8a66`)
+**Session 22 (DECISION_LOG §67):** the user approved this 0.10 scope: friendly pages for 404 and
+other suitable HTTP errors; no "Development Mode" text; users see only the Reference ID;
+`TraceId` in the server log; no stack trace / exception details / sensitive data in production
+responses; authorization, toast and AJAX-403 behaviour unchanged. Implemented: `UseExceptionHandler`
+(outside Development, as before) + `UseStatusCodePagesWithReExecute("/Home/HttpStatus/{0}")`
+(AJAX keeps the bare status); Reference ID = request `TraceId` (W3C hex); `{TraceId}` in the
+Console and File output templates. Not in the approved scope (still open): dev SQL logging,
+and the `WithMachineName`/`WithThreadId` enrichers listed without their packages (the app
+starts, so they are silently ignored — they add nothing today).
 **Session 17 (DECISION_LOG §45):** user approved `Result { Succeeded, ErrorCode, Error }` /
 `Result<T> { Value }` with factories `Success()` / `Failure(code, safeMessage)` and `ErrorCodes`
 constants (`COMMON.NOT_FOUND`, `COMMON.DUPLICATE`, `IDENTITY.FAILED`). All four template services

@@ -2115,6 +2115,25 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
     on it and on D-21–D-27 (Proposed).
   - 0.12 manual smoke needs the app run against a non-test database (approval needed).
 
+### 67. Session 22 — 0.10 D-34 scope approved and implemented (2026-10-15)
+- The user approved the 0.10 D-34 scope (friendly HTTP error pages, no "Development Mode" text,
+  Reference ID only, `TraceId` in the server log, no sensitive details in production responses,
+  existing authorization / toast / AJAX-403 behaviour kept). Recorded in D-34.
+- Implemented `d0a8a66`: `Home.HttpStatus` (anonymous, added to the A6/A10 allowlist) +
+  `HttpStatus.cshtml` via `UseStatusCodePagesWithReExecute`; AJAX gets `EmptyResult` with the
+  status kept; `Error.cshtml` rewritten (Reference ID only); Reference ID =
+  `Activity.Current.TraceId` hex, the same value Serilog 4.3 stores as `LogEvent.TraceId`;
+  `{TraceId}` added to both output templates.
+- **Test host now runs as `Production`** (`AppFactory.UseEnvironment`) so B1 sees what users
+  see; side effect: `appsettings.Development.json` (with the `.\SQLEXPRESS` connection string)
+  is no longer loaded by tests. Test log sink `CapturingLogSink` via `ReadFrom.Services`.
+- Tests B1 (500 page has no exception text, 32-hex Reference ID equals the logged error's
+  TraceId, templates contain `{TraceId}`), B2 (friendly 404 for a signed-in user; AJAX bare 404;
+  anonymous unknown URL → Login because the D-31 fallback policy also covers URLs without an
+  endpoint — kept, it does not reveal which URLs exist). Mutations: no status pages, old
+  `Activity.Id` format, AJAX gets HTML → the matching test fails. Evidence: build 0/0, **88/88**.
+- Still open in 0.10 (not in the approved scope): dev SQL logging; enrichers without packages.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

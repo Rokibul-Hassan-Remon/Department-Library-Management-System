@@ -7,9 +7,11 @@
   close-out) · **`b1bba18` D-56 staff-side rules + `UsersController` role list** · `b5e8b3b` docs ·
   **`ac24fd7` menu from DB permissions (D-37 regression) + case-insensitive role diff** ·
   **`56bb5f0` D-57** · `946ac49` docs · **`2c862e0` access tests A5/A6/A10/A11** ·
-  **`42ae3f4` D-55 toasts + A2** · docs commit after it.
-- Evidence at `42ae3f4`: build 0 errors / 0 warnings; tests **86/86**; mutation checks for every
-  new rule (DECISION_LOG §64–§66). No migration; no non-test database touched.
+  **`42ae3f4` D-55 toasts + A2** · `94865bc` docs · **`d0a8a66` D-34 0.10 scope (B1–B2)** ·
+  docs commit after it.
+- Evidence at `d0a8a66`: build 0 errors / 0 warnings; tests **88/88**; mutation checks for every
+  new rule (DECISION_LOG §64–§67). No migration; no non-test database touched. Test host now
+  runs as `Production`.
 - After the D-56 diff the user gave **blanket permission for the remaining sequence**
   ("don't wait for my approval"); limits kept: no destructive command, no Proposed/Pending
   decision treated as Approved.
@@ -23,10 +25,14 @@
 - Missing 0.9 tests A5/A6/A10/A11 added; **D-55 implemented** (toasts, permission failure →
   safe local page + toast, AJAX 403, test A2) — §66.
 
-### ⛔ Next action — waiting for the user (§66 "Stopped")
-1. Approve or change the **D-34 0.10 items** (status-code pages, Error view Reference ID only,
-   Serilog TraceId, enricher check; tests B1–B2).
-2. Approve starting **0.11a HiLo demonstration** (test DB only, D-29/D-30).
+- **D-34 0.10 scope approved by the user and implemented** (status pages, Reference ID =
+  TraceId, `{TraceId}` in logs, tests B1–B2) — §67.
+
+### ⛔ Next action — waiting for the user (each a separate approval)
+1. 0.10 leftovers outside the approved scope: dev SQL logging; the `WithMachineName`/
+   `WithThreadId` enrichers listed without packages (remove them, or add the packages).
+2. Approve starting **0.11a HiLo demonstration** (test DB only, D-29/D-30); review the 0.10
+   result first, as the user asked.
 3. Then 0.11 audit (D-21–D-27 approvals), 0.12 smoke (needs approval to run against a
    non-test DB), Gate 3 report → approval → merge.
 
