@@ -78,6 +78,23 @@ public class DataLayerTests(AppFactory app)
             Assert.Contains(CseLibrary.Core.Constants.Permissions.Users.View, names);
         });
 
+    [Fact] // D-29: ids come from the HiLo sequences at AddAsync, so an audit row can carry them in the same SaveChanges
+    public Task GeneralConfig_and_Permission_ids_are_known_at_AddAsync() =>
+        app.WithServiceAsync(async sp =>
+        {
+            var uow = sp.GetRequiredService<IUnitOfWork>();
+            var config = new GeneralConfig { Key = NewKey() };
+            var permission = new Permission { Name = "Test.HiLo." + Guid.NewGuid().ToString("N")[..8], Module = "Test" };
+
+            await uow.GeneralConfigs.AddAsync(config);
+            await uow.Permissions.AddAsync(permission);
+            Assert.True(config.Id > 0 && permission.Id > 0); // before SaveChanges
+
+            await uow.SaveChangesAsync();
+            Assert.NotNull(await uow.GeneralConfigs.GetForUpdateAsync(config.Id));
+            Assert.NotNull(await uow.Permissions.GetForUpdateAsync(permission.Id));
+        });
+
     [Fact] // E2
     public Task Unit_of_work_and_identity_stores_share_one_context() =>
         app.WithServiceAsync(async sp =>

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CseLibrary.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261013142332_RecordStatusAndAuditColumns")]
-    partial class RecordStatusAndAuditColumns
+    [Migration("20261015031410_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,12 @@ namespace CseLibrary.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.HasSequence("GeneralConfigs_HiLo")
+                .IncrementsBy(10);
+
+            modelBuilder.HasSequence("Permissions_HiLo")
+                .IncrementsBy(10);
 
             modelBuilder.Entity("CseLibrary.Core.Entities.ApplicationRole", b =>
                 {
@@ -127,7 +133,9 @@ namespace CseLibrary.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
+                        .IsUnique()
+                        .HasDatabaseName("EmailIndex")
+                        .HasFilter("[NormalizedEmail] IS NOT NULL");
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
@@ -146,7 +154,7 @@ namespace CseLibrary.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "GeneralConfigs_HiLo");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -198,7 +206,7 @@ namespace CseLibrary.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "Permissions_HiLo");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

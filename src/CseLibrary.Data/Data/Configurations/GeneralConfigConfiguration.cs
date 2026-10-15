@@ -10,6 +10,7 @@ public class GeneralConfigConfiguration : IEntityTypeConfiguration<GeneralConfig
     {
         builder.ToTable("GeneralConfigs");
         builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).UseHiLo("GeneralConfigs_HiLo"); // D-29: id known at AddAsync, for same-SaveChanges audit rows
         builder.Property(c => c.Key).IsRequired().HasMaxLength(150);
         builder.Property(c => c.Value).HasMaxLength(2000);
         builder.Property(c => c.Description).HasMaxLength(500);

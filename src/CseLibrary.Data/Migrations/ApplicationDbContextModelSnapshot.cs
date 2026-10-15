@@ -22,6 +22,12 @@ namespace CseLibrary.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence("GeneralConfigs_HiLo")
+                .IncrementsBy(10);
+
+            modelBuilder.HasSequence("Permissions_HiLo")
+                .IncrementsBy(10);
+
             modelBuilder.Entity("CseLibrary.Core.Entities.ApplicationRole", b =>
                 {
                     b.Property<string>("Id")
@@ -145,7 +151,7 @@ namespace CseLibrary.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "GeneralConfigs_HiLo");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -197,7 +203,7 @@ namespace CseLibrary.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "Permissions_HiLo");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

@@ -47,7 +47,7 @@ public static class DbSeeder
 
             // A built-in permission must exist: restore the latest deleted row, or add it.
             if (rows.MaxBy(p => p.Id) is { } deleted) deleted.Status = RecordStatus.Active;
-            else db.Permissions.Add(new Permission { Name = name, DisplayName = name, Module = module });
+            else await db.Permissions.AddAsync(new Permission { Name = name, DisplayName = name, Module = module }); // async: HiLo (D-29)
         }
         await db.SaveChangesAsync();
     }
@@ -104,7 +104,7 @@ public static class DbSeeder
     {
         if (await db.GeneralConfigs.AnyAsync()) return;
 
-        db.GeneralConfigs.AddRange(
+        await db.GeneralConfigs.AddRangeAsync(
             new GeneralConfig { Key = "Site.Name", Value = "Default Template", Group = "Site" },
             new GeneralConfig { Key = "Site.SupportEmail", Value = "support@local", Group = "Site" }
         );
