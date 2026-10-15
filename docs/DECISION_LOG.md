@@ -2214,6 +2214,13 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   `DataLayerTests.GeneralConfig_and_Permission_ids_are_known_at_AddAsync`; mutation (no `UseHiLo`
   on `GeneralConfig`) fails both. Evidence: build 0/0, **94/94**. **0.11a done.**
 
+### 72. Session 22 — audit package approved (2026-10-15)
+- Proposed as one package P1–P7 with four questions; the user answered "ok" → approved as
+  recommended: **Q1** `GeneralConfig.Value` audited + rule "no secrets in `GeneralConfig`";
+  **Q2** the full D-24 event list (+ `UserDeleted`); **Q3** `EntityId` nvarchar(64); **Q4** JSON
+  `{"Prop":{"Old","New"}}`, 1,000-char truncation. Recorded under D-27 ("Audit package").
+- Implementation plan follows separately and needs its own approval (no code yet).
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
@@ -2238,7 +2245,7 @@ connection string and D-47 below are **resolved** (§29); kept as history.
 | ~~Q-S19-2 … Q-S19-17 (§53)~~ | **Answered Session 20 (§55)** — registration details (D-54), toast/forbidden-page details (D-55), deleted users in list + email reuse (D-53/D-52), anonymous error pages |
 | ~~D-53 implementation (§53)~~ | **Resolved Session 20 (§55): implemented `8550c00`** |
 | ~~D-37 cleanup~~ | **Closed Session 20 (§55):** target `CseLibrary` does not exist on `.\SQLEXPRESS`; nothing to delete |
-| D-21/24/25/27 details | Audit schema, event list, bulk-write rule, consistency table — Proposed |
+| ~~D-21/24/25/27 details~~ | **Resolved Session 22 (§72):** audit package P1–P7 approved (Q1–Q4 as recommended) |
 | D-47 naming (M9) | `LibraryManagement.*` vs Approved `CseLibrary.*`; blocks 0.3 (Q-M9-9) |
 | ~~D-45 outstanding-loan rule (M9)~~ | Superseded by D-48 (M10) — conflict resolved as configuration; no request workflow |
 | D-48 borrowing policy (M10–M12) | Wholly Proposed; reviewed before the Lending phase, not now. Architecture, settings, constraints, defaults/overrides, activation, permission holder (conflict with archive roles table), due-date edit (would amend FR-06), category change (Q-M10-1, -2, -4..-9); P17 mechanism; member status on the member row (Phase 2); values Pending user/department (Q-M10-3); lost/cancelled counting Q-M9-3; lowering limit Q-M9-5; explicit `ReadCommitted` in D-14 (optional at 0.8) |

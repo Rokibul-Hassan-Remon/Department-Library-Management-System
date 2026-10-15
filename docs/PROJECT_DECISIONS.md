@@ -933,7 +933,7 @@ Application/error logs (Serilog, structured, correlation ID, redaction), **audit
 (who/when/what changed), and **business history** (e.g. `LendingTransactions`) are distinct.
 Application logs never replace business records. **Source:** M2 Standards §4.
 
-### D-21 Central `AuditLogs` via EF Core `SaveChangesInterceptor` — Approved
+### D-21 Central `AuditLogs` via EF Core `SaveChangesInterceptor` — Approved; schema and change-data policy **Approved Session 22** (see "Audit package" below D-27)
 One indexed central table, written by a `SaveChangesInterceptor` in the **same SaveChanges**
 as the business change (atomic). Audit Books, BookCopies, Members, LendingTransactions and other
 relevant application entities. **Source:** M3 item 2, M2 Standards §5.
@@ -967,7 +967,7 @@ secrets. **Explicit opt-in** (default = not audited):
 Supersedes the earlier `[AuditIgnore]` name-check proposal. Member email/phone changes are
 audited (accountability); audit access restricted to Admin.
 
-### D-24 Explicit security audit events — Approved (principle); list and policy Proposed
+### D-24 Explicit security audit events — Approved (principle); list and policy **Approved Session 22** (see "Audit package" below D-27)
 Interceptor alone does not capture security events (M3 item 3). Proposed `ISecurityAuditService`
 writing `Category = Security` rows:
 - `LoginSucceeded`, `LoginFailed`, `LockedOut`, `Logout` — written independently, best-effort
@@ -977,7 +977,7 @@ writing `Category = Security` rows:
   `UserRolesChanged`, `PasswordChanged`, `PasswordResetByAdmin`, `RoleCreated/Updated/Deleted`,
   `RolePermissionsChanged` — written in the **same UoW transaction** as the change.
 
-### D-25 Interceptor limitations — Approved as documented constraint
+### D-25 Interceptor limitations — Approved as documented constraint; no-bulk/raw-write rule **Approved Session 22**
 The interceptor only sees change-tracked `SaveChanges`. It does **not** see `ExecuteUpdate`/
 `ExecuteDelete`, raw SQL writes, direct DB edits, or migration data seeding. Rule (Proposed):
 no bulk/raw writes on `IAuditable` entities; if ever required, the service writes explicit audit
@@ -989,7 +989,7 @@ requirement (own schema, query pattern, retention, or volume — e.g. copy-condi
 report). Such history is written explicitly by the service in the **same SaveChanges**.
 `LendingTransactions` remain the authoritative business history. **Source:** M3 item 4.
 
-### D-27 Consistency policy — Proposed
+### D-27 Consistency policy — **Approved Session 22** (unchanged table)
 | Record | Same transaction as the business change? |
 |---|---|
 | Entity audit (interceptor) | Yes — same SaveChanges |
@@ -997,6 +997,36 @@ report). Such history is written explicitly by the service in the **same SaveCha
 | Login security events | No — independent, best-effort |
 | Future entity history / email outbox | Yes |
 | Serilog application logs | No — best-effort, outside |
+
+**Audit package — Approved Session 22 (2026-10-15, DECISION_LOG §72)**, details for D-21 – D-27
+(implementation plan needs its own approval):
+- **P1 `AuditLogs` (D-21):** `Id` bigint IDENTITY (nothing references it in the same save, so no
+  HiLo); `Category` tinyint (1 Entity, 2 Security); `EntityType` nvarchar(100); `EntityId`
+  **nvarchar(64)** (int entity ids and string user ids, Q4); `Action` nvarchar(50);
+  `ActorUserId` nvarchar(450) NULL (NULL = system); `OccurredAtUtc` datetime2 (`TimeProvider`);
+  `CorrelationId` nvarchar(64) NULL (request TraceId = the D-34 Reference ID); `Changes`
+  nvarchar(max) JSON. Indexes (EntityType, EntityId, OccurredAtUtc), (ActorUserId,
+  OccurredAtUtc), (CorrelationId). Append-only: no soft delete, not a `BaseEntity`. New
+  migration after the D-30 baseline. `ICurrentUser` and `TimeProvider` already exist (D-50/D-51).
+- **P2 change data (D-21):** Created = every `.Audited()` value; Updated = only changed
+  `.Audited()` properties old→new; Deleted = the soft delete (Status → Deleted), key + audited
+  snapshot; strings truncated to 1,000 characters; JSON `{"Prop":{"Old":…,"New":…}}`.
+- **P3 scope (D-22, D-23):** Phase 0 `IAuditable` = `GeneralConfig`, `Permission`. Audited:
+  `Key`, `Value`, `Description`, `Group`, `Name`, `DisplayName`, `Module`, `Status`. NotAudited:
+  `Id` (it is `EntityId`), `CreatedAt/By`, `UpdatedAt/By` (duplicate the audit row). **Q1:**
+  `GeneralConfig.Value` is audited; **rule: secrets are never stored in `GeneralConfig`** —
+  they belong in user-secrets / environment variables (D-40).
+- **P4 security events (D-24), Q2 = full list:** same transaction as the change —
+  `UserCreated`, `UserUpdated` (changed field names only), `UserActivated`/`UserDeactivated`,
+  **`UserDeleted`** (D-53, new), `UserRolesChanged` (added/removed names), `PasswordResetByAdmin`,
+  `PasswordChanged` (self-service), `RoleCreated`/`RoleUpdated`/`RoleDeleted`,
+  `RolePermissionsChanged` (added/removed). Independent, best-effort (failure → Serilog only,
+  login unaffected): `LoginSucceeded`, `LoginFailed` (known user), `LockedOut`, `Logout`;
+  unknown-email attempts → Serilog only. Never passwords, hashes or tokens.
+- **P5 (D-25):** no `ExecuteUpdate`/`ExecuteDelete`/raw SQL writes on `IAuditable` tables;
+  enforced by an architecture test (the `UnitOfWork` `sp_getapplock` call writes nothing).
+- **P6 (D-27):** the table above, unchanged.
+- **P7 not in Phase 0:** audit viewing UI (later, Admin-only); retention/purge (D-28 Pending).
 
 ### D-28 Audit retention/archival — Pending (later phase)
 No purge until a retention policy, backup/restore and archive-integrity procedure exist. Expected

@@ -39,9 +39,8 @@
 ### ⛔ Next action — waiting for the user (each a separate approval)
 1. ~~D-29/D-30~~ **Approved and implemented `88f8a46`** (§71); **0.11a done**.
 2. ~~Vulnerable package~~ **fixed `4b0fb10`** (§70).
-3. **0.11 audit:** needs approval of the Proposed parts of D-21 (schema, change-data policy),
-   D-24 (event list), D-25 (no bulk/raw writes rule), D-27 (consistency table). Propose them as
-   one package; no code before approval.
+3. **0.11 audit:** package P1–P7 **approved** (§72, recorded under D-27 "Audit package"). Next:
+   propose the implementation plan; no code before its approval.
 4. Then 0.12 smoke (needs approval to run against a non-test DB), Gate 3 report → approval →
    merge.
 
