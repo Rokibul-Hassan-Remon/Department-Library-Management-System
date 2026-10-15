@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Xml.Linq;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Data.Data;
+using CseLibrary.Data.Data.Configurations;
 using CseLibrary.Services.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +50,54 @@ public class ArchitectureTests
         var unguarded = actions.Where(a => !anonymous.Contains(a) && !authenticatedOnly.Contains(a.Name)
                                            && !a.Method.IsDefined(typeof(CseLibrary.Web.Authorization.HasPermissionAttribute)));
         Assert.Empty(unguarded.Select(a => a.Name));
+    }
+
+    [Fact] // C6 (D-23): every property of an auditable entity is classified; nothing secret-like is audited
+    public void Every_property_of_an_auditable_entity_is_classified_and_no_secret_is_audited()
+    {
+        var properties = AuditableTypes().SelectMany(t => t.GetProperties()).ToList();
+        Assert.NotEmpty(properties);
+        Assert.Empty(properties.Where(p => p.FindAnnotation(AuditClassification.Annotation) is null)
+            .Select(p => $"{p.DeclaringType.ClrType.Name}.{p.Name}"));
+
+        string[] secretLike = ["Password", "Hash", "Token", "Secret", "Stamp", "Credential"];
+        Assert.Empty(properties.Where(p => AuditClassification.IsAudited(p)
+                                           && secretLike.Any(s => p.Name.Contains(s, StringComparison.OrdinalIgnoreCase))).Select(p => p.Name));
+    }
+
+    [Fact] // C7 (D-22): the allowlist is explicit; no Identity entity (or the role-permission join) is auditable
+    public void Only_the_allowlisted_entities_are_auditable()
+    {
+        var auditable = AuditableTypes().Select(t => t.ClrType).ToList();
+        Assert.Equal(["GeneralConfig", "Permission"], auditable.Select(t => t.Name).Order());
+        Assert.DoesNotContain(auditable, t => t.Namespace!.StartsWith("Microsoft.AspNetCore.Identity")
+                                              || t == typeof(Core.Entities.ApplicationUser) || t == typeof(Core.Entities.ApplicationRole)
+                                              || t == typeof(Core.Entities.RolePermission));
+    }
+
+    [Fact] // P5 (D-25): no bulk or raw SQL writes, which the audit interceptor cannot see; the admin guard lock writes nothing
+    public void No_bulk_or_raw_sql_writes()
+    {
+        string[] banned = ["ExecuteUpdate", "ExecuteDelete", "ExecuteSql"];
+        var sep = Path.DirectorySeparatorChar;
+        var files = new[] { "CseLibrary.Data", "CseLibrary.Services", "CseLibrary.Web" }
+            .SelectMany(p => Directory.GetFiles(Path.Combine(RepoRoot, "src", p), "*.cs", SearchOption.AllDirectories))
+            .Where(f => !f.Contains($"{sep}obj{sep}") && !f.Contains($"{sep}bin{sep}") && !f.Contains($"{sep}Migrations{sep}"))
+            .ToList();
+
+        Assert.Empty(files.Where(f => Path.GetFileName(f) != "UnitOfWork.cs" && banned.Any(File.ReadAllText(f).Contains)).Select(Path.GetFileName));
+        var unitOfWork = File.ReadAllText(files.Single(f => Path.GetFileName(f) == "UnitOfWork.cs"));
+        Assert.Equal(1, unitOfWork.Split("ExecuteSql").Length - 1); // sp_getapplock only
+        Assert.DoesNotContain("ExecuteUpdate", unitOfWork);
+        Assert.DoesNotContain("ExecuteDelete", unitOfWork);
+    }
+
+    private static IEnumerable<Microsoft.EntityFrameworkCore.Metadata.IEntityType> AuditableTypes()
+    {
+        // Builds the model only; no connection is opened.
+        using var db = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlServer(@"Server=(localdb)\MSSQLLocalDB;Database=CseLibrary_Test_model_only").Options);
+        return db.Model.GetEntityTypes().Where(t => typeof(IAuditable).IsAssignableFrom(t.ClrType)).ToList();
     }
 
     [Fact] // E1: assemblies actually referenced, not namespaces (UserManager lives in Microsoft.Extensions.Identity.Core)

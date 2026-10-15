@@ -20,7 +20,7 @@ public class StartupAndGuardTests(AppFactory app)
             var db = sp.GetRequiredService<ApplicationDbContext>();
             Assert.Equal(app.Database.Name, new SqlConnectionStringBuilder(db.Database.GetConnectionString()).InitialCatalog);
             Assert.Equal(db.Database.GetMigrations(), await db.Database.GetAppliedMigrationsAsync());
-            Assert.EndsWith("_InitialCreate", Assert.Single(db.Database.GetMigrations())); // D-30: one regenerated baseline
+            Assert.EndsWith("_InitialCreate", db.Database.GetMigrations().First()); // D-30: the regenerated baseline comes first
             Assert.True(await db.Users.AnyAsync(u => u.Email == AppFactory.AdminEmail));
         });
 

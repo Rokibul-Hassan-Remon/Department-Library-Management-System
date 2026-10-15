@@ -21,9 +21,11 @@ public static class DependencyInjection
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<AuditColumnsInterceptor>();
+        services.AddScoped<AuditLogInterceptor>();
         services.AddDbContext<ApplicationDbContext>((sp, options) => options
             .UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure())
-            .AddInterceptors(sp.GetRequiredService<AuditColumnsInterceptor>()));
+            // Order matters: audit columns and soft delete first, then the audit rows that describe them (D-21).
+            .AddInterceptors(sp.GetRequiredService<AuditColumnsInterceptor>(), sp.GetRequiredService<AuditLogInterceptor>()));
 
         // Password and lockout values come from the "Identity" section of appsettings (D-31).
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>

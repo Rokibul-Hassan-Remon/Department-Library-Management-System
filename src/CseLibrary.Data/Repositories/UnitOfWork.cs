@@ -15,12 +15,14 @@ namespace CseLibrary.Data.Repositories;
 /// </summary>
 public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
 {
+    private AuditLogRepository? _auditLogs;
     private GeneralConfigRepository? _generalConfigs;
     private PermissionRepository? _permissions;
     private RoleReadRepository? _roles;
     private RolePermissionRepository? _rolePermissions;
     private UserReadRepository? _users;
 
+    public IAuditLogRepository AuditLogs => _auditLogs ??= new(db);
     public IGeneralConfigRepository GeneralConfigs => _generalConfigs ??= new(db);
     public IPermissionRepository Permissions => _permissions ??= new(db);
     public IRoleReadRepository Roles => _roles ??= new(db);

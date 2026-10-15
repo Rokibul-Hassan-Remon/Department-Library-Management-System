@@ -22,7 +22,7 @@ public class MigrationTests
             await using var db = new ApplicationDbContext(
                 new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(database.ConnectionString).Options);
             Assert.False(db.Database.HasPendingModelChanges());
-            Assert.Single(db.Database.GetMigrations());
+            Assert.EndsWith("_InitialCreate", db.Database.GetMigrations().First());
 
             await db.Database.MigrateAsync();
             Assert.Equal(["GeneralConfigs_HiLo:10", "Permissions_HiLo:10"],
