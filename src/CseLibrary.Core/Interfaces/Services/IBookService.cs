@@ -6,7 +6,8 @@ namespace CseLibrary.Core.Interfaces.Services;
 
 public interface IBookService
 {
-    Task<PagedResult<BookListItemDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default);
+    Task<PagedResult<BookListItemDto>> GetPageAsync(PageRequest page, string? search, int? categoryId = null, CancellationToken ct = default);
+    Task<IReadOnlyList<CategoryDto>> GetCategoriesAsync(CancellationToken ct = default);
     Task<BookDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default);
     Task<Result<int>> CreateAsync(BookFormDto dto, CancellationToken ct = default);
     Task<Result> UpdateAsync(BookFormDto dto, CancellationToken ct = default);

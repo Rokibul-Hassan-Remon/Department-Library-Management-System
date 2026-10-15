@@ -22,6 +22,19 @@ internal static class DuplicateKeyExtensions
         }
     }
 
+    /// <summary>A RowVersion mismatch (someone changed the row meanwhile) becomes <paramref name="conflict"/> instead of an HTTP 500.</summary>
+    public static async Task<TResult> OnConflict<TResult>(this Task<TResult> write, TResult conflict) where TResult : Result
+    {
+        try
+        {
+            return await write;
+        }
+        catch (ConcurrencyConflictException)
+        {
+            return conflict;
+        }
+    }
+
     public static async Task<Result> SaveAsync(this IUnitOfWork uow, CancellationToken ct)
     {
         await uow.SaveChangesAsync(ct);

@@ -2363,6 +2363,35 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - Evidence: tests 120/120 (`PortalTests` ×6); mutation — Fellow created Active → 2 tests failed,
   restored → green.
 
+### 80. Session 23 — schema aligned with the database model (M15 diagram) (2026-10-15)
+- **User finding:** the catalog used free-text authors/category although
+  `docs/diagrams/database-model.html` has `Authors`, `BookAuthors`, `Categories`. **User
+  direction:** fix it, make the project DB design match the diagram, and build features that way.
+  This approves the M15 database model as the implementation target (previously Proposed).
+- **User decision (migrations):** the three never-deployed migrations `AddCatalog`, `AddLending`,
+  `AddMemberPortal` (applied only to dropped `CseLibrary_Test_*` databases) were removed with
+  `dotnet ef migrations remove --force` and replaced by one migration **`AddLibraryCore`**
+  (additive only; `InitialCreate` and `AddAuditLog` untouched).
+- Now matching the diagram / archive §4.2: `Categories` (Name unique), `Authors`, `BookAuthors`
+  (PK BookId+AuthorId, with entry order), `Books.CategoryId`, `Title` 250, `PublicationYear`
+  smallint; `BookCopies.RowVersion` and archive `CopyStatus` values (Damaged 3, Lost 4);
+  `Members.IdentityUserId` (0..1 portal link), `Email` 254; table **`LendingTransactions`**
+  (C# `Loan`) with `IssueDateUtc`, `ReturnDateUtc`, `TransactionStatus` (Issued/Returned),
+  `IssuedByUserId` (required FK), `ReturnedByUserId`, `ReturnCondition` (Good/Damaged), CHECK
+  "Returned rows need ReturnDate", `UX_Lending_ActiveBookCopy` WHERE `TransactionStatus = 1`;
+  **`LibraryPolicies`** (MemberCategory unique, MaxActiveLoans, LoanDays, MaxRenewals) replaces
+  the `Lending.{Type}.*` GeneralConfig keys (only `Lending.ReminderDaysBefore` stays there);
+  **`EmailNotificationLogs`** (IdempotencyKey unique, Attempts, DeliveryStatus) — reminders are
+  now sent once per key and failed ones retried. All FKs NO ACTION.
+- Additions beyond the diagram (kept from earlier slices): `Members.Approval` (D-54),
+  `LendingTransactions.RenewCount`, `LibraryPolicies.MaxRenewals`. Not built (diagram marks them
+  Phase 4 or not shown): `OutboxMessages`, `Students`/`DepartmentFellows` subtype tables,
+  `CoverImagePath`.
+- UI: category filter on Books, category suggestions on the book form, Return with condition,
+  `Policies` page (GeneralConfig permissions), stale copy edit refused via RowVersion.
+- Evidence: build 0/0; tests 122/122; mutation — reminder idempotency check removed → reminder
+  test failed, restored → green.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

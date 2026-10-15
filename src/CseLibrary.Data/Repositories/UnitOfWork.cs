@@ -20,6 +20,10 @@ public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
     private BookCopyRepository? _bookCopies;
     private MemberRepository? _members;
     private LoanRepository? _loans;
+    private CategoryRepository? _categories;
+    private AuthorRepository? _authors;
+    private LibraryPolicyRepository? _libraryPolicies;
+    private EmailNotificationLogRepository? _emailNotificationLogs;
     private GeneralConfigRepository? _generalConfigs;
     private PermissionRepository? _permissions;
     private RoleReadRepository? _roles;
@@ -31,6 +35,10 @@ public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
     public IBookCopyRepository BookCopies => _bookCopies ??= new(db);
     public IMemberRepository Members => _members ??= new(db);
     public ILoanRepository Loans => _loans ??= new(db);
+    public ICategoryRepository Categories => _categories ??= new(db);
+    public IAuthorRepository Authors => _authors ??= new(db);
+    public ILibraryPolicyRepository LibraryPolicies => _libraryPolicies ??= new(db);
+    public IEmailNotificationLogRepository EmailNotificationLogs => _emailNotificationLogs ??= new(db);
     public IGeneralConfigRepository GeneralConfigs => _generalConfigs ??= new(db);
     public IPermissionRepository Permissions => _permissions ??= new(db);
     public IRoleReadRepository Roles => _roles ??= new(db);

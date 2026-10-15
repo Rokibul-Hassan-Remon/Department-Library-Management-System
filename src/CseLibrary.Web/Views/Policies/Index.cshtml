@@ -1,0 +1,26 @@
+@model IReadOnlyList<LibraryPolicyDto>
+@{ ViewData["Title"] = "Lending policies"; }
+
+<h2>Lending policies</h2>
+<p class="text-muted">Limits apply to new issues and renewals; existing loans keep their due dates.</p>
+<table class="table">
+    <thead><tr><th>Member type</th><th>Max books at once</th><th>Loan days</th><th>Max renewals</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var p in Model)
+        {
+            var f = $"policy-{p.Id}"; // inputs join the form in the last cell (a form cannot wrap table cells)
+            <tr>
+                <td class="align-middle">@p.MemberCategory</td>
+                <td><input form="@f" name="MaxActiveLoans" type="number" min="0" max="100" value="@p.MaxActiveLoans" class="form-control" /></td>
+                <td><input form="@f" name="LoanDays" type="number" min="1" max="365" value="@p.LoanDays" class="form-control" /></td>
+                <td><input form="@f" name="MaxRenewals" type="number" min="0" max="10" value="@p.MaxRenewals" class="form-control" /></td>
+                <td>
+                    <form id="@f" asp-action="Edit" method="post">
+                        <input type="hidden" name="Id" value="@p.Id" /><input type="hidden" name="MemberCategory" value="@p.MemberCategory" />
+                        <button class="btn btn-primary">Save</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

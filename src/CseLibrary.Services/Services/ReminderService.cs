@@ -1,33 +1,60 @@
 using CseLibrary.Core.Constants;
+using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CseLibrary.Services.Services;
 
-/// <summary>Reminds members of loans due in <c>Lending.ReminderDaysBefore</c> days and of overdue loans. No fines in v1.</summary>
-public class ReminderService(IUnitOfWork uow, IEmailSender email, TimeProvider time) : IReminderService
+/// <summary>
+/// Reminds members of loans due in <c>Lending.ReminderDaysBefore</c> days and of overdue loans. Each email has an
+/// idempotency key in EmailNotificationLogs, so a rerun or restart never sends it twice; a failed one is retried.
+/// </summary>
+public class ReminderService(IUnitOfWork uow, IEmailSender email, TimeProvider time, ILogger<ReminderService> logger) : IReminderService
 {
-    // ponytail: no "already sent" record; an overdue loan is reminded on every run (daily) and a restart re-sends today's batch.
-    // Add a LastRemindedOn column on Loan when real email is switched on and duplicates matter.
     public async Task<int> SendDueRemindersAsync(CancellationToken ct = default)
     {
         var today = DateOnly.FromDateTime(time.GetLocalNow().DateTime);
         var config = await uow.GeneralConfigs.GetByKeyAsync(LendingConfigKeys.ReminderDaysBefore, ct);
         var daysBefore = int.TryParse(config?.Value, out var d) && d >= 0 ? d : LendingConfigKeys.DefaultFor(LendingConfigKeys.ReminderDaysBefore);
 
-        var targets = await uow.Loans.GetReminderTargetsAsync(today.AddDays(daysBefore), today, ct);
-        foreach (var t in targets)
+        var sent = 0;
+        foreach (var t in await uow.Loans.GetReminderTargetsAsync(today.AddDays(daysBefore), today, ct))
         {
-            var overdue = t.DueDate < today;
-            await email.SendAsync(t.Email,
-                overdue ? $"Overdue: {t.BookTitle}" : $"Due on {t.DueDate:yyyy-MM-dd}: {t.BookTitle}",
-                $"Dear {t.MemberName},\n\nThe book \"{t.BookTitle}\" (copy {t.AccessionNumber}) " +
-                (overdue ? $"was due on {t.DueDate:yyyy-MM-dd}. Please return it to the CSE library as soon as possible."
-                         : $"is due on {t.DueDate:yyyy-MM-dd}. Please return or renew it by then.") +
-                "\n\nCSE Department Library", ct);
+            var type = t.DueDate < today ? EmailType.Overdue : EmailType.DueSoon;
+            var key = $"{type}:{t.LoanId}:{t.DueDate:yyyyMMdd}"; // a renewal (new due date) earns a new reminder
+            var log = await uow.EmailNotificationLogs.FindByKeyForUpdateAsync(key, ct);
+            if (log?.DeliveryStatus == DeliveryStatus.Sent) continue;
+            if (log == null)
+            {
+                log = new EmailNotificationLog { LendingTransactionId = t.LoanId, EmailType = type, Recipient = t.Email, IdempotencyKey = key };
+                await uow.EmailNotificationLogs.AddAsync(log, ct);
+            }
+
+            log.Subject = type == EmailType.Overdue ? $"Overdue: {t.BookTitle}" : $"Due on {t.DueDate:yyyy-MM-dd}: {t.BookTitle}";
+            log.Attempts++;
+            try
+            {
+                await email.SendAsync(t.Email, log.Subject,
+                    $"Dear {t.MemberName},\n\nThe book \"{t.BookTitle}\" (copy {t.AccessionNumber}) " +
+                    (type == EmailType.Overdue
+                        ? $"was due on {t.DueDate:yyyy-MM-dd}. Please return it to the CSE library as soon as possible."
+                        : $"is due on {t.DueDate:yyyy-MM-dd}. Please return or renew it by then.") +
+                    "\n\nCSE Department Library", ct);
+                log.DeliveryStatus = DeliveryStatus.Sent;
+                log.SentAtUtc = time.GetUtcNow().UtcDateTime;
+                log.LastError = null;
+                sent++;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                log.DeliveryStatus = DeliveryStatus.Failed;
+                log.LastError = ex.Message.Length > 1000 ? ex.Message[..1000] : ex.Message;
+                logger.LogWarning(ex, "Reminder {Key} failed; it is retried on the next run", key);
+            }
+            await uow.SaveChangesAsync(ct); // one row per email, so a crash mid-run loses at most one
         }
-        return targets.Count;
+        return sent;
     }
 }
 

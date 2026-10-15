@@ -1,4 +1,5 @@
 @model BookFormDto
+@inject CseLibrary.Core.Interfaces.Services.IBookService Books
 @{ var isNew = Model.Id == 0; ViewData["Title"] = isNew ? "New Book" : "Edit Book"; }
 
 <h2>@ViewData["Title"]</h2>
@@ -9,7 +10,8 @@
     <div class="mb-3"><label asp-for="Authors" class="form-label">Authors (comma separated)</label><input asp-for="Authors" class="form-control" /></div>
     <div class="row">
         <div class="col-md-6 mb-3"><label asp-for="Isbn" class="form-label">ISBN</label><input asp-for="Isbn" class="form-control" /><span asp-validation-for="Isbn" class="text-danger"></span></div>
-        <div class="col-md-6 mb-3"><label asp-for="Category" class="form-label"></label><input asp-for="Category" class="form-control" /></div>
+        <div class="col-md-6 mb-3"><label asp-for="Category" class="form-label"></label><input asp-for="Category" class="form-control" list="categories" />
+            <datalist id="categories">@foreach (var c in await Books.GetCategoriesAsync()) { <option value="@c.Name"></option> }</datalist></div>
         <div class="col-md-6 mb-3"><label asp-for="Publisher" class="form-label"></label><input asp-for="Publisher" class="form-control" /></div>
         <div class="col-md-3 mb-3"><label asp-for="Edition" class="form-label"></label><input asp-for="Edition" class="form-control" /></div>
         <div class="col-md-3 mb-3"><label asp-for="PublicationYear" class="form-label">Year</label><input asp-for="PublicationYear" class="form-control" /><span asp-validation-for="PublicationYear" class="text-danger"></span></div>

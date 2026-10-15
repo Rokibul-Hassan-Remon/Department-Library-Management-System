@@ -22,6 +22,10 @@
   self-registration (D-54: Student active at once, Dept. Fellow Pending → `Registrations.Review`
   approves/rejects), "My books" page, daily due/overdue reminders written to the log
   (`LogEmailSender`; swap for SMTP later). Build 0/0, tests **120/120**.
+- **Schema aligned with the M15 database model (§80)** on `feature/phase-1-db-alignment`:
+  Authors/BookAuthors/Categories, LendingTransactions, LibraryPolicies, EmailNotificationLogs;
+  three unapplied migrations replaced by `AddLibraryCore`. Tests **122/122**. Lending and portal
+  are merged into `develop` (`f01b4aa`).
 - **Not built yet:** real SMTP email, reports, D-54 per-type default roles (Q-S21-1), rejected
   applicant re-applying with the same email (Q-S19-7). Owed: Gate 3 reviews; merges of the
   lending and portal branches into `develop`.

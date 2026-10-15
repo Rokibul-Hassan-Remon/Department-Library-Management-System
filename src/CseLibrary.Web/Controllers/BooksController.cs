@@ -13,10 +13,12 @@ namespace CseLibrary.Web.Controllers;
 public class BooksController(IBookService service) : Controller
 {
     [HasPermission(Permissions.Books.View)]
-    public async Task<IActionResult> Index(int page = 1, string? search = null)
+    public async Task<IActionResult> Index(int page = 1, string? search = null, int? categoryId = null)
     {
         ViewData["Search"] = search;
-        return View(await service.GetPageAsync(new PageRequest(page), search));
+        ViewData["CategoryId"] = categoryId;
+        ViewData["Categories"] = await service.GetCategoriesAsync();
+        return View(await service.GetPageAsync(new PageRequest(page), search, categoryId));
     }
 
     [HasPermission(Permissions.Books.View)]

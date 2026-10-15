@@ -51,7 +51,7 @@ public class LendingTests(AppFactory app)
 
         Assert.True((await app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().ReturnAsync(loan.Id))).Succeeded);
         var returned = Assert.Single((await Member(memberId)).Loans);
-        Assert.NotNull(returned.ReturnedAtUtc); // history row kept, not deleted
+        Assert.NotNull(returned.ReturnDateUtc); // history row kept, not deleted
         Assert.True((await Issue(other.Member, copies[0])).Succeeded); // available again
     }
 
@@ -72,6 +72,21 @@ public class LendingTests(AppFactory app)
         Assert.Equal(ErrorCodes.HasOverdue, (await Issue(late.Member, late.Copies[1])).ErrorCode);
         Assert.Equal(ErrorCodes.RenewNotAllowed,
             (await app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().RenewAsync(loanId))).ErrorCode);
+    }
+
+    [Fact]
+    public async Task Damaged_return_records_who_and_how_and_retires_the_copy_from_lending()
+    {
+        var (member, memberId, copies) = await Arrange(MemberType.Student, 1);
+        Assert.True((await Issue(member, copies[0])).Succeeded);
+        var loanId = Assert.Single((await Member(memberId)).Loans).Id;
+        Assert.True((await app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().ReturnAsync(loanId, ReturnCondition.Damaged))).Succeeded);
+
+        var other = await Arrange(MemberType.Student, 0);
+        Assert.Equal(ErrorCodes.CopyUnavailable, (await Issue(other.Member, copies[0])).ErrorCode); // Damaged, not Available
+        var loan = await app.WithServiceAsync(sp => sp.GetRequiredService<IUnitOfWork>().Loans.GetForUpdateAsync(loanId));
+        Assert.Equal((LendingStatus.Returned, ReturnCondition.Damaged, TestCurrentUser.SeedAdminId, TestCurrentUser.SeedAdminId),
+            (loan!.TransactionStatus, loan.ReturnCondition, loan.IssuedByUserId, loan.ReturnedByUserId));
     }
 
     [Fact]

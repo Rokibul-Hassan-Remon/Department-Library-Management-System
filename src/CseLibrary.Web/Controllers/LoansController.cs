@@ -1,5 +1,6 @@
 using CseLibrary.Core.Constants;
 using CseLibrary.Core.DTOs;
+using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Core.Paging;
 using CseLibrary.Core.Results;
@@ -29,9 +30,9 @@ public class LoansController(ILendingService service) : Controller
     }
 
     [HttpPost, HasPermission(Permissions.Lending.Return), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Return(int id, string? returnUrl)
+    public async Task<IActionResult> Return(int id, ReturnCondition condition, string? returnUrl)
     {
-        Toast(await service.ReturnAsync(id), "Book returned.");
+        Toast(await service.ReturnAsync(id, condition), condition == ReturnCondition.Damaged ? "Book returned as damaged." : "Book returned.");
         return Back(returnUrl);
     }
 
@@ -50,4 +51,21 @@ public class LoansController(ILendingService service) : Controller
 
     private IActionResult Back(string? returnUrl) =>
         Url.IsLocalUrl(returnUrl) ? Redirect(returnUrl) : RedirectToAction(nameof(Index));
+}
+
+/// <summary>Borrowing rules per member type (LibraryPolicies). Same permissions as the general configuration.</summary>
+[Authorize]
+public class PoliciesController(ILendingService service) : Controller
+{
+    [HasPermission(Permissions.GeneralConfig.View)]
+    public async Task<IActionResult> Index() => View(await service.GetPoliciesAsync());
+
+    [HttpPost, HasPermission(Permissions.GeneralConfig.Edit), ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(LibraryPolicyDto dto)
+    {
+        var result = ModelState.IsValid ? await service.UpdatePolicyAsync(dto) : Result.Failure(ErrorCodes.InvalidState, "Values out of range.");
+        if (result.Succeeded) TempData["Success"] = $"{dto.MemberCategory} policy saved.";
+        else TempData["Error"] = result.Error;
+        return RedirectToAction(nameof(Index));
+    }
 }

@@ -17,9 +17,9 @@ else
                 <tr class="@(l.IsOverdue(today) ? "table-danger" : "")">
                     <td>@l.BookTitle</td>
                     <td>@l.AccessionNumber</td>
-                    <td>@l.IssuedAtUtc.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                    <td>@l.IssueDateUtc.ToLocalTime().ToString("yyyy-MM-dd")</td>
                     <td>@l.DueDate.ToString("yyyy-MM-dd") @(l.IsOverdue(today) ? "(overdue)" : "")</td>
-                    <td>@l.ReturnedAtUtc?.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                    <td>@l.ReturnDateUtc?.ToLocalTime().ToString("yyyy-MM-dd")</td>
                 </tr>
             }
             @if (Model.Loans.Count == 0) { <tr><td colspan="5" class="text-muted">You have not borrowed any books yet.</td></tr> }
