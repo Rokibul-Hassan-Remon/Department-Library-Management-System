@@ -2174,6 +2174,23 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   (GHSA-2fmv-rv2c-59x7) — in `CseLibrary.Web`, `CseLibrary.Data`, `CseLibrary.Tests`. A fix
   (pinning a patched version) changes package references and needs approval.
 
+### 70. Session 22 — package fix; read-only data check for D-30 (2026-10-15)
+- **Vulnerability fixed on the user's recommendation** `4b0fb10`: direct
+  `System.Security.Cryptography.Pkcs` **10.0.13** reference in `CseLibrary.Data` (first patched
+  version of both advisories for 10.x; source of 9.0.11 = `Microsoft.Data.SqlClient` 6.1.6 via
+  `Microsoft.EntityFrameworkCore.SqlServer` 10.0.12). `dotnet list package --vulnerable
+  --include-transitive`: no vulnerable packages in any project. Build 0/0, **93/93**.
+- **Audit key strategy:** the user recommends option (a) HiLo + regenerated baseline (D-29/D-30)
+  **but requires data confirmation first** → not approved yet.
+- **Read-only inspection (D-30, M5 §3 / M6 C), 2026-10-15:** connection strings
+  (`appsettings.json`, `appsettings.Development.json`) both `.\SQLEXPRESS` / `CseLibrary`;
+  user-secrets file for `UserSecretsId 23c63bb8-…` does not exist; migrations
+  `InitialCreate`, `RecordStatusAndAuditColumns`, `UniqueUserEmail`. `sys.databases` (names only,
+  `master`): **`.\SQLEXPRESS` has no user databases** (service running; neither `CseLibrary` nor
+  `DefaultTemplate` exists there now); `(localdb)\MSSQLLocalDB` has only `Practice` (not this
+  project) and no leftover `CseLibrary_Test_*`. No other server or backup was checked — the user
+  must confirm that no copy elsewhere (another machine, a backup, a deployment) holds data to keep.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
