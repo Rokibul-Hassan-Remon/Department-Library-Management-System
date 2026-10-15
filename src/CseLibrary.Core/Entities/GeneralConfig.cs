@@ -1,6 +1,8 @@
+using CseLibrary.Core.Interfaces;
+
 namespace CseLibrary.Core.Entities;
 
-public class GeneralConfig : BaseEntity
+public class GeneralConfig : BaseEntity, IAuditable
 {
     public string Key { get; set; } = string.Empty;
     public string? Value { get; set; }

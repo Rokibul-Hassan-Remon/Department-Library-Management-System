@@ -12,6 +12,7 @@ public static class DependencyInjection
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IGeneralConfigService, GeneralConfigService>();
+        services.AddScoped<ISecurityAuditService, SecurityAuditService>();
 
         return services;
     }

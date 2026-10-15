@@ -101,11 +101,62 @@ cookie part and the `UsersController` role list (0.9)._
 
 | # | Step | Requires | Main files | Done when |
 |---|---|---|---|---|
-| [ ] 0.9 | Security baseline: configurable `IdentityOptions`, lockout on, fallback policy, **class-level `[Authorize]` on every controller (FR-M9-05; inventory in D-31 M9 extension: today no controller has it, Home actions and `Account.Logout` are anonymous)**, explicit `[AllowAnonymous]` allowlist, global antiforgery, cookie settings, deactivation (`IsActive` + security stamp + `CanSignInAsync`). Database-backed permission authorization (D-37): no permission claims in the cookie, login writes nothing to `AspNetUserClaims`, handler checks `IsActive` + role membership + permissions per request with request-local cache. Cleanup of existing claim rows only after separate approval. | D-31 values + M9 approach, D-32 mechanism (Proposed); Q-M9-10; D-37 (Approved in principle) | `Web/Identity/*`, `Web/Authorization/*`, all `Controllers/*`, `Program.cs`, `appsettings.json` | Tests A1–A11 |
-| [ ] 0.10 | Error handling and logging: exception handler, status-code pages, Error view with Reference ID only, Serilog TraceId in output, verify enricher config, dev SQL logging. | D-34 | `HomeController`/`ErrorController`, `Views/Shared/Error.cshtml`, `StatusCode.cshtml`, `appsettings*.json` | Tests B1–B2 |
-| [ ] 0.11a | **HiLo demonstration (no migration change).** In a uniquely named disposable LocalDB database `CseLibrary_Test_{guid}` (D-40 guard; never the `CseLibrary` dev DB — M8 §2): HiLo id generation, audit rows carrying the new `EntityId`, rollback behavior, `EnableRetryOnFailure` compatibility. Produce the migration + `dotnet ef migrations script` diff. **Stop for approval** (D-29, D-30). | D-29 (conditional) | test project, spike migration (not applied to any non-test DB) | Demonstration tests green; diff shown; user approval recorded |
-| [ ] 0.11 | Audit: `AuditLog` entity + config + indexes, `IAuditable`, `.Audited()`/`.NotAudited()` property classification (D-23), `ICurrentUser` (Web impl), `TimeProvider`, `AuditSaveChangesInterceptor`, `ISecurityAuditService` events, key strategy per approved D-29, migration per approved D-30. | D-21–D-27, **D-29/D-30 approval from 0.11a** | `Core/Entities/AuditLog.cs`, `Core/Interfaces/*`, `Data/Interceptors/*`, `Data/Configurations/*`, `Services/Security/*`, `Web/Infrastructure/HttpCurrentUser.cs`, `Migrations/*` | Tests C1–C7 |
-| [ ] 0.12 | Manual smoke test (admin login, create/deactivate user, lockout, error page, audit row) + docs: `status.md`, `SESSION_HANDOFF.md`, `PROJECT_DECISIONS.md`, `DECISION_LOG.md`. | 0.9–0.11 | `docs/**` | Smoke results recorded; Phase 0 exit criteria met |
+| [x] 0.9 | Security baseline: configurable `IdentityOptions`, lockout on, fallback policy, **class-level `[Authorize]` on every controller (FR-M9-05; inventory in D-31 M9 extension: today no controller has it, Home actions and `Account.Logout` are anonymous)**, explicit `[AllowAnonymous]` allowlist, global antiforgery, cookie settings, deactivation (`IsActive` + security stamp + `CanSignInAsync`). Database-backed permission authorization (D-37): no permission claims in the cookie, login writes nothing to `AspNetUserClaims`, handler checks `IsActive` + role membership + permissions per request with request-local cache. Cleanup of existing claim rows only after separate approval. | D-31 values + M9 approach, D-32 mechanism (Proposed); Q-M9-10; D-37 (Approved in principle) | `Web/Identity/*`, `Web/Authorization/*`, all `Controllers/*`, `Program.cs`, `appsettings.json` | Tests A1–A11 |
+| [x] 0.10 | Error handling and logging: exception handler, status-code pages, Error view with Reference ID only, Serilog TraceId in output, verify enricher config, dev SQL logging. | D-34 | `HomeController`/`ErrorController`, `Views/Shared/Error.cshtml`, `StatusCode.cshtml`, `appsettings*.json` | Tests B1–B2 |
+| [x] 0.11a | **HiLo demonstration (no migration change).** In a uniquely named disposable LocalDB database `CseLibrary_Test_{guid}` (D-40 guard; never the `CseLibrary` dev DB — M8 §2): HiLo id generation, audit rows carrying the new `EntityId`, rollback behavior, `EnableRetryOnFailure` compatibility. Produce the migration + `dotnet ef migrations script` diff. **Stop for approval** (D-29, D-30). | D-29 (conditional) | test project, spike migration (not applied to any non-test DB) | Demonstration tests green; diff shown; user approval recorded |
+| [x] 0.11 | Audit: `AuditLog` entity + config + indexes, `IAuditable`, `.Audited()`/`.NotAudited()` property classification (D-23), `ICurrentUser` (Web impl), `TimeProvider`, `AuditSaveChangesInterceptor`, `ISecurityAuditService` events, key strategy per approved D-29, migration per approved D-30. | D-21–D-27, **D-29/D-30 approval from 0.11a** | `Core/Entities/AuditLog.cs`, `Core/Interfaces/*`, `Data/Interceptors/*`, `Data/Configurations/*`, `Services/Security/*`, `Web/Infrastructure/HttpCurrentUser.cs`, `Migrations/*` | Tests C1–C7 |
+| [x] 0.12 | **Verified (Session 23, §75–§76):** smoke passed on a disposable test DB; Gate 3 approved by the user. Manual smoke test (admin login, create/deactivate user, lockout, error page, audit row) + docs: `status.md`, `SESSION_HANDOFF.md`, `PROJECT_DECISIONS.md`, `DECISION_LOG.md`. | 0.9–0.11 | `docs/**` | Smoke results recorded; Phase 0 exit criteria met |
+
+_Session 19 notes (DECISION_LOG §52–§53):_
+- _0.9: access design (D-31 M9), password/lockout values (D-31) and D-32 mechanism Approved. D-37
+  authorization fix implemented (uncommitted; A7, A8, A9 green, 52/52); legacy `AspNetUserClaims`
+  cleanup reported, not run. D-53 (users never physically deleted) Approved as a requirement;
+  soft-delete code awaits approval (recommended in the D-32 commit). Registration (D-54) is
+  **not** built in Phase 0 — Q-S19-9._
+- _0.9/0.10: D-55 (toast notifications, no AccessDenied redirect when the page can respond)
+  changes test A2 and the AccessDenied/Error flow; timing Q-S19-14, fallback Q-S19-10._
+- _Session 20 (§55): Q-S19-2 … 17 answered. 0.10 builds the D-55 toast (Bootstrap toast +
+  existing `TempData` keys, Reference ID in error toast, safe local return else Home, AJAX
+  401/403) and updates test A2; `Error`/status-code pages anonymous. Registration stays outside
+  Phase 0. D-53: deleted users hidden from the Users list by default._
+- _Session 20 progress on 0.9 (`feature/phase-0-gate-3`, 64/64): D-37 `fab1af1`, D-53 soft
+  delete `8550c00`, D-31 baseline `215d75e` (tests A1, A5, A7, A8, A9). Still open in 0.9: D-32
+  (test A4), `UsersController` role list, Gate 3 reviews. 0.9 stays unchecked until then._
+- _Session 21 (§57): D-32 + test A4 done `c63854b` (65/65). A4 uses a test-only stamp interval
+  of 0 (shared options instance, restored) instead of advancing `TimeProvider`. Still open in
+  0.9: `UsersController` role list, Gate 3 reviews._
+- _Session 21 (§58–§63): D-56 recorded `add844a`. Added to 0.9 (implementation plan needs
+  approval first): fixed `"Admin"` constant (remove `Seed:Admin:Role`), privileged-role
+  assign/remove rule in `UserService`, last-effective-Admin guard (role removal, deactivation,
+  soft delete; concurrency-safe), `RoleService` rules (Admin-only privileged edits/deletes,
+  `Admin` role undeletable, keeps all permissions, no rename to/from `Admin`), together with the
+  `UsersController` role-list refactor. Registration itself stays outside Phase 0._
+- _Session 22 (§64): D-56 staff-side rules + `UsersController` role list done `b1bba18`
+  (`RoleAssignmentTests`, 73/73, mutation M1–M7). Reviews done (§65): menu fix `ac24fd7`,
+  D-57 `56bb5f0` (76/76). Missing access tests A5/A6/A10/A11 added `2c862e0` (§66). 0.9 done;
+  A2 lives with D-55 in 0.10._
+- _Session 22 (§66): 0.10 **D-55 part done** `42ae3f4` (toasts, permission failure → safe local
+  page + toast, AJAX 403, Reference ID toast, test A2; 86/86). 0.11a / 0.11 / 0.12 not started
+  (approvals needed)._
+- _Session 22 (§67): 0.10 **D-34 approved scope done** `d0a8a66` (status pages, Error view,
+  Reference ID = TraceId, `{TraceId}` in logs; B1–B2; 88/88; test host runs as Production).
+  Leftovers done on the user's "ok" `42d0908` (§68): dev SQL command logging, package-less
+  enrichers removed. **0.10 done** (89/89)._
+- _Session 22 (§69): 0.11a demonstration tests green `be033f9` (93/93); migration diff shown —
+  script generation refuses to drop IDENTITY in place, so D-29 needs D-30 or a table rebuild.
+  0.11a stays unchecked until the user's approval is recorded (D-29 condition 3)._
+- _Session 22 (§71): D-29/D-30 approved (option (a)); HiLo + regenerated baseline `88f8a46`
+  (94/94). **0.11a done.** Next: 0.11 audit needs D-21–D-27 approvals._
+- _Session 22 (§72–§73): audit package approved; entity audit `d8301c0` + security events
+  `3a00c50` (C1–C7, 105/105). **0.11 done.** Next: 0.12 smoke (needs approval to run the app
+  against a non-test DB)._
+- _Session 22 (§74): **0.12 target approved = option (খ), a disposable `CseLibrary_Test_*`
+  LocalDB database** (env-var connection string + seed password, dropped afterwards; the dev
+  database is not created). Not yet run — first task of Session 23, then the Gate 3 report._
+- _Session 23 (§75): **0.12 smoke run and passed** on disposable `CseLibrary_Test_1cad9ca5…`
+  (admin login, create/deactivate user, lockout, permission toast, 404 page, entity + security
+  audit rows); database dropped. 0.12 stays unchecked until the Gate 3 report confirms the
+  Phase 0 exit criteria._
 
 **⛔ Gate 3 review — stop and wait for user approval before Phase 1.**
 

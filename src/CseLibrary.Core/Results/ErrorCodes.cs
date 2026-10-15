@@ -5,4 +5,6 @@ public static class ErrorCodes
     public const string NotFound = "COMMON.NOT_FOUND";
     public const string Duplicate = "COMMON.DUPLICATE";
     public const string IdentityFailed = "IDENTITY.FAILED";
+    public const string Forbidden = "SECURITY.FORBIDDEN";
+    public const string LastAdmin = "SECURITY.LAST_ADMIN";
 }

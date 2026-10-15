@@ -1,3 +1,4 @@
+using CseLibrary.Core.Constants;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces.Repositories;
@@ -15,15 +16,29 @@ public class UserReadRepository(ApplicationDbContext db) : IUserReadRepository
 {
     public async Task<PagedResult<UserDto>> GetPageAsync(PageRequest page, CancellationToken ct = default)
     {
-        var total = await db.Users.CountAsync(ct);
+        var total = await Live.CountAsync(ct);
         page = page.ClampTo(total);
-        var items = await ToDto(db.Users.OrderBy(u => u.UserName).ThenBy(u => u.Id).Skip(page.Skip).Take(page.PageSize))
+        var items = await ToDto(Live.OrderBy(u => u.UserName).ThenBy(u => u.Id).Skip(page.Skip).Take(page.PageSize))
             .ToListAsync(ct);
         return new PagedResult<UserDto>(items, total, page.Page, page.PageSize);
     }
 
     public Task<UserDto?> GetDetailsAsync(string id, CancellationToken ct = default) =>
-        ToDto(db.Users.Where(u => u.Id == id)).FirstOrDefaultAsync(ct);
+        ToDto(Live.Where(u => u.Id == id)).FirstOrDefaultAsync(ct);
+
+    public Task<bool> IsEffectiveAdminAsync(string userId, CancellationToken ct = default) =>
+        EffectiveAdmins.AnyAsync(u => u.Id == userId, ct);
+
+    public Task<int> CountEffectiveAdminsAsync(CancellationToken ct = default) => EffectiveAdmins.CountAsync(ct);
+
+    private IQueryable<ApplicationUser> EffectiveAdmins =>
+        db.Users.Where(u => u.Status == RecordStatus.Active && (from ur in db.UserRoles
+                                                                 join r in db.Roles on ur.RoleId equals r.Id
+                                                                 where ur.UserId == u.Id && r.Name == SystemRoles.Admin
+                                                                 select ur).Any());
+
+    // Deleted users are hidden from the list and details (D-53, Q-S19-15).
+    private IQueryable<ApplicationUser> Live => db.Users.Where(u => u.Status != RecordStatus.Deleted);
 
     private IQueryable<UserDto> ToDto(IQueryable<ApplicationUser> q) =>
         q.Select(u => new UserDto

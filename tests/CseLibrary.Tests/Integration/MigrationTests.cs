@@ -6,13 +6,14 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace CseLibrary.Tests.Integration;
 
-/// <summary>D-51 data conversion on rows that exist before the migration, up and down, in its own test database.</summary>
+/// <summary>
+/// D-30 baseline, in its own test database: matches the model, migrates up and down, and carries the HiLo
+/// sequences (D-29) and the D-51 status rules that earlier migrations used to add.
+/// </summary>
 public class MigrationTests
 {
-    private const string Before = "20260508164255_InitialCreate";
-
     [Fact]
-    public async Task RecordStatus_migration_converts_existing_rows_both_ways()
+    public async Task Baseline_matches_the_model_and_migrates_up_and_down()
     {
         var database = new TestDatabase();
         TestDatabase.EnsureSafe(database.ConnectionString);
@@ -20,29 +21,23 @@ public class MigrationTests
         {
             await using var db = new ApplicationDbContext(
                 new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(database.ConnectionString).Options);
-            var migrator = db.GetService<IMigrator>();
-            await migrator.MigrateAsync(Before);
+            Assert.False(db.Database.HasPendingModelChanges());
+            Assert.EndsWith("_InitialCreate", db.Database.GetMigrations().First());
 
-            await db.Database.ExecuteSqlRawAsync("""
-                INSERT INTO GeneralConfigs ([Key], CreatedAt, IsDeleted) VALUES ('live', SYSUTCDATETIME(), 0), ('gone', SYSUTCDATETIME(), 1);
-                INSERT INTO Permissions (Name, CreatedAt, IsDeleted) VALUES ('P.Live', SYSUTCDATETIME(), 0), ('P.Gone', SYSUTCDATETIME(), 1);
-                INSERT INTO AspNetUsers (Id, CreatedAt, IsActive, EmailConfirmed, PhoneNumberConfirmed, TwoFactorEnabled, LockoutEnabled, AccessFailedCount)
-                VALUES ('on', SYSUTCDATETIME(), 1, 0, 0, 0, 0, 0), ('off', SYSUTCDATETIME(), 0, 0, 0, 0, 0, 0);
-                """);
+            await db.Database.MigrateAsync();
+            Assert.Equal(["GeneralConfigs_HiLo:10", "Permissions_HiLo:10"],
+                await Values(db, "SELECT name + ':' + CAST(increment AS varchar) AS [Value] FROM sys.sequences"));
 
-            await migrator.MigrateAsync(); // latest
-            Assert.Equal(["gone:3", "live:1"], await Pairs(db, "SELECT [Key] + ':' + CAST(Status AS varchar) AS [Value] FROM GeneralConfigs"));
-            Assert.Equal(["P.Gone:3", "P.Live:1"], await Pairs(db, "SELECT Name + ':' + CAST(Status AS varchar) AS [Value] FROM Permissions"));
-            Assert.Equal(["off:2", "on:1"], await Pairs(db, "SELECT Id + ':' + CAST(Status AS varchar) AS [Value] FROM AspNetUsers"));
             await Assert.ThrowsAnyAsync<Exception>(() => // CHECK rejects an undefined status
-                db.Database.ExecuteSqlRawAsync("UPDATE GeneralConfigs SET Status = 0 WHERE [Key] = 'live'"));
-            await db.Database.ExecuteSqlRawAsync( // filtered unique index: a deleted key can be reused
-                "INSERT INTO GeneralConfigs ([Key], CreatedAt, Status) VALUES ('gone', SYSUTCDATETIME(), 1)");
-            await db.Database.ExecuteSqlRawAsync("DELETE FROM GeneralConfigs WHERE [Key] = 'gone' AND Status = 1");
+                db.Database.ExecuteSqlRawAsync("INSERT INTO GeneralConfigs (Id, [Key], CreatedAt, Status) VALUES (-1, 'k', SYSUTCDATETIME(), 0)"));
+            await db.Database.ExecuteSqlRawAsync( // filtered unique index: a deleted key can be reused once
+                "INSERT INTO GeneralConfigs (Id, [Key], CreatedAt, Status) VALUES (-2, 'k', SYSUTCDATETIME(), 3), (-3, 'k', SYSUTCDATETIME(), 1)");
+            await Assert.ThrowsAnyAsync<Exception>(() =>
+                db.Database.ExecuteSqlRawAsync("INSERT INTO GeneralConfigs (Id, [Key], CreatedAt, Status) VALUES (-4, 'k', SYSUTCDATETIME(), 1)"));
 
-            await migrator.MigrateAsync(Before); // down
-            Assert.Equal(["gone:1", "live:0"], await Pairs(db, "SELECT [Key] + ':' + CAST(IsDeleted AS varchar) AS [Value] FROM GeneralConfigs"));
-            Assert.Equal(["off:0", "on:1"], await Pairs(db, "SELECT Id + ':' + CAST(IsActive AS varchar) AS [Value] FROM AspNetUsers"));
+            await db.GetService<IMigrator>().MigrateAsync(Migration.InitialDatabase); // down
+            Assert.Equal(["__EFMigrationsHistory"], await Values(db, "SELECT name AS [Value] FROM sys.tables"));
+            Assert.Empty(await Values(db, "SELECT name AS [Value] FROM sys.sequences"));
         }
         finally
         {
@@ -50,6 +45,6 @@ public class MigrationTests
         }
     }
 
-    private static async Task<List<string>> Pairs(ApplicationDbContext db, string sql) =>
+    private static async Task<List<string>> Values(ApplicationDbContext db, string sql) =>
         (await db.Database.SqlQueryRaw<string>(sql).ToListAsync()).Order().ToList();
 }

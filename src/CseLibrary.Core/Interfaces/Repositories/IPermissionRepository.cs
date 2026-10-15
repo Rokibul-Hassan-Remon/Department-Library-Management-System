@@ -13,6 +13,9 @@ public interface IPermissionRepository : IRepository<Permission>
     /// <summary>Those of <paramref name="ids"/> that exist and are not deleted.</summary>
     Task<IReadOnlyList<int>> GetExistingIdsAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default);
 
+    /// <summary>Permissions that are not deleted.</summary>
+    Task<int> CountAsync(CancellationToken ct = default);
+
     /// <summary>Distinct permission names over all of the user's roles, in one query; none for a user who is not Active.</summary>
     Task<IReadOnlyList<string>> GetNamesForUserAsync(string userId, CancellationToken ct = default);
 }

@@ -22,6 +22,12 @@ namespace CseLibrary.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.HasSequence("GeneralConfigs_HiLo")
+                .IncrementsBy(10);
+
+            modelBuilder.HasSequence("Permissions_HiLo")
+                .IncrementsBy(10);
+
             modelBuilder.Entity("CseLibrary.Core.Entities.ApplicationRole", b =>
                 {
                     b.Property<string>("Id")
@@ -139,45 +145,106 @@ namespace CseLibrary.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CseLibrary.Core.Entities.AuditLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ActorUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<byte>("Category")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Changes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId");
+
+                    b.HasIndex("ActorUserId", "OccurredAtUtc");
+
+                    b.HasIndex("EntityType", "EntityId", "OccurredAtUtc");
+
+                    b.ToTable("AuditLogs", (string)null);
+                });
+
             modelBuilder.Entity("CseLibrary.Core.Entities.GeneralConfig", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasAnnotation("CseLibrary:Audited", false);
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "GeneralConfigs_HiLo");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", false);
 
                     b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("CseLibrary:Audited", false);
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(500)")
+                        .HasAnnotation("CseLibrary:Audited", true);
 
                     b.Property<string>("Group")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasAnnotation("CseLibrary:Audited", true);
 
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(150)")
+                        .HasAnnotation("CseLibrary:Audited", true);
 
                     b.Property<byte>("Status")
-                        .HasColumnType("tinyint");
+                        .HasColumnType("tinyint")
+                        .HasAnnotation("CseLibrary:Audited", true);
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", false);
 
                     b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("CseLibrary:Audited", false);
 
                     b.Property<string>("Value")
                         .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(2000)")
+                        .HasAnnotation("CseLibrary:Audited", true);
 
                     b.HasKey("Id");
 
@@ -195,41 +262,51 @@ namespace CseLibrary.Data.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("int")
+                        .HasAnnotation("CseLibrary:Audited", false);
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "Permissions_HiLo");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", false);
 
                     b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("CseLibrary:Audited", false);
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(500)")
+                        .HasAnnotation("CseLibrary:Audited", true);
 
                     b.Property<string>("DisplayName")
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .HasAnnotation("CseLibrary:Audited", true);
 
                     b.Property<string>("Module")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("nvarchar(100)")
+                        .HasAnnotation("CseLibrary:Audited", true);
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasColumnType("nvarchar(150)")
+                        .HasAnnotation("CseLibrary:Audited", true);
 
                     b.Property<byte>("Status")
-                        .HasColumnType("tinyint");
+                        .HasColumnType("tinyint")
+                        .HasAnnotation("CseLibrary:Audited", true);
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", false);
 
                     b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("CseLibrary:Audited", false);
 
                     b.HasKey("Id");
 

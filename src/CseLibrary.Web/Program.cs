@@ -7,6 +7,7 @@ using CseLibrary.Web.Authorization;
 using CseLibrary.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -31,14 +32,25 @@ try
         options.AccessDeniedPath = "/Account/AccessDenied";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Events.OnRedirectToAccessDenied = AccessDeniedRedirect.HandleAsync; // D-55
     });
+    // A changed security stamp (deactivation, deletion) ends existing sessions within this interval (D-31, D-32).
+    builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+        options.ValidationInterval = TimeSpan.FromMinutes(builder.Configuration.GetValue("Security:StampValidationMinutes", 5)));
+
+    // Authenticated by default; public endpoints opt out with [AllowAnonymous] (D-31).
+    builder.Services.AddAuthorizationBuilder()
+        .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
     builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
     builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
-    builder.Services.AddControllersWithViews();
+    builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
 
     var app = builder.Build();
 
@@ -55,6 +67,7 @@ try
         app.UseExceptionHandler("/Home/Error");
         app.UseHsts();
     }
+    app.UseStatusCodePagesWithReExecute("/Home/HttpStatus/{0}"); // D-34: friendly page for bodiless 4xx/5xx
 
     app.UseHttpsRedirection();
     app.UseStaticFiles();

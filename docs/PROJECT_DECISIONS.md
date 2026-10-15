@@ -933,7 +933,7 @@ Application/error logs (Serilog, structured, correlation ID, redaction), **audit
 (who/when/what changed), and **business history** (e.g. `LendingTransactions`) are distinct.
 Application logs never replace business records. **Source:** M2 Standards §4.
 
-### D-21 Central `AuditLogs` via EF Core `SaveChangesInterceptor` — Approved
+### D-21 Central `AuditLogs` via EF Core `SaveChangesInterceptor` — Approved; schema and change-data policy **Approved Session 22** (see "Audit package" below D-27)
 One indexed central table, written by a `SaveChangesInterceptor` in the **same SaveChanges**
 as the business change (atomic). Audit Books, BookCopies, Members, LendingTransactions and other
 relevant application entities. **Source:** M3 item 2, M2 Standards §5.
@@ -967,7 +967,7 @@ secrets. **Explicit opt-in** (default = not audited):
 Supersedes the earlier `[AuditIgnore]` name-check proposal. Member email/phone changes are
 audited (accountability); audit access restricted to Admin.
 
-### D-24 Explicit security audit events — Approved (principle); list and policy Proposed
+### D-24 Explicit security audit events — Approved (principle); list and policy **Approved Session 22** (see "Audit package" below D-27)
 Interceptor alone does not capture security events (M3 item 3). Proposed `ISecurityAuditService`
 writing `Category = Security` rows:
 - `LoginSucceeded`, `LoginFailed`, `LockedOut`, `Logout` — written independently, best-effort
@@ -977,7 +977,7 @@ writing `Category = Security` rows:
   `UserRolesChanged`, `PasswordChanged`, `PasswordResetByAdmin`, `RoleCreated/Updated/Deleted`,
   `RolePermissionsChanged` — written in the **same UoW transaction** as the change.
 
-### D-25 Interceptor limitations — Approved as documented constraint
+### D-25 Interceptor limitations — Approved as documented constraint; no-bulk/raw-write rule **Approved Session 22**
 The interceptor only sees change-tracked `SaveChanges`. It does **not** see `ExecuteUpdate`/
 `ExecuteDelete`, raw SQL writes, direct DB edits, or migration data seeding. Rule (Proposed):
 no bulk/raw writes on `IAuditable` entities; if ever required, the service writes explicit audit
@@ -989,7 +989,7 @@ requirement (own schema, query pattern, retention, or volume — e.g. copy-condi
 report). Such history is written explicitly by the service in the **same SaveChanges**.
 `LendingTransactions` remain the authoritative business history. **Source:** M3 item 4.
 
-### D-27 Consistency policy — Proposed
+### D-27 Consistency policy — **Approved Session 22** (unchanged table)
 | Record | Same transaction as the business change? |
 |---|---|
 | Entity audit (interceptor) | Yes — same SaveChanges |
@@ -998,12 +998,42 @@ report). Such history is written explicitly by the service in the **same SaveCha
 | Future entity history / email outbox | Yes |
 | Serilog application logs | No — best-effort, outside |
 
+**Audit package — Approved Session 22 (2026-10-15, DECISION_LOG §72)**, details for D-21 – D-27
+(implementation plan needs its own approval):
+- **P1 `AuditLogs` (D-21):** `Id` bigint IDENTITY (nothing references it in the same save, so no
+  HiLo); `Category` tinyint (1 Entity, 2 Security); `EntityType` nvarchar(100); `EntityId`
+  **nvarchar(64)** (int entity ids and string user ids, Q4); `Action` nvarchar(50);
+  `ActorUserId` nvarchar(450) NULL (NULL = system); `OccurredAtUtc` datetime2 (`TimeProvider`);
+  `CorrelationId` nvarchar(64) NULL (request TraceId = the D-34 Reference ID); `Changes`
+  nvarchar(max) JSON. Indexes (EntityType, EntityId, OccurredAtUtc), (ActorUserId,
+  OccurredAtUtc), (CorrelationId). Append-only: no soft delete, not a `BaseEntity`. New
+  migration after the D-30 baseline. `ICurrentUser` and `TimeProvider` already exist (D-50/D-51).
+- **P2 change data (D-21):** Created = every `.Audited()` value; Updated = only changed
+  `.Audited()` properties old→new; Deleted = the soft delete (Status → Deleted), key + audited
+  snapshot; strings truncated to 1,000 characters; JSON `{"Prop":{"Old":…,"New":…}}`.
+- **P3 scope (D-22, D-23):** Phase 0 `IAuditable` = `GeneralConfig`, `Permission`. Audited:
+  `Key`, `Value`, `Description`, `Group`, `Name`, `DisplayName`, `Module`, `Status`. NotAudited:
+  `Id` (it is `EntityId`), `CreatedAt/By`, `UpdatedAt/By` (duplicate the audit row). **Q1:**
+  `GeneralConfig.Value` is audited; **rule: secrets are never stored in `GeneralConfig`** —
+  they belong in user-secrets / environment variables (D-40).
+- **P4 security events (D-24), Q2 = full list:** same transaction as the change —
+  `UserCreated`, `UserUpdated` (changed field names only), `UserActivated`/`UserDeactivated`,
+  **`UserDeleted`** (D-53, new), `UserRolesChanged` (added/removed names), `PasswordResetByAdmin`,
+  `PasswordChanged` (self-service), `RoleCreated`/`RoleUpdated`/`RoleDeleted`,
+  `RolePermissionsChanged` (added/removed). Independent, best-effort (failure → Serilog only,
+  login unaffected): `LoginSucceeded`, `LoginFailed` (known user), `LockedOut`, `Logout`;
+  unknown-email attempts → Serilog only. Never passwords, hashes or tokens.
+- **P5 (D-25):** no `ExecuteUpdate`/`ExecuteDelete`/raw SQL writes on `IAuditable` tables;
+  enforced by an architecture test (the `UnitOfWork` `sp_getapplock` call writes nothing).
+- **P6 (D-27):** the table above, unchanged.
+- **P7 not in Phase 0:** audit viewing UI (later, Admin-only); retention/purge (D-28 Pending).
+
 ### D-28 Audit retention/archival — Pending (later phase)
 No purge until a retention policy, backup/restore and archive-integrity procedure exist. Expected
 volume small (SQL Express 10 GB DB limit is ample). Later options: yearly archive table/DB keyed
 by EntityType/EntityId; DB-level `DENY UPDATE, DELETE` on `AuditLogs` (Phase 7). No partitioning.
 
-### D-29 HiLo identifiers for audited entities — **Conditionally approved as preferred candidate (M6 A4); not approved for migration changes**
+### D-29 HiLo identifiers for audited entities — **Approved for migration changes (Session 22, option (a) with D-30)**; was conditionally approved (M6 A4)
 Problem: for Added entities with SQL identity keys, `EntityId` is unknown during
 `SavingChanges`, so the audit row cannot carry it in the same SaveChanges.
 Candidate: EF Core HiLo, one sequence per `IAuditable` table, block size 10, **only** on
@@ -1023,8 +1053,14 @@ sequential GUID keys (larger keys/indexes, unreadable ids).
    `CseLibrary_Test_{guid}` under the D-40 guard — **not** the `CseLibrary` development database.
 2. Show the migration and generated SQL script diff.
 3. Obtain the user's explicit approval before applying any consequential database change.
+**Session 22 (DECISION_LOG §69):** conditions 1 and 2 met — demonstration tests green
+(`be033f9`, spike model on a disposable test DB); migration diff shown. The SQL script cannot be
+generated for the existing tables ("To change the IDENTITY property of a column, the column
+needs to be dropped and recreated"), so applying D-29 needs D-30 (regenerated baseline) or a
+table rebuild. **Condition 3 met Session 22 (DECISION_LOG §71):** the user approved option (a) — HiLo (block 10,
+`GeneralConfig` + `Permission` now; later audited entities as listed) with a regenerated baseline (D-30).
 
-### D-30 Regenerate baseline migration — Pending
+### D-30 Regenerate baseline migration — **Approved Session 22** (option (a); data confirmed by the user, read-only check DECISION_LOG §70)
 Proposed together with D-29 and the rename (D-41): regenerate `InitialCreate` instead of
 altering identity columns. Requires user confirmation that **no database created from the
 template holds data that must be kept.** The existing `DefaultTemplate` DB is never touched.
@@ -1036,18 +1072,46 @@ is explained before execution, and needs separate explicit approval.
 
 ## 4. Security and error handling
 
-### D-31 Security baseline — Approved; default values Proposed
+### D-31 Security baseline — Approved; password + lockout values and access design Approved (Session 19); other default values Proposed
 Approved (M3 item 6): secure password policy, configurable lockout, authenticated-by-default
 authorization, explicit `[AllowAnonymous]` only where required, effective deactivation,
 server-side authorization, safe error responses, security auditing. Values must be configurable
 and documented, not hard-coded.
+**Approved Session 19 (2026-10-14, DECISION_LOG §52) — password and lockout values:** password
+min length **10**, at least **one digit**; lockout after **5** failed attempts for **15 minutes**;
+`PasswordSignInAsync(..., lockoutOnFailure: true)`. Still **Proposed** (not covered by this
+approval): security-stamp validation interval, cookie settings, global antiforgery.
+**Approved Session 20 (2026-10-14, DECISION_LOG §55), after comparison with the current config:**
+security-stamp validation interval **5 min** (`Security:StampValidationMinutes`; current default
+30 min); cookie **`Secure = Always`**, `HttpOnly = true` and `SameSite = Lax` set explicitly,
+8 h sliding unchanged; global **`AutoValidateAntiforgeryToken`** (existing per-action attributes
+may stay). Code change (D-31 baseline commit) needs its own execution approval.
+**Implemented Session 20 — committed `215d75e` (DECISION_LOG §55):** all approved D-31
+values from `appsettings` (`Identity`, `Security:StampValidationMinutes`), cookie flags, global
+antiforgery, `FallbackPolicy` + class `[Authorize]`; anonymous: `Home.Index`/`Privacy`/`Error`,
+`Account.Login`/`AccessDenied` (AccessDenied until D-55). Status-code page comes with 0.10.
+**Approved Session 19 (DECISION_LOG §52) — 0.9 access design** (supersedes the Session 13
+Q-M9-10 answer "all pages authenticated except Login, AccessDenied, Error"):
+- `Home.Index` is **public** and is the CSE Library landing page, with **Login** and
+  **Registration** links in the top-right corner.
+- `Home.Privacy` stays **public** (general information page).
+- Login and Registration endpoints are reachable **anonymously**.
+- All other pages and operations require **authentication and the appropriate
+  authorization/permission checks**.
+- `FallbackPolicy` + class-level `[Authorize]` applied consistently (approach items 1–3 below);
+  explicit `[AllowAnonymous]` **only** on the intended public endpoints.
+- Public Registration **must not grant privileged roles automatically**.
+- Open (not decided by this approval): Q-S19-1 registration scope, Q-S19-2 anonymous access to
+  `Error` / status-code / `AccessDenied` (section 9).
+**Approved Session 20 (DECISION_LOG §55) — Q-S19-2:** generic error / status-code responses work
+for anonymous requests; the authorization rules of protected resources stay unchanged.
 Proposed defaults (bound from `appsettings` `Identity` section to `IdentityOptions`): password
 min length 10 + digit; lockout 5 failures / 15 min with `lockoutOnFailure: true`; security-stamp
 validation interval 5 min (`Security:StampValidationMinutes`); `FallbackPolicy` =
 authenticated user; `[AllowAnonymous]` only on Login, AccessDenied, Error, StatusCode pages;
 global `AutoValidateAntiforgeryToken`; cookie HttpOnly, `Secure=Always`, `SameSite=Lax`,
 8 h sliding.
-**M9 extension (FR-M9-05) — Proposed.** Requirement in `requirements.md`.
+**M9 extension (FR-M9-05) — Approved Session 19 (access design above; §52).** Requirement in `requirements.md`.
 Code inventory (read-only, Session 4, `DefaultTemplate/DefaultTemplate/`):
 - **No controller has a class-level `[Authorize]`; no `FallbackPolicy` is configured**
   (`Program.cs` registers only `PermissionPolicyProvider` + `PermissionAuthorizationHandler`).
@@ -1063,7 +1127,9 @@ Proposed approach (both layers; they do not conflict):
 1. **Class-level `[Authorize]` on every controller** (explicit, as M9 requires), with
    `[AllowAnonymous]` only on the allowlist: `Account.Login` (GET/POST), `Account.AccessDenied`,
    `Home.Error`, status-code page (0.10). Whether `Home.Index`/`Home.Privacy` are public is
-   Q-M9-10 (D-31 default above makes them authenticated).
+   Q-M9-10 (D-31 default above makes them authenticated). **Session 19: superseded —
+   `Home.Index`, `Home.Privacy` and Registration are public (access design above); the
+   Error/status-code/AccessDenied entries are Q-S19-2.**
 2. **`FallbackPolicy` = authenticated user** stays as the safety net for any endpoint without
    authorization metadata (e.g. a future controller that forgets step 1). Fallback applies only
    where no `[Authorize]`/`[AllowAnonymous]` exists, so it is not redundant with step 1 and does
@@ -1074,11 +1140,23 @@ Proposed approach (both layers; they do not conflict):
 4. Error/status pages show only the Reference ID (D-34; tests B1/B2).
 **Verify:** A1, A2, A4, A6–A8, A10, A11 (step 0.9), B1/B2 (step 0.10).
 
-### D-32 Effective deactivation — Approved (principle); mechanism Proposed
+### D-32 Effective deactivation — Approved (principle); mechanism Approved (Session 19)
 Set `IsActive=false` + `UpdateSecurityStampAsync` (session invalid within the validation
 interval); move the `IsActive` login check from `AccountController` into a
 `SignInManager.CanSignInAsync` override. Permission-protected actions are denied immediately via
 the per-request `IsActive` check (D-37). Verify: test A4.
+**Approved Session 19 (2026-10-14, DECISION_LOG §52):** the proposed design above — an inactive
+user cannot sign in again; deactivating a user calls `UpdateSecurityStampAsync`; existing-cookie
+validation and protected-page access are verified by automated tests (A4). This approval does
+**not** approve any other security setting (the stamp validation interval value stays D-31
+Proposed). In code the flag is `ApplicationUser.Status` (`RecordStatus.Active`/`Inactive`).
+**Session 20 (DECISION_LOG §56):** not implemented yet; the stamp interval it relies on is now
+5 min (D-31, `215d75e`). Implementation plan proposed (section 9, "Session 21 start"); execution
+approval pending.
+**Session 21 (DECISION_LOG §57): implemented `c63854b`** — `ActiveUserSignInManager`
+(`CanSignInAsync` = `Active` only, registered via `AddSignInManager`; check removed from
+`AccountController`); `UserService.UpdateAsync` calls `UpdateSecurityStampAsync` on Active →
+Inactive. Test A4 `Deactivated_user_loses_existing_sessions`; 65/65; mutation-checked.
 
 ### D-33 Permission claims via `UserClaimsPrincipalFactory` — Superseded by D-37
 Original proposal: a custom `UserClaimsPrincipalFactory` adds permission claims to the cookie at
@@ -1119,8 +1197,26 @@ Design:
 Cost: one small query per authorized request — acceptable for this application's traffic.
 **Done only when tests pass:** A4, A7, A8, A9 (grant, revoke, role change, deactivation,
 old-cookie behavior), using real SQL and the real authorization pipeline.
+**Session 19 (DECISION_LOG §53) — authorization fix implemented (uncommitted, user request):**
+handler no longer reads cookie permission claims, checks the DB every request with a
+request-local `HttpContext.Items` cache; login no longer writes `AspNetUserClaims`. Tests A7
+(revoke + legacy claim row), A8, A9 green (52/52); A4 comes with D-32. Legacy-row cleanup:
+criteria reported, **not run** (separate approval).
+**Session 20 (DECISION_LOG §55):** fix committed `fab1af1`. Cleanup target `CseLibrary` on
+`.\SQLEXPRESS` checked read-only (user-approved): **the database does not exist** — no legacy
+rows to delete, cleanup **not needed**. Test DBs are recreated per run. Re-check only if a
+pre-`fab1af1` build is ever run against a real database.
 
-### D-34 Error handling — Approved (standard); `Result` type Approved (Session 17)
+### D-34 Error handling — Approved (standard); `Result` type Approved (Session 17); step 0.10 scope Approved and implemented Session 22 (`d0a8a66`)
+**Session 22 (DECISION_LOG §67):** the user approved this 0.10 scope: friendly pages for 404 and
+other suitable HTTP errors; no "Development Mode" text; users see only the Reference ID;
+`TraceId` in the server log; no stack trace / exception details / sensitive data in production
+responses; authorization, toast and AJAX-403 behaviour unchanged. Implemented: `UseExceptionHandler`
+(outside Development, as before) + `UseStatusCodePagesWithReExecute("/Home/HttpStatus/{0}")`
+(AJAX keeps the bare status); Reference ID = request `TraceId` (W3C hex); `{TraceId}` in the
+Console and File output templates. Not in the approved scope (still open): dev SQL logging,
+and the `WithMachineName`/`WithThreadId` enrichers listed without their packages (the app
+starts, so they are silently ignored — they add nothing today).
 **Session 17 (DECISION_LOG §45):** user approved `Result { Succeeded, ErrorCode, Error }` /
 `Result<T> { Value }` with factories `Success()` / `Failure(code, safeMessage)` and `ErrorCodes`
 constants (`COMMON.NOT_FOUND`, `COMMON.DUPLICATE`, `IDENTITY.FAILED`). All four template services
@@ -1521,10 +1617,269 @@ holds duplicate emails; clean them first.
 **Source:** user, Session 18 (DECISION_LOG §50); closes the D-14 rule 3 duplicate-email gap (§48).
 **Implemented: yes — `70bad0f`, merged into `develop` `e9a0536` (Session 18, §50);** migration
 `UniqueUserEmail`, test: two users with one email → `DuplicateKeyException`.
+**Session 19 note:** the "users are hard-deleted" premise no longer holds once D-53 is implemented —
+a soft-deleted user keeps the email in the unique index (open question Q-S19-16).
+
+### D-53 User records are never physically deleted — Approved (Session 19, user requirement); implementation not approved
+- Never physically delete a row from `AspNetUsers`. Deleting a user in the application keeps the
+  row and sets `Status = Deleted` (`RecordStatus.Deleted` = 3 already exists; no schema change).
+- A deleted user cannot sign in or reach protected functionality (regardless of registration
+  type or approval state, D-54); the user's ID and historical relationships are preserved.
+- Distinct from the D-37 cleanup of legacy permission rows in `AspNetUserClaims` (no
+  `AspNetUsers` row is deleted by that cleanup).
+**Findings (read-only inspection, Session 19, DECISION_LOG §53):**
+1. `UserService.DeleteAsync` calls `UserManager.DeleteAsync` → **physical `DELETE` of the
+   `AspNetUsers` row**; Identity's cascade also removes the user's `AspNetUserRoles`,
+   `AspNetUserClaims`, `AspNetUserLogins`, `AspNetUserTokens` rows. Reached from
+   `UsersController.DeleteConfirmed` (`Users.Delete` permission). This is the only code path
+   that deletes users (seeder and tests do not).
+2. `AuditColumnsInterceptor` turns deletes into soft deletes only for `BaseEntity` (D-51);
+   `ApplicationUser` is not a `BaseEntity`, so there is no safety net today.
+3. `UserService.UpdateAsync` sets `Status = dto.IsActive ? Active : Inactive` — editing a
+   soft-deleted user would **reactivate** it; needs a guard.
+4. Sign-in: `AccountController.Login` rejects `Status != Active` (so `Deleted` is rejected);
+   permission checks require `Status = Active` (`PermissionRepository.GetNamesForUserAsync`).
+   An existing cookie still reaches authenticated-only pages until the security stamp changes →
+   delete must also call `UpdateSecurityStampAsync` (same mechanism as D-32).
+5. `UserReadRepository` lists all users with no status filter — deleted users would appear in the
+   Users list (Q-S19-15).
+6. Not in scope but same pattern: `RoleService.DeleteAsync` physically deletes roles.
+**Approved Session 20 (2026-10-14, DECISION_LOG §55):** Q-S19-15 — `Deleted` users are **hidden
+by default** in the normal Users list; an authorized admin view may show them when needed.
+Q-S19-16 — a deleted user's email **cannot be reused for now**; the D-52 unique index stays
+unchanged. The code change still needs a separate execution approval.
+**Implemented Session 20 — committed `8550c00` (DECISION_LOG §55):** `DeleteAsync` sets
+`Status = Deleted` and saves it through `UpdateSecurityStampAsync` (one write, stamp changed);
+`UpdateAsync`/`DeleteAsync`/`ResetPasswordAsync` treat a deleted user as not found;
+`UserReadRepository` hides deleted users from list + details. No admin "show deleted" view yet
+(built when needed). Test `Deleted_user_is_kept_but_locked_out_and_hidden`; 53/53; mutation check
+(hard delete restored → test fails). Limit: an old cookie on an authenticated-only page (no
+permission check) lasts until stamp validation — interval is D-31 (Proposed 5 min, default 30).
+**Proposed implementation (original text):** `DeleteAsync` sets `Status = Deleted` + stamp update
+via `UserManager.UpdateAsync` in one transaction; `UpdateAsync` refuses to change a deleted user;
+tests: row kept, sign-in refused, existing cookie denied, edit cannot resurrect.
+
+### D-54 Self-registration (Q-S19-1) — design Approved (Session 19); implementation not approved
+**Source:** user, Session 19 (DECISION_LOG §53). Recorded as a design decision; building it needs
+separate approval.
+1. **Form:** one Registration form with a radio choice **`Student`** / **`Dept. Fellow`**.
+   **Control superseded Session 21 by D-56 (Q-S21-3): a dropdown** populated from the
+   `RegistrationType` enum; the two choices themselves are unchanged.
+2. **Student:** a successful registration immediately creates an **Active** account, subject to
+   the agreed account-security rules (D-31). Choosing `Student` grants **no** privileged role or
+   permission; access follows the configured authorization policy.
+3. **Dept. Fellow:** a successful submission creates an account/application in **Pending**
+   state. A Librarian reviews it manually and **approves** or **rejects** it. `Pending` and
+   `Rejected` cannot log in. After approval the account may become `Active` and log in, provided
+   it is not `Deleted` and all other sign-in checks pass. Approval grants **no** automatic access
+   to all resources; access follows the permissions configured by the System Admin.
+4. **Retention:** user rows are never physically deleted (D-53); a `Deleted` account cannot log
+   in regardless of registration type or approval state.
+5. **Separate workflows, shared logic:** Student and Dept. Fellow registration are separate,
+   explicit workflow methods. Both reuse common internal logic where it is genuinely shared
+   (validation, identity creation, …); workflow-specific validation, status transitions and
+   approval rules stay separate so future Dept. Fellow rules can change without affecting Student
+   registration. **No Dept. Fellow special rules are invented now** — discussed later.
+6. Selecting a registration type never grants privileged roles or resource permissions;
+   authorization stays governed by the configured permissions (D-37).
+**Status model gap (decision required, no schema invented):** `ApplicationUser.Status` is
+`RecordStatus` {`Active`, `Inactive`, `Deleted`} — the **account** state. It cannot represent
+**registration approval** (`Pending`, `Approved`, `Rejected`), and folding those into
+`RecordStatus` would mix two meanings (e.g. a rejected fellow later deleted). Registration
+approval needs its own representation (e.g. a separate approval-state field on the user, or a
+separate registration-application record) — Q-S19-8. Sign-in (`CanSignInAsync`, D-32) must then
+require account `Active` **and** approval not `Pending`/`Rejected`.
+**Approved details Session 20 (2026-10-14, DECISION_LOG §55)** — implementation still not approved:
+- **Q-S19-3 Fields / identity:** the necessary identity and credential fields; **email
+  confirmation will be considered** (not decided yet; the exact field list is set at design time).
+- **Q-S19-4 Fellow activation:** Librarian approval makes the Fellow account **Active**, subject to
+  the other security checks.
+- **Q-S19-5 Member link:** if a `Member` record already exists, validate it and link it; **no
+  duplicate member record is created automatically**.
+- **Q-S19-6 Approvers:** a dedicated **`Registrations.Review`** permission.
+- **Q-S19-7 Resubmission:** a rejected applicant **may apply again**, but never as a duplicate
+  account or duplicate application.
+- **Q-S19-8 Approval state:** kept **separate from `RecordStatus`** (exact schema still needs a
+  design + approval).
+- **Q-S19-9 Phase:** Registration is implemented **outside Phase 0**.
+- **Q-S19-17 Student default access:** a **System Admin-configured default member role**, with no
+  privileged permission. **Refined Session 21 by D-56 (Q-S21-1):** separate Student and Fellow defaults.
+Items 1–6 above stay in force (Student → Active; Fellow → Pending → Librarian review; separate
+workflow methods with shared logic; no physical `AspNetUsers` delete, `Status = Deleted`).
+
+### D-55 UI notifications and error handling — design Approved (Session 19); implemented Session 22 (`42ae3f4`)
+**Source:** user, Session 19 (DECISION_LOG §53).
+1. **One reusable toast mechanism** for the whole application (shared component/service, not
+   per-page logic), top-right:
+   - **Success:** green, auto-dismiss ≈ 3 s, close (`×`) button.
+   - **Error:** red, auto-dismiss ≈ 5 s, close (`×`) button, safe user-friendly message only.
+   - **Warning / info:** distinct accessible styles; durations by importance (values open, Q-S19-12).
+2. **Validation:** an overall toast when useful **plus** field-level messages beside the fields;
+   important feedback never only in a temporary toast; entered data preserved where appropriate.
+3. **Authorization:** the server always rejects an operation without the permission; the user
+   sees a red toast with a generic message ("You don't have permission to perform this
+   action."), **not** a redirect to a separate AccessDenied page when the current page can handle
+   the response. Authentication-required requests still follow the login / session-expiry flow.
+   A toast never replaces server-side authentication or authorization.
+4. **Errors:** expected application errors → user-friendly notifications; unexpected errors →
+   centralized exception handling; never stack traces, DB details, connection strings or other
+   sensitive data in user-facing text; diagnostics logged server-side (D-34, Serilog); a fallback
+   response stays for cases where the original page cannot be rendered.
+5. **Consistency / accessibility:** limit simultaneous toasts; readable, accessible text; never
+   colour alone (text or icon too); consistent timers and close buttons.
+**Reconciliation with existing decisions:**
+- **D-31 access design / Q-S19-2:** public `Home.Index`/`Privacy` unaffected. `AccessDenied`
+  stops being the normal way to show a permission failure; it may remain only as the fallback
+  when there is no page to return to (e.g. a forbidden URL typed directly) — Q-S19-10.
+- **D-34:** the Error page with Reference ID only remains the fallback for unexpected errors;
+  whether an error toast also shows the Reference ID is Q-S19-11.
+- **Test A2** ("authenticated without permission → AccessDenied/403") and the existing test that
+  expects a redirect to `/Account/AccessDenied` will change when D-55 is implemented.
+- Today controllers already put messages in `TempData["Success"]` / `TempData["Error"]`; the
+  toast mechanism can render these (reuse, no new message channel needed).
+**Approved details Session 20 (2026-10-14, DECISION_LOG §55)** — built in step 0.10:
+- **Q-S19-10 No page to return to:** go back to a **safe local** return location if there is one,
+  otherwise Home, with the toast; AJAX/API requests get the appropriate **401/403**; **open
+  redirects are prevented** (local URLs only).
+- **Q-S19-11:** the error toast **shows the Reference ID**.
+- **Q-S19-12:** warning ≈ **5 s**, info ≈ **3 s**; at most **3** toasts at once; the timer
+  **pauses on hover/focus**.
+- **Q-S19-13:** verify the existing implementation first, then use **Bootstrap's toast** and the
+  **current `TempData` keys**.
+- **Q-S19-14:** implemented in **step 0.10**, together with the **test A2** update.
+
+### D-56 Registration type is a closed enum, not a role — design Approved (Session 21); staff-side rules Q-S21-4 … 15 implemented Session 22 (`b1bba18`); registration itself not built (outside Phase 0)
+**Source:** user, Session 21 (DECISION_LOG §58). Refines D-54; D-54 items 1–6 and its Session 20
+details stay in force. Registration is still built outside Phase 0 (Q-S19-9).
+1. **`RegistrationType` enum** with exactly two values: **`Student`**, **`DepartmentFellow`**
+   (UI label "Dept. Fellow"). It lives in Core with the other domain enums.
+2. **Not an authorization concept:** `RegistrationType` is only the applicant's registration
+   choice. It is never a role, claim or permission, and authorization never reads it (D-37).
+3. **Choice source:** the public Registration form's choices come from `RegistrationType` only.
+   The database role list (`IRoleService` / `RoleReadRepository`) is **never** used to populate
+   or validate the public form, so anonymous users can neither see nor submit role names such as
+   `Admin`.
+4. **Server-side enforcement:** the registration service validates the posted value with
+   `Enum.IsDefined` (model binding accepts undefined numbers such as `"7"`) and rejects anything
+   else; the form carries no role or permission field, and any extra posted field is ignored by
+   the view model. Public registration can never assign `Admin` or any other privileged role.
+5. **Workflows (from D-54):** `Student` → Student workflow → `Active` after successful
+   registration, subject to all other security checks (D-31). `DepartmentFellow` → Fellow
+   workflow → `Pending`; never `Active` until a user with **`Registrations.Review`** approves it
+   manually (Q-S19-6). Reject is the same permission. Both workflows are separate service methods
+   that share common logic (validation, identity creation); no extra Fellow verification rules
+   are invented now.
+6. **Access after activation:** only the configured member role/permissions are applied (per-type
+   default roles, Q-S19-17 → Q-S21-1); approval never grants all permissions or a privileged role.
+7. **Retention / sign-in:** no physical `AspNetUsers` delete; `Status = Deleted` users cannot sign
+   in or reach protected functionality (D-53, D-32). Sign-in also requires approval not
+   `Pending`/`Rejected` (D-54 status-model gap, Q-S19-8 schema still open).
+8. **Layering:** registration rules live in a registration service (Services layer) using
+   `IUnitOfWork`; controllers only map the form. `IRoleService` / `RoleService` /
+   `RoleReadRepository` remain the path for **staff-side** role operations (e.g. the
+   `UsersController` role list on the `Users.Create`/`Users.Edit` pages, which are not public).
+**Approved details Session 21 (2026-10-14, DECISION_LOG §59)** — implementation still not approved:
+- **Q-S21-1 Default roles:** two separate **System Admin-configured** default roles, one for
+  `Student` and one for `DepartmentFellow` (refines Q-S19-17, which named only the Student role).
+  Both must be **non-privileged**; the server validates the configuration and refuses a
+  privileged role as a registration default. The Student role is applied on successful Student
+  registration, the Fellow role only on approval (item 5).
+- **Q-S21-2 Storage:** `RegistrationType` is stored on the **registration application record**
+  (Q-S19-8). It is a business classification only — never an authorization role, claim or
+  permission.
+- **Q-S21-3 Form control:** a **dropdown** populated from the `RegistrationType` enum, with
+  server-side validation of the submitted value (item 4). Supersedes the radio in D-54 item 1.
+- **Q-S21-4 `Admin` role assignment (staff Users page):** `UserService` enforces server-side that
+  only an `Admin` user may assign or remove the `Admin` role, on create and edit. This prevents
+  privilege escalation, including self-promotion by a holder of `Users.Create`/`Users.Edit`.
+  Existing authorization checks stay unchanged (`[HasPermission(Users.*)]`, D-37 database check,
+  D-31 fallback policy); the rule is an additional check, not a replacement.
+  **Scope extended by Q-S21-8:** the rule covers every privileged role (Q-S21-5), not only `Admin`.
+**Approved details Session 21 (2026-10-14, DECISION_LOG §60)** — implementation still not approved:
+- **Q-S21-5 Privileged role:** a role is privileged if it has any permission **outside the
+  approved member-permission allowlist**. The allowlist is defined when member-portal permissions
+  are designed; until then it is empty, so every role holding at least one permission counts as
+  privileged (confirmed by Q-S21-10).
+- **Q-S21-6 Admin identification:** Admin-specific security checks use the **literal role name
+  `"Admin"`**. Conflict with the configurable seed role name resolved by Q-S21-9 (fixed constant).
+- **Q-S21-7 Last effective Admin:** the server refuses any operation that would leave no
+  effective Admin — removing a privileged role from, deactivating (D-32) or soft-deleting (D-53)
+  the last effective Admin, including the acting user themselves. The check and the write must be
+  atomic so two concurrent operations cannot each pass the check and together remove the last
+  two Admins (mechanism proposed at implementation, within the D-14 transaction rules).
+  "Effective Admin" = holds the `Admin` role and `Status = Active`, even while temporarily locked
+  out (Q-S21-11).
+- **Q-S21-8 Scope and phase:** the assignment/removal restriction of Q-S21-4 applies to **all
+  privileged roles** (Q-S21-5): only an `Admin` may assign or remove a privileged role. Built in
+  **Gate 3 (0.9)** together with the `UsersController` role-list refactor.
+**Approved details Session 21 (2026-10-14, DECISION_LOG §61)** — implementation still not approved:
+- **Q-S21-9 Fixed Admin identity (Option A):** the Admin role name is a **fixed constant**
+  (`"Admin"`) used by the seeder and every Admin-specific check. `Seed:Admin:Role`
+  (`appsettings.json`, `SeedAdminOptions.Role`) is either removed, or kept only with startup
+  validation that **fails** when its value differs from the constant. A mismatch is never
+  silently allowed. Which of the two: Q-S21-13 (**removed**).
+- **Q-S21-10 Interim classification (Option A):** until the member-permission allowlist is
+  defined, **every role with one or more permissions is privileged** (Q-S21-5). In Gate 3 a
+  non-Admin `Users.Create`/`Users.Edit` holder can therefore assign or remove only roles without
+  permissions.
+- **Q-S21-11 Lockout (Option B):** an `Admin` with `Status = Active` **counts as an effective
+  Admin even during a temporary authentication lockout** (D-31); lockout state is not part of
+  the Q-S21-7 count.
+- **Q-S21-12 `RoleService` enforcement (Option A):** in **Gate 3 (0.9)**, `RoleService` enforces
+  server-side the same rules so role management cannot bypass them: only an `Admin` may change
+  a role's permissions so that it becomes privileged (privilege escalation through permission
+  changes) or edit/delete a privileged role (Q-S21-8 scope); the **`Admin` role cannot be
+  deleted**; and no permission change may undermine the last-effective-Admin protection
+  (Q-S21-7). Existing authorization checks (`[HasPermission(Roles.*)]`, D-37, D-31) stay.
+  Exact boundaries: Q-S21-14, Q-S21-15 (answered below).
+**Approved details Session 21 (2026-10-14, DECISION_LOG §62)** — implementation still not approved:
+- **Q-S21-13 Seed setting:** `Seed:Admin:Role` is **removed** (`appsettings.json` and
+  `SeedAdminOptions.Role`); the seeder uses the fixed `"Admin"` constant (Q-S21-9). No startup
+  validation is needed because no setting remains.
+- **Q-S21-14 Admin role permissions:** the `Admin` role **always holds every permission**; any
+  change that removes a permission from it is refused server-side in `RoleService` (as
+  `DbSeeder` already restores missing ones at startup).
+- **Q-S21-15 Role renames:** `RoleService` refuses server-side both renaming the `Admin` role and
+  renaming any other role **to** `Admin`, so the fixed identity can be neither broken nor hijacked.
+Open: none from Q-S21 (section 9). **Extended Session 22 by D-57** (operations on privileged users).
+
+### D-57 Only an Admin may reset, re-email, deactivate or delete a privileged user — Approved (Session 22); implemented `56bb5f0`
+**Source:** user, Session 22 (DECISION_LOG §65), after the Gate 3 code review found that a
+non-Admin `Users.Edit` holder could reset an Admin's password and sign in as that Admin,
+bypassing D-56. Extends D-56 (Q-S21-4/8); does not replace it.
+1. **Non-Admin:** cannot reset the password of, change the email of, deactivate or soft-delete a
+   user who holds a privileged role (D-56 Q-S21-5/10: any role with ≥ 1 live permission).
+2. **Admin** (effective Admin, D-56 Q-S21-7): may do all of these; the last-effective-Admin
+   protection still applies.
+3. **Server-side:** enforced in `UserService` (`ErrorCodes.Forbidden`), not only by hiding UI.
+4. **Other users** (no privileged role): current permission rules unchanged. Editing a
+   privileged user's full name with unchanged email/status/roles stays allowed.
+5. **Existing flows must keep working** (tested): sign-in, self-service password change
+   (`/Account/ChangePassword`, not routed through `UserService`), Admin password reset.
 
 ---
 
 ## 9. Open decisions
+
+**Session 21 (2026-10-14, DECISION_LOG §58–§62) — D-56 / staff role assignment.** Q-S21-1 … 15
+answered (§59–§62, see D-56); none open:
+| Item | Question | Recommendation |
+|---|---|---|
+| ~~Q-S21-13 `Seed:Admin:Role` (Q-S21-9)~~ **Answered Session 21 (§62): removed** | Remove the setting, or keep it with startup validation that fails on a mismatch? | Remove it (one less setting; a value that must always equal a constant has no purpose) |
+| ~~Q-S21-14 Admin role permissions (Q-S21-12)~~ **Answered Session 21 (§62): `Admin` role always holds all permissions; removals refused** | Admin identity is the role **name** (Q-S21-6), so stripping permissions from the `Admin` role leaves an "effective Admin" who can do nothing. Which removals are refused: **any** permission (the `Admin` role always holds every permission, as `DbSeeder` already restores at startup), or only those needed to manage users/roles (`Users.*`, `Roles.*`)? | Any: the `Admin` role always holds all permissions; edits to its permission set are refused |
+| ~~Q-S21-15 Renaming roles (Q-S21-9, Q-S21-12)~~ **Answered Session 21 (§62): both renames refused** | `RoleService.UpdateAsync` lets a `Roles.Edit` holder rename a role. Renaming `Admin`, or renaming another role **to** `Admin`, would break or hijack the fixed identity | Refuse both server-side (follows from Q-S21-9); confirm |
+| ~~Q-S21-9 **Conflict:** literal `"Admin"` vs configurable seed role (Q-S21-6)~~ **Answered Session 21 (§61): Option A — fixed constant; setting removed or startup-validated (Q-S21-13)** | `appsettings.json` `Seed:Admin:Role` and `SeedAdminOptions.Role` let the seeded admin role be renamed. If it is set to anything but `"Admin"`, the seeded admin is not an Admin for the Q-S21-4/7/8 checks | Make `"Admin"` one Core constant used by the seeder and the checks, and remove `Seed:Admin:Role` (or fail at startup when it differs). Code/config change — needs your approval |
+| ~~Q-S21-10 Interim effect of the empty allowlist (Q-S21-5, Q-S21-8)~~ **Answered Session 21 (§61): Option A — every role with ≥ 1 permission is privileged** | Until member permissions exist, every role with any permission is privileged, so in Gate 3 only an `Admin` may assign or remove **any** role that has permissions; a non-Admin `Users.Create`/`Users.Edit` holder can only assign permission-less roles | Accept as intended (safe default); confirm |
+| ~~Q-S21-11 Locked-out Admin (Q-S21-7)~~ **Answered Session 21 (§61): Option B — `Active` Admin counts during temporary lockout** | Does an `Admin` who is temporarily locked out (D-31 lockout) still count as an effective Admin? | Yes — lockout is temporary; count `Admin` + `Active` only |
+| ~~Q-S21-12 Role-side escalation paths (Q-S21-7, Q-S21-8)~~ **Answered Session 21 (§61): Option A — enforced in `RoleService`, Gate 3 (Q-S21-14, Q-S21-15)** | The rules cover user operations. A `Roles.Edit`/`Roles.Delete` holder can still (a) add staff permissions to a role they or others already hold, making it privileged, or (b) delete/strip the `Admin` role, leaving no effective Admin | Apply the same rules in `RoleService`: only an `Admin` may edit/delete a privileged role or make a role privileged; the `Admin` role cannot be deleted or lose permissions. Gate 3 (0.9) — needs your approval |
+| ~~Q-S21-5 "Privileged role" definition (Q-S21-1)~~ **Answered Session 21 (§60): permissions outside the member allowlist (allowlist defined with the member portal)** | Which roles count as privileged when validating registration defaults? Only the `Admin` role, or any role that holds a staff permission (`Users.*`, `Roles.*`, `GeneralConfig.*`, `Registrations.Review`, …)? | Any role holding a permission outside an explicit member-permission list; the list is defined with the member portal (no member permissions exist yet) |
+| ~~Q-S21-6 Identifying `Admin` (Q-S21-4)~~ **Answered Session 21 (§60): literal `"Admin"` (conflict: Q-S21-9)** | The admin role name comes from configuration (`Seed:Admin:Role`, default `"Admin"`, `DbSeeder`), not a constant | Use the configured seed role name in both the seeder and `UserService` |
+| ~~Q-S21-7 Last Admin (Q-S21-4)~~ **Answered Session 21 (§60): protected server-side against privileged-role removal, deactivation, soft delete; concurrency-safe** | May an `Admin` remove the `Admin` role from the last remaining `Admin` (incl. themselves), or deactivate/delete that user? | Refuse it server-side (avoids locking everyone out); needs your approval as a new rule |
+| ~~Q-S21-8 Scope and timing (Q-S21-4)~~ **Answered Session 21 (§60): all privileged roles; Gate 3 (0.9) with the role-list refactor** | Restriction covers the `Admin` role only, or every privileged role (Q-S21-5)? Built in Gate 3 (0.9, with the role-list refactor) or later? | `Admin` only, as decided; Gate 3 0.9 together with the `UsersController` role list |
+| ~~Q-S21-1 Fellow member role (D-56)~~ **Answered Session 21 (§59): separate configured non-privileged roles, validated** | Q-S19-17 configures a default member role for **Students**. On approval, does a Fellow get the same configured role, or a separately configured Fellow role? | A separate System Admin setting per registration type (Fellows may later get different limits); both non-privileged |
+| ~~Q-S21-2 Store the type (D-56)~~ **Answered Session 21 (§59): on the registration application record; classification only** | Is `RegistrationType` stored? Where? | Yes, on the registration application record (Q-S19-8), so review/re-apply know the workflow; never copied into roles or claims |
+| ~~Q-S21-3 Form control (D-54/D-56)~~ **Answered Session 21 (§59): dropdown from the enum, server-validated** | D-54 says **radio** `Student` / `Dept. Fellow`; Session 21 text says **dropdown** | Radio (two options, both visible); either way the values come from the enum |
+| ~~Q-S21-4 Privileged roles on the staff Users page (0.9)~~ **Answered Session 21 (§59): option (b), enforced in `UserService`** | `UsersController` Create/Edit lists **all** DB roles, so any holder of `Users.Create`/`Users.Edit` can assign `Admin` to anyone (incl. themselves via Edit) | Decide before the Gate 3 report: (a) document `Users.Create`/`Users.Edit` as Admin-only grants, or (b) only users who are `Admin` may assign/remove the `Admin` role (server-side check in `UserService`). Recommend (b) |
 
 **Session 14 (2026-10-13, DECISION_LOG §30–§35) — open now, ask at the start of Session 15:**
 | Item | Question | Recommendation |
@@ -1536,7 +1891,29 @@ holds duplicate emails; clean them first.
 | ~~Gate 2 start~~ **Resolved Session 17 (§44): started; 0.6–0.8 committed (`51e189a`, `48a9acf`, `0d01e4e`)** | Begin steps 0.6–0.8 (incl. D-50, D-51) on `feature/phase-0-gate-2` | — |
 | ~~Gate 2 review findings (§47)~~ **Resolved Session 18 (`8cd5f53`, §48)** | Which of CR1–CR9 / P1–P3 to fix before the Gate 2 report | One correction commit: CR1, CR3, CR4, CR5, CR7, CR8, CR9, CR2 permission-lookup filter, P1–P3; CR2 cookie part → 0.9; CR6 keep |
 | ~~Gate 2 report~~ **Resolved Session 18: approved, merged `798ccbd` (§49)** | After the correction commit: D-14 per-use-case duplicate-operation assessment, docs, report; then approval + merge → `develop` (separate approvals) | — |
-| **Gate 3 start — open, ask at the start of Session 19** | Begin steps 0.9–0.12 on `feature/phase-0-gate-3` from `develop` | Includes CR2 cookie part (D-32/D-37) and the `UsersController` role list (0.9) |
+| ~~Session 22 start — Gate 3 (0.9) implementation plan (§63)~~ **Done Session 22 (§64): plan approved, implemented `b1bba18`; lock = `sp_getapplock`, codes `SECURITY.FORBIDDEN` / `SECURITY.LAST_ADMIN`** | Propose one plan for D-56 Q-S21-4 … 15 + the `UsersController` role-list refactor (`IRoleService`), with tests and mutation checks; no code before the plan is approved | Plan → "ok" → code → build/test/mutation → diff → commit "ok" (separate approvals). Then Gate 3 reviews, 0.10–0.12 |
+| **Session 23 start — 0.12 smoke, then Gate 3 report (DECISION_LOG §74)** | 0.12 runs on a **disposable `CseLibrary_Test_*` LocalDB database** (user chose option (খ)); env-var connection string + seed password only; drop it afterwards; never create or touch `.\SQLEXPRESS` / `CseLibrary` | Smoke → record results → Gate 3 report → approval → merge into `develop` `--no-ff` (separate approvals) |
+| ~~Session 21 start — D-32 execution approval (§56)~~ **Resolved Session 21 (§57): approved, implemented `c63854b`** | Implement D-32: custom `SignInManager.CanSignInAsync` (only `Active`; check moved out of `AccountController`), `UpdateSecurityStampAsync` when `UpdateAsync` turns a user `Inactive`, test A4 (stamp changes, old cookie denied on permission page and — with a test-only interval 0 — on a login-only page, re-login refused) | Done (65/65, mutation-checked). Next: `UsersController` role list, Gate 3 `/code-review` + `/ponytail-review`, 0.10 |
+| ~~Session 19 work review (§53, §54)~~ **Session 20 (§55): Q-S19-2…17 answered; still separate approvals: D-37 commit, D-37 cleanup (target DB → read-only count → rows + rollback → delete), D-53 code, D-31 stamp/cookie/antiforgery values** | Review the uncommitted D-37 fix + docs; then separately: commit, D-37 cleanup target DB + read-only count, D-53 implementation, open values below | Commit the D-37 fix first (tests 52/52) |
+| ~~Gate 3 start~~ **Resolved Session 19 (§52): started on `feature/phase-0-gate-3`** | Begin steps 0.9–0.12 on `feature/phase-0-gate-3` from `develop` | Includes CR2 cookie part (D-32/D-37) and the `UsersController` role list (0.9) |
+| ~~Q-S19-1 Registration scope (Session 19, §52)~~ **Design answered Session 19 (§53) → D-54**; details open as Q-S19-3 … Q-S19-9, Q-S19-17 | Public Registration is approved as an anonymous endpoint that grants no privileged role — but who may register (students/fellows only? institutional email?), what the account gets (no role / a member role), link to the member record, staff approval/activation, and the phase it is built in are not decided. No registration endpoint exists today | Decide before Registration is implemented; 0.9 only reserves it in the anonymous allowlist |
+| ~~Q-S19-2 Infrastructure pages (Session 19, §52; see D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | The approved access design names Login, Registration, `Home.Index`, `Home.Privacy` as public; the earlier allowlist also had `Account.AccessDenied`, `Home.Error`, status-code page (0.10) | Keep `Error` + status-code page anonymous (an anonymous visitor's error would otherwise redirect to Login); `AccessDenied` only as D-55 fallback (Q-S19-10). Needs the user's confirmation |
+| ~~D-37 cleanup (Session 19, §53)~~ **Closed Session 20 (§55): target `CseLibrary` does not exist on `.\SQLEXPRESS` — nothing to delete** | Delete legacy rows `AspNetUserClaims.ClaimType = 'Permission'` (exact, case-sensitive); other claim types kept. Which database, row count (read-only `SELECT COUNT` needs approval to run), backup table + rollback | Report given §53; **nothing deleted** until the user approves that specific operation |
+| ~~Q-S19-3 Registration fields / identity (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Required fields per type (student ID, session, designation, phone, …) and how identity is verified (institutional email domain, email confirmation — `RequireConfirmedEmail` is `false` today, staff check) | Decide before Registration is built |
+| ~~Q-S19-4 Fellow activation (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Does Librarian approval make the account `Active` directly, or is a further activation step needed (e.g. email confirmation, admin role assignment)? | Decide with Q-S19-8 |
+| ~~Q-S19-5 Member link (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | How a registered Student / approved Fellow is linked to a `Member` record (created at registration, at approval, or linked to an existing staff-entered member; matching rule) | Before the Members phase |
+| ~~Q-S19-6 Approvers (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Which Librarian role(s)/permission approve or reject Fellow applications | A dedicated permission (e.g. `Registrations.Review`) assigned by the System Admin — not approved |
+| ~~Q-S19-7 Resubmission (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Can a rejected applicant resubmit? Same account or new application; any waiting period | — |
+| ~~Q-S19-8 Approval-state model (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Represent registration approval (`Pending`/`Approved`/`Rejected`) separately from account status `RecordStatus` — field on the user vs separate application record | Separate from `RecordStatus`; exact schema needs a design + approval |
+| ~~Q-S19-9 Registration phase + tests (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Which phase implements Registration and its tests | Not Phase 0 (0.9 only allowlists the endpoint when it exists) |
+| ~~Q-S19-10 Forbidden page without a "current page" (D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | A forbidden URL opened directly (no page to return to): keep `AccessDenied` as fallback, or redirect to `Home.Index`/referrer with the red toast? Also AJAX: 401/403 status instead of a redirect | Redirect to a safe local page (referrer if local, else Home) with the toast; AJAX gets 401/403 |
+| ~~Q-S19-11 Reference ID in error toast (D-55, D-34)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Should the red toast for an unexpected error show the Reference ID? | Yes (D-34 shows only the Reference ID) |
+| ~~Q-S19-12 Toast values (D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Warning/info durations; maximum simultaneous toasts; pause on hover/focus | Warning ≈ 5 s, info ≈ 3 s, max 3, pause on hover/focus (WCAG 2.2.1) |
+| ~~Q-S19-13 Toast implementation (D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Bootstrap's built-in toast component (already shipped) + `TempData` vs a custom script | Bootstrap toast + existing `TempData["Success"/"Error"]` keys |
+| ~~Q-S19-14 Toast timing in the plan (D-55)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Built in Phase 0 (0.9 permission response, 0.10 error handling) or Phase 1 (first UI work) | 0.10, with test A2 updated |
+| ~~Q-S19-15 Deleted users in the Users list (D-53)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Hide `Deleted` users, or show them with their status (filter) | Hide by default |
+| ~~Q-S19-16 Email of a deleted user (D-52, D-53)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Unique email index still covers soft-deleted users → the same email cannot register again. Keep (email belongs to the retained record) or filter the index by `Status <> Deleted` | Keep for now |
+| ~~Q-S19-17 Student default access (D-54)~~ **Answered Session 20 (§55) — see D-31 / D-53 / D-54 / D-55** | Does a newly registered Student get a default role (configured by the System Admin) or no role until assigned? | A configurable default member role with no privileged permissions |
 | CR5 cascade part (§48) | Soft delete of a principal still hard-deletes tracked non-`BaseEntity` dependents | Decide when the first such relation is built (Phase 2/3); no current code path |
 | D-49 O1–O5 | Available count, `Issued` in `CopyStatus`, member subtypes, history name, loan id type (`database.md` §6) | Before the phase that builds the tables (Phase 2/3); recommendations in `database.md` |
 | ~~Merged branch~~ **Resolved Session 18 (§50): `gate-1` and `gate-2` deleted with `-d`** | Delete `feature/phase-0-gate-1` (merged into `develop`)? | Any time; needs the user's OK (Session 17: asked together with the Gate 2 start; the bare "ok" counted for Gate 2 only) |
@@ -1548,7 +1925,8 @@ holds duplicate emails; clean them first.
 Approved), D-07 T1 scope (`.gitattributes` + hash check), D-07 T1-EOL (LF), D-07 T4 (replaced by
 R1 recovery source), step 0.1 (authorized), D-47 / Q-M9-9 (`CseLibrary.*`), D-41 tooling, D-40
 connection string, Q-M9-8 (keep offset paging), Q-M9-10 (all pages authenticated except Login,
-AccessDenied, Error), Q-M9-11 (yes), D-14 `ReadCommitted` (deferred to Phase 3), D-16 (Approved).
+AccessDenied, Error — **Superseded Session 19 (§52): `Home.Index`, `Home.Privacy`, Registration
+public; see D-31 access design**), Q-M9-11 (yes), D-14 `ReadCommitted` (deferred to Phase 3), D-16 (Approved).
 **Still open, decided by review at their gate (no discussion round needed):** D-13 signatures,
 D-15/D-34 types (0.7), D-14 per-use-case assessment (0.8), D-31 values + D-32 (0.9), D-37 claims
 cleanup (separate data approval), D-21/24/25/27 details + D-29/D-30 (0.11). Lending-phase items
@@ -1576,10 +1954,11 @@ documentation package", which was stale after §18.)_
 | D-14 | Per-use-case ambiguous-commit assessment: risk, mechanism, tests, limitations (approach approved M8 §3; assessment presented at Gate 2) | 0.8 |
 | D-15 | Proposed details: `PageRequest`/`PagedResult<T>`, page size max 100, bounded-table exception | 0.7 |
 | D-34 | `Result`/`Result<T>` + `ErrorCode` type | 0.7 |
-| D-31 | Default security values (password, lockout, stamp interval, cookie) | 0.9 |
-| D-31 (M9) | Controller-level `[Authorize]` + `FallbackPolicy` approach; `Home.Index`/`Privacy` public or not (Q-M9-10) | 0.9 |
-| D-32 | Deactivation mechanism (`CanSignInAsync` override + stamp update) | 0.9 |
-| D-37 | Cleanup of existing permission rows in `AspNetUserClaims` (data change — separate approval) | 0.9 |
+| D-31 | Default security values: ~~password, lockout~~ (**Approved Session 19**, §52); stamp interval, cookie, global antiforgery still Proposed | 0.9 |
+| ~~D-31 (M9)~~ | **Approved Session 19 (§52):** controller-level `[Authorize]` + `FallbackPolicy`; `Home.Index`/`Privacy`/Registration public (Q-M9-10 superseded); open: Q-S19-1, Q-S19-2 | 0.9 |
+| ~~D-32~~ | **Approved Session 19 (§52):** deactivation mechanism (`CanSignInAsync` override + stamp update) | 0.9 |
+| D-37 | Cleanup of existing permission rows in `AspNetUserClaims` (data change — separate approval; deletion criteria reported Session 19 §53, not run). Authorization fix implemented Session 19 (uncommitted) | 0.9 |
+| D-53 | Soft delete of users: implementation approval (findings + proposal Session 19 §53) | 0.9 (recommended, with D-32) |
 | D-21/D-24/D-25/D-27 | Audit schema, security event list, bulk-write rule, consistency table (Proposed details) | 0.11 |
 | D-29 | HiLo: isolated demonstration + migration/script diff, then approval | 0.11 |
 | D-30 | Confirm no template-created DB holds data to keep; regenerate baseline migration (new DB only) | 0.11 |
@@ -1596,7 +1975,7 @@ documentation package", which was stale after §18.)_
 | Q-M9-7 | Listing UX: Load More button, infinite scroll or numbered pages? | Load More *(recommended)* — D-46 | Phase 1 |
 | Q-M9-8 | Keep the Users list on offset count-and-page (Approved D-15/D1) rather than keyset? | keep *(recommended)* | 0.8 |
 | Q-M9-9 | Project prefix: keep `CseLibrary.*` (D-41) or switch to `LibraryManagement.*`? | — (both valid; structure identical) — D-47 | **0.3** |
-| Q-M9-10 | Should `Home.Index` / `Home.Privacy` be public? | authenticated *(D-31 default)* | 0.9 |
+| Q-M9-10 | Should `Home.Index` / `Home.Privacy` be public? **Answered Session 19 (§52): both public** (supersedes the Session 13 answer) | authenticated *(D-31 default)* | 0.9 |
 | Q-M9-11 | Approve seeding `requirements.md` / `business-rules.md` now (before step 0.2)? | — | 0.2 |
 
 ### M10/M11 questions — borrowing policy (D-48): can wait until the Lending phase

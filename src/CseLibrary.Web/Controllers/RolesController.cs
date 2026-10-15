@@ -3,10 +3,12 @@ using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Web.Authorization;
 using CseLibrary.Web.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CseLibrary.Web.Controllers;
 
+[Authorize]
 public class RolesController : Controller
 {
     private readonly IRoleService _roleService;

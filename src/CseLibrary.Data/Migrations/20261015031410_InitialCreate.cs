@@ -11,6 +11,14 @@ namespace CseLibrary.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateSequence(
+                name: "GeneralConfigs_HiLo",
+                incrementBy: 10);
+
+            migrationBuilder.CreateSequence(
+                name: "Permissions_HiLo",
+                incrementBy: 10);
+
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
@@ -33,9 +41,9 @@ namespace CseLibrary.Data.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     FullName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Status = table.Column<byte>(type: "tinyint", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -54,48 +62,49 @@ namespace CseLibrary.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                    table.CheckConstraint("CK_AspNetUsers_Status", "[Status] IN (1, 2, 3)");
                 });
 
             migrationBuilder.CreateTable(
                 name: "GeneralConfigs",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<int>(type: "int", nullable: false),
                     Key = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     Value = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Group = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Status = table.Column<byte>(type: "tinyint", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_GeneralConfigs", x => x.Id);
+                    table.CheckConstraint("CK_GeneralConfigs_Status", "[Status] IN (1, 2, 3)");
                 });
 
             migrationBuilder.CreateTable(
                 name: "Permissions",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<int>(type: "int", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     DisplayName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Module = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Status = table.Column<byte>(type: "tinyint", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Permissions", x => x.Id);
+                    table.CheckConstraint("CK_Permissions_Status", "[Status] IN (1, 2, 3)");
                 });
 
             migrationBuilder.CreateTable(
@@ -259,7 +268,9 @@ namespace CseLibrary.Data.Migrations
             migrationBuilder.CreateIndex(
                 name: "EmailIndex",
                 table: "AspNetUsers",
-                column: "NormalizedEmail");
+                column: "NormalizedEmail",
+                unique: true,
+                filter: "[NormalizedEmail] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
@@ -272,13 +283,15 @@ namespace CseLibrary.Data.Migrations
                 name: "IX_GeneralConfigs_Key",
                 table: "GeneralConfigs",
                 column: "Key",
-                unique: true);
+                unique: true,
+                filter: "[Status] <> 3");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Permissions_Name",
                 table: "Permissions",
                 column: "Name",
-                unique: true);
+                unique: true,
+                filter: "[Status] <> 3");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RolePermissions_PermissionId",
@@ -318,6 +331,12 @@ namespace CseLibrary.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Permissions");
+
+            migrationBuilder.DropSequence(
+                name: "GeneralConfigs_HiLo");
+
+            migrationBuilder.DropSequence(
+                name: "Permissions_HiLo");
         }
     }
 }

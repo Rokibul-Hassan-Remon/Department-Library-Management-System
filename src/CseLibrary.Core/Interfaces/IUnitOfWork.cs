@@ -9,6 +9,7 @@ namespace CseLibrary.Core.Interfaces;
 /// </summary>
 public interface IUnitOfWork
 {
+    IAuditLogRepository AuditLogs { get; }
     IGeneralConfigRepository GeneralConfigs { get; }
     IPermissionRepository Permissions { get; }
     IRoleReadRepository Roles { get; }
@@ -29,4 +30,10 @@ public interface IUnitOfWork
         Func<CancellationToken, Task<TResult>> work,
         Func<CancellationToken, Task<bool>>? verifySucceeded = null,
         CancellationToken ct = default) where TResult : Result;
+
+    /// <summary>
+    /// Waits for the exclusive admin-guard lock, held until the current transaction ends, so a last-effective-Admin
+    /// check and its write cannot interleave with another (D-56 Q-S21-7). Only inside <see cref="ExecuteInTransactionAsync"/>.
+    /// </summary>
+    Task AcquireAdminGuardLockAsync(CancellationToken ct = default);
 }

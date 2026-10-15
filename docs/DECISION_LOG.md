@@ -1770,6 +1770,553 @@ filtered unique index on `NormalizedEmail` — a schema decision for the user (p
   action only (docs commit, then Gate 2, then merge, then the next commit) — each asked again.
 - Next: Gate 3 (0.9–0.12) start needs the user's explicit approval.
 
+### 52. Session 19 — Gate 3 start; 0.9 security decisions (2026-10-14)
+- Verified: Session 18 close-out already committed (`408b625`) and merged (`5bb43bc`); branch
+  deleted. User "ok" → Gate 3 started; branch `feature/phase-0-gate-3` created from `develop`.
+- Assistant presented the 0.9 plan (three commits: D-37 DB-only permissions, D-31 baseline,
+  D-32 deactivation) and four questions: D-31 values, D-31 M9 approach + Q-M9-10, D-32 mechanism,
+  D-37 claim-row cleanup. Recommendation for Q-M9-10 was "authenticated"; the user chose otherwise.
+- **User decisions (each recorded as stated, nothing else upgraded):**
+  1. **0.9 access design — Approved** (D-31 M9 extension; supersedes the Session 13 Q-M9-10
+     answer): `Home.Index` public — CSE Library landing page with Login and Registration links
+     top-right; `Home.Privacy` public; Login and Registration anonymous; everything else needs
+     authentication + the appropriate authorization/permission checks; `FallbackPolicy` +
+     class-level `[Authorize]` applied consistently, `[AllowAnonymous]` only on the intended
+     public endpoints; public Registration must not grant privileged roles automatically.
+  2. **D-31 password + lockout values — Approved:** min length 10, one digit, lockout 5 failures /
+     15 min, `lockoutOnFailure: true`. Stamp interval, cookie settings, global antiforgery stay
+     Proposed.
+  3. **D-32 mechanism — Approved:** inactive user cannot sign in again; deactivation calls
+     `UpdateSecurityStampAsync`; existing-cookie validation and protected-page access verified by
+     automated tests. Explicitly approves no other security setting.
+- Not answered: D-37 cleanup of existing `AspNetUserClaims` permission rows (still needs separate
+  approval; assistant recommends deferring — the new handler will not read them).
+- **New open questions from decision 1:** Q-S19-1 registration scope (no registration endpoint
+  exists; who may register, what the account gets, link to member record, staff activation,
+  phase — note the archive's "Student Registration" is a staff form, not self-registration);
+  Q-S19-2 whether `Error` / status-code / `AccessDenied` stay anonymous (recommended: yes for
+  `Error` + status-code page).
+- Documentation-only change (PROJECT_DECISIONS, this log, SESSION_HANDOFF); no code, Git state,
+  staging or commits changed.
+
+### 53. Session 19 — D-37 fix, user retention, registration, notifications (2026-10-14)
+User sent five requests in one message:
+1. **D-37 (both tasks).** Inspection: the only legacy claim type is `Permission`
+   (`Permissions.ClaimType`), written by the old `AccountController.AddPermissionClaimsAsync`
+   (value = permission name); no other code writes `AspNetUserClaims`. **Authorization fix
+   implemented** (user request; uncommitted): handler ignores cookie permission claims and checks
+   the DB per request (request-local cache); login writes no claims; `IPermissionService` removed
+   from `AccountController`. Tests: A9 flipped (login writes no claims), A7 flipped (revoked
+   permission denied on the next request **and** after re-login), new A7 legacy-row test (a
+   `Permission` row in `AspNetUserClaims` reaches the cookie but grants nothing), new A8 (removed
+   from role → denied next request). Build 0/0, tests 52/52. Mutation check: re-adding the
+   cookie-claim shortcut fails the legacy-row test.
+   **Cleanup — reported, not run:** criteria `ClaimType = N'Permission'` exact, case-sensitive;
+   every other claim type kept; no `AspNetUsers` row touched. Target database not chosen: the
+   `CseLibrary` dev DB on `.\SQLEXPRESS` has never been migrated by this project (Session 18
+   evidence), the user's `DefaultTemplate` DB is off-limits (CLAUDE.md), test DBs are disposable.
+   Row count needs a read-only `SELECT COUNT(*)` on the chosen DB — not run without approval.
+   Rollback: copy matching rows to a backup table inside the same transaction before the
+   `DELETE`; restore with `SET IDENTITY_INSERT` + `INSERT … SELECT`. Since the handler ignores the
+   rows, the cleanup is hygiene only (rows still ride along in the cookie until removed).
+2. **User retention → D-53 (Approved requirement).** Findings: `UserService.DeleteAsync` →
+   `UserManager.DeleteAsync` physically deletes the user (+ cascade of roles, claims, logins,
+   tokens); no interceptor safety net (`ApplicationUser` is not a `BaseEntity`); `UpdateAsync`
+   could resurrect a deleted user; deleted users would show in the Users list; existing cookie
+   needs a stamp update; `RoleService.DeleteAsync` also hard-deletes (out of scope). Code not
+   changed — user asked for findings first.
+3. **Registration design → D-54** (Q-S19-1 answered): Student → Active immediately; Dept. Fellow
+   → Pending, Librarian approves/rejects; Pending/Rejected/Deleted cannot log in; no privileged
+   roles from the registration type. Status-model gap recorded (approval ≠ `RecordStatus`,
+   Q-S19-8); open details Q-S19-3 … Q-S19-9, Q-S19-17.
+4. **Separate registration workflows with shared logic** (added to D-54 item 5): explicit
+   Student and Dept. Fellow workflow methods, shared internals reused, workflow rules separate,
+   no Fellow special rules invented now. Design decision, not implementation approval.
+5. **UI notifications and error handling → D-55.** Reconciled with D-31 access design, Q-S19-2,
+   D-34 and test A2; open Q-S19-10 … Q-S19-14. Also recorded D-52 conflict (Q-S19-16).
+- Docs updated: PROJECT_DECISIONS (D-37 note, D-52 note, D-53–D-55, section 9), this log,
+  PHASE_0_PLAN (0.9 / 0.10 notes), SESSION_HANDOFF. No database, migration, branch, staging or
+  commit change.
+
+### 54. Session 19 — close-out
+- User asked to switch sessions (conversation too long) and to record this session's decisions,
+  discussion and findings in the existing docs. SESSION_HANDOFF Session 19 block rewritten
+  (state table of uncommitted files, decisions, findings, ordered next action, lessons), this
+  log, PROJECT_DECISIONS section 9 note.
+- Nothing committed this session: the D-37 fix (3 files) and all docs are uncommitted on
+  `feature/phase-0-gate-3`; the user has not yet reviewed the §53 report. Close-out made in the
+  working tree (no close-out branch: switching branches would carry the uncommitted code and
+  was not approved).
+- Next: Session 20 starts with the review of §53, then separate approvals (D-37 commit, cleanup
+  target DB + count, D-53 implementation, open values).
+
+### 55. Session 20 — Q-S19-2 … Q-S19-17 answered (2026-10-14)
+- Verified first: branch `feature/phase-0-gate-3`, 7 files uncommitted as in §54, build 0 errors,
+  tests 52/52.
+- Assistant listed Q-S19-2 … Q-S19-17 with recommendations. **User approved (recorded as stated):**
+  - **D-54:** Q-S19-3 necessary identity + credential fields, email confirmation *to be
+    considered* (not decided); Q-S19-4 Librarian approval → Fellow `Active`, subject to other
+    security checks; Q-S19-5 validate + link an existing `Member`, no automatic duplicate;
+    Q-S19-6 dedicated `Registrations.Review` permission; Q-S19-7 rejected applicant may re-apply,
+    no duplicate account/application; Q-S19-8 approval state separate from `RecordStatus`;
+    Q-S19-9 outside Phase 0; Q-S19-17 System Admin-configured default member role, no privileged
+    permission. Earlier D-54 items (Student → Active, Fellow → Pending → Librarian review,
+    separate workflow methods, no physical `AspNetUsers` delete) confirmed.
+  - **D-55:** Q-S19-10 safe local return location else Home with toast, AJAX/API 401/403, open
+    redirect prevented; Q-S19-11 Reference ID in error toast; Q-S19-12 warning ≈ 5 s, info ≈ 3 s,
+    max 3, pause on hover/focus; Q-S19-13 verify existing code, Bootstrap toast + current
+    `TempData` keys; Q-S19-14 step 0.10 with test A2 update.
+  - **D-53/D-52:** Q-S19-15 deleted users hidden by default, visible from an authorized admin
+    view when needed; Q-S19-16 email of a deleted user not reusable for now, unique index stays.
+  - **Q-S19-2:** generic error/status responses work for anonymous requests; protected-resource
+    authorization unchanged.
+- **Explicitly not approved by this message** (each still a separate gate): D-37 commit (staged
+  list + exact message first); D-37 cleanup (confirm target DB → read-only count → affected rows
+  + rollback plan → separate delete approval); D-53 code changes (execution approval before any
+  edit); D-31 stamp interval, cookie settings, global antiforgery (show values compared with the
+  current configuration — the Session 19 approval covered only password/lockout).
+- Docs updated: PROJECT_DECISIONS (D-31, D-53, D-54, D-55, section 9), this log, PHASE_0_PLAN
+  note, SESSION_HANDOFF. No code, database, staging or commit change.
+- Then, each on its own "ok": D-37 fix committed `fab1af1` (3 files); docs committed `9234229`.
+  Local `.claude/settings.local.json` allows `git add/commit/status` (auto-mode classifier had
+  blocked the approved commit); excluded via `.git/info/exclude`.
+- **D-37 cleanup closed:** user approved target `CseLibrary` on `.\SQLEXPRESS` + read-only check.
+  `SELECT COUNT(*) FROM sys.databases WHERE name = N'CseLibrary'` → `DESKTOP-OIKPIIF\SQLEXPRESS 0`.
+  The database does not exist, so the claim count was not run and nothing needs deleting.
+- **D-53 implemented** (user "ok" to start code; commit needs its own ok): soft delete via
+  `Status = Deleted` + `UpdateSecurityStampAsync`; deleted user = not found for update/delete/reset
+  password; hidden from Users list + details. Separate commit from D-32 (smaller review). New test
+  `Deleted_user_is_kept_but_locked_out_and_hidden`; build 0/0; tests 53/53; mutation check passed.
+  Committed `8550c00` (code + docs, user "ok").
+- **D-31 remaining values Approved** (user "ok" after a current-vs-proposed table): stamp interval
+  5 min (from config), cookie `Secure = Always` + explicit `HttpOnly`/`SameSite = Lax`, 8 h sliding
+  kept, global `AutoValidateAntiforgeryToken`. Values only — D-31 baseline code not yet approved.
+- **D-31 baseline implemented** (user "ok" to start code; commit needs its own ok): Identity
+  password/lockout bound from `appsettings` `Identity`; `Security:StampValidationMinutes` = 5;
+  cookie Secure/HttpOnly/SameSite=Lax; global antiforgery; `FallbackPolicy` = authenticated;
+  class `[Authorize]` on all 6 controllers; `[AllowAnonymous]` on Home Index/Privacy/Error,
+  Account Login/AccessDenied. Assistant's defaults (user told to object if needed): no Registration
+  link or landing-page redesign yet (Registration outside Phase 0), AccessDenied stays until D-55
+  (0.10), Logout authenticated. Test passwords lengthened to 11 chars. New tests: allowlist (A1),
+  lockout (A5), password policy from config, cookie/stamp/antiforgery settings; 64/64; mutation
+  checks (lockout off, binding removed, Index not anonymous) each fail.
+  Committed `215d75e` (14 files incl. docs, user "ok").
+- Proposed next (not approved): D-32 code — custom `SignInManager.CanSignInAsync`, stamp update
+  on deactivation in `UserService.UpdateAsync`, test A4 with a test-only validation interval 0.
+
+### 56. Session 20 — close-out
+- User asked to switch sessions (conversation too long) and to record this session's decisions,
+  discussion and findings in the existing docs. Updated: SESSION_HANDOFF (Session 20 block
+  rewritten), this log, PROJECT_DECISIONS (commit hashes for D-31/D-53, D-32 note, section 9
+  "Session 21 start" row), PHASE_0_PLAN (0.9 progress note).
+- Branch `feature/phase-0-gate-3`: 4 commits on top of `develop` @ `5bb43bc` — `fab1af1` (D-37),
+  `9234229` (docs), `8550c00` (D-53), `215d75e` (D-31). Not merged; Gate 3 not reported.
+- Findings worth keeping:
+  1. The auto-mode permission classifier can block an approved `git commit`; the user granted
+     `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git status:*)` in `.claude/settings.local.json`
+     (local, excluded from Git). Other git/read commands may still be classified.
+  2. Python is not installed on this machine — edit docs with the Edit tool or `sed`.
+  3. Identity's defaults (6 chars, symbol, upper case) would hide a broken config binding if a
+     test only checks a password that fails both rule sets — test a password that only the
+     configured policy accepts (done in `Password_policy_comes_from_configuration`).
+  4. `UpdateSecurityStampAsync` saves the whole user, so setting `Status` first and calling it
+     stores both in one write (used by D-53 delete; reusable for D-32 deactivation).
+  5. The dev DB `CseLibrary` on `.\SQLEXPRESS` does not exist; the app has never run against it.
+- Close-out committed `b81dfee` (docs, user "ok commit"); handoff then updated to record it.
+
+### 57. Session 21 — D-32 implemented (2026-10-14)
+- User: "D-32-এর approval দিয়ে শুরু করতে পারবে" → taken as D-32 execution approval (code only).
+- Implemented as proposed in §56: `ActiveUserSignInManager.CanSignInAsync` (only `Active`, every
+  sign-in path; `AccountController` keeps only the null-user check, same generic error);
+  `UserService.UpdateAsync` uses `UpdateSecurityStampAsync` instead of `UpdateAsync` when an
+  Active user is deactivated (one write). Reactivation does not change the stamp.
+- Test A4 `Deactivated_user_loses_existing_sessions`: stamp changes; old cookie → redirect on
+  `/GeneralConfig` at once; with the stamp interval set to 0 (test-only, shared
+  `IOptions<SecurityStampValidatorOptions>` instance, restored in `finally`) → `/Account/Login`
+  on `/Account/ChangePassword`; re-login refused. Deviation from PHASE_0_PLAN A4 wording
+  ("advance `TimeProvider`"): interval 0 was the approved approach (§56).
+- Evidence: build 0/0; tests 65/65; mutation: no stamp update → A4 fails; no `CanSignInAsync`
+  check → A4 + `Inactive_user_cannot_log_in_and_has_no_permissions` fail.
+- Commits (each on its own user "ok"): `c63854b` code; docs commit after it.
+
+### 58. Session 21 — registration type revised (2026-10-14)
+- After the `UsersController` role-list plan (staff page, `IRoleService.GetNamesAsync`), the user
+  asked that the **public** registration choice never come from database roles: a dedicated
+  `RegistrationType` enum {`Student`, `DepartmentFellow`}, only a registration choice, never a
+  role or permission; server-side rejection of undefined values; no privileged role from public
+  registration; `Registrations.Review` for Fellow approve/reject; approval applies only the
+  configured member permissions; soft-delete rule unchanged. Recorded as **D-56** (design
+  Approved, implementation not approved); refines D-54.
+- Code review (read-only): no registration code, view or `Registrations.*` permission exists yet;
+  the only role dropdown is the staff `Users` Create/Edit page (`RoleManager.Roles` in the
+  controller, all roles incl. `Admin`). The user still accepts `IRoleService` / `RoleService` /
+  `RoleReadRepository` for role operations; that refactor is not started.
+- Finding raised as Q-S21-4: any holder of `Users.Create`/`Users.Edit` can assign `Admin`.
+- Open: Q-S21-1 … Q-S21-4 (PROJECT_DECISIONS §9). Docs only; nothing staged or committed.
+
+### 59. Session 21 — Q-S21-1 … Q-S21-4 answered (2026-10-14)
+User decisions, recorded under D-56 (implementation not approved; docs only):
+- **Q-S21-1:** separate System Admin-configured, non-privileged default roles for `Student` and
+  `DepartmentFellow`; the configuration is validated server-side so a privileged role cannot be
+  a registration default. Refines Q-S19-17 (Student only).
+- **Q-S21-2:** `RegistrationType` stored on the registration application record; a business
+  classification, not an authorization role, claim or permission.
+- **Q-S21-3:** dropdown populated from the `RegistrationType` enum, server-side validation of the
+  submitted value. **Supersedes** the radio control in D-54 item 1 (choices unchanged).
+- **Q-S21-4:** option (b) — `UserService` enforces server-side that only an `Admin` may assign or
+  remove the `Admin` role; prevents privilege escalation incl. self-promotion; existing
+  authorization checks (`HasPermission`, D-37, D-31 fallback) stay.
+- New open questions from these answers: Q-S21-5 "privileged role" definition, Q-S21-6 how
+  `Admin` is identified (configured `Seed:Admin:Role`), Q-S21-7 last-`Admin` protection,
+  Q-S21-8 restriction scope + timing.
+
+### 60. Session 21 — Q-S21-5 … Q-S21-8 answered (2026-10-14)
+User decisions, recorded under D-56 (implementation not approved; docs only):
+- **Q-S21-5:** a role is privileged if it has permissions outside the approved member-permission
+  allowlist; the allowlist is defined when member-portal permissions are designed.
+- **Q-S21-6:** Admin-specific security checks use the literal role name `"Admin"` (the assistant's
+  recommendation — configured seed role name — not taken).
+- **Q-S21-7:** the last effective Admin is protected server-side against privileged-role removal,
+  deactivation and soft deletion; concurrent operations must be accounted for.
+- **Q-S21-8:** the Q-S21-4 restriction applies to **all privileged roles** (the assistant had
+  recommended `Admin` only); built in Gate 3 (0.9) with the `UsersController` role-list refactor.
+- Conflicts / gaps flagged, not resolved (PROJECT_DECISIONS §9): **Q-S21-9** literal `"Admin"` vs
+  the configurable `Seed:Admin:Role` (`appsettings.json`, `SeedAdminOptions`); **Q-S21-10** the
+  allowlist is empty until the member portal, so in Gate 3 every role with a permission is
+  privileged; **Q-S21-11** whether a locked-out Admin counts as effective; **Q-S21-12** role-side
+  escalation (`Roles.Edit`/`Roles.Delete` can make a role privileged or remove the `Admin` role).
+- No earlier decision was changed: Q-S21-4 is marked "scope extended by Q-S21-8", not rewritten.
+
+### 61. Session 21 — Q-S21-9 … Q-S21-12 answered (2026-10-14)
+User decisions, recorded under D-56 (implementation not approved; docs only):
+- **Q-S21-9 (Option A):** fixed Admin constant; `Seed:Admin:Role` removed, or kept only with
+  startup validation that fails on a mismatch; a mismatch is never silently allowed. Resolves
+  the Q-S21-6 conflict.
+- **Q-S21-10 (Option A):** until the member-permission allowlist exists, every role with one or
+  more permissions is privileged.
+- **Q-S21-11 (Option B):** an `Admin` with `Status = Active` counts as effective even during a
+  temporary authentication lockout.
+- **Q-S21-12 (Option A):** `RoleService` enforces the rules server-side in Gate 3: no privilege
+  escalation through permission changes, no `Admin`-role deletion, no permission removal that
+  undermines the last-effective-Admin protection, within the existing decision scope.
+- Ambiguities flagged, not decided (PROJECT_DECISIONS §9): **Q-S21-13** remove vs validate
+  `Seed:Admin:Role`; **Q-S21-14** which `Admin`-role permission removals are refused (identity is
+  the role name, so a stripped `Admin` role is still "effective"); **Q-S21-15** renaming `Admin`
+  or renaming another role to `Admin` (`RoleService.UpdateAsync` allows renames today).
+
+### 62. Session 21 — Q-S21-13 … Q-S21-15 answered (2026-10-14)
+User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, recorded under D-56
+(implementation not approved; docs only):
+- **Q-S21-13:** `Seed:Admin:Role` is removed; the seeder uses the fixed `"Admin"` constant.
+- **Q-S21-14:** the `Admin` role always holds every permission; removing any is refused.
+- **Q-S21-15:** renaming the `Admin` role, or renaming another role to `Admin`, is refused.
+- No Q-S21 question remains open. All Q-S21 rules are built in Gate 3 (0.9) with the
+  `UsersController` role-list refactor (Q-S21-8, Q-S21-12), each step on its own approval.
+
+### 63. Session 21 — close-out (2026-10-14)
+- Commits this session (each on its own user "ok"): `c63854b` D-32 code + test A4; `3c9b5a3` docs
+  (D-32, Session 20 follow-up note); `add844a` docs (D-56, §58–§62). Branch
+  `feature/phase-0-gate-3`, 8 commits, not merged. Tests 65/65 at `c63854b`.
+- The `UsersController` role-list step was **planned but not started**: the assistant proposed
+  `IRoleService.GetNamesAsync` (name-only projection; `GetAllAsync` also loads `PermissionIds`)
+  and a private helper replacing the six `_roleManager.Roles.Select(...)` calls. The user then
+  turned the discussion to D-56; the refactor now goes into one Gate 3 (0.9) plan with the
+  Q-S21 rules (SESSION_HANDOFF next action 3). The plan needs approval before code.
+- Findings (code-verified, read-only):
+  1. `SignInManager.CanSignInAsync` runs at sign-in only; the cookie's stamp validator does not
+     call it, so ending existing sessions relies on the stamp change (hence D-32's stamp update).
+  2. `PasswordSignInAsync` refuses a non-`Active` user with `NotAllowed` before checking the
+     password, so no failed-attempt count is added; the UI shows the same generic error.
+  3. `IOptions<SecurityStampValidatorOptions>.Value` is one shared mutable instance; test A4 sets
+     the interval to 0 and restores it in `finally` (tests in the `app` collection run serially).
+  4. MVC model binding accepts undefined enum numbers (e.g. `"7"`) — D-56 requires
+     `Enum.IsDefined` on the server.
+  5. `UsersController` Create/Edit list **all** roles incl. `Admin` → any `Users.Create`/
+     `Users.Edit` holder could assign `Admin` (incl. to themselves) — answered by Q-S21-4/8.
+  6. `RoleService.UpdateAsync` allows renaming any role (Q-S21-15); `DbSeeder` restores all
+     permissions to the admin role at startup only (Q-S21-14).
+  7. `Seed:Admin:Role` (`appsettings.json`, `SeedAdminOptions.Role`) made the admin role name
+     configurable — to be removed (Q-S21-13).
+  8. `RoleService.DeleteAsync` deletes roles **physically** (`RoleManager.DeleteAsync`); D-53
+     soft delete covers users only. No decision yet — raise with the Gate 3 plan if relevant.
+- Close-out docs (this section, SESSION_HANDOFF Session 21 block, PHASE_0_PLAN note,
+  PROJECT_DECISIONS §9 "Session 22 start" row) are uncommitted unless the user asks to commit.
+
+### 64. Session 22 — Gate 3 (0.9) D-56 implementation (2026-10-14)
+- Verified at start: branch `feature/phase-0-gate-3`, top `add844a`, build 0/0, tests 65/65.
+  Session 21 close-out committed on the user's "ok" (`21869c6`).
+- Plan proposed and approved ("ok"), then two choices approved separately:
+  (a) **concurrency mechanism = `sp_getapplock`** (Exclusive, `LockOwner = Transaction`,
+  resource `CseLibrary.AdminGuard`) instead of `UPDLOCK/HOLDLOCK`; (b) **error codes**
+  `ErrorCodes.Forbidden = "SECURITY.FORBIDDEN"`, `ErrorCodes.LastAdmin = "SECURITY.LAST_ADMIN"`.
+- Implemented `b1bba18` (user gave blanket permission for the remaining sequence after the diff):
+  `SystemRoles.Admin` constant; `Seed:Admin:Role` / `SeedAdminOptions.Role` removed;
+  `IRoleReadRepository.GetNamesAsync` / `AnyPrivilegedAsync`, `IUserReadRepository.IsEffectiveAdminAsync`
+  / `CountEffectiveAdminsAsync`, `IPermissionRepository.CountAsync`, `IUnitOfWork.AcquireAdminGuardLockAsync`;
+  `UserService` checks only the changed roles (non-Admin may still edit an Admin's name/email),
+  runs every check before the first write, and wraps `DeleteAsync` in a transaction;
+  `RoleService` rules per Q-S21-12/14/15; `UsersController` uses `IRoleService.GetNamesAsync`
+  (architecture test E1 now also forbids `RoleManager<>` in controllers).
+- Tests: new `RoleAssignmentTests` (8); test host `TestCurrentUser` = request user, else
+  `ActAs(...)`, else the seeded Admin (direct service calls in tests have no request).
+  Evidence: build 0/0, **73/73**; mutation checks M1–M7 (privileged check, count, lock, caller
+  check, rename / permission / delete guards) each fail the matching test.
+- Not changed: non-Admins still see all role names on the Users pages (server refuses
+  privileged ones); `RoleService.DeleteAsync` still deletes physically (§63 item 8, no decision).
+
+### 65. Session 22 — Gate 3 reviews, menu fix, D-57 (2026-10-14)
+- `/code-review` on `develop...feature/phase-0-gate-3` (10 findings), verified one by one:
+  1. **Menu bug (real, from D-37 `fab1af1`):** `_Layout.cshtml` showed links by cookie
+     `Permission` claims, which login no longer writes → fixed `ac24fd7`: the layout calls
+     `IAuthorizationService` with the same `Permission:*` policies (one query per request via
+     the handler cache); test `Menu_shows_links_for_database_permissions_only`; reverting the
+     layout fails it.
+  2. **Role-name case (real, minor):** `UpdateAsync` role diff now ignores case (`ac24fd7`).
+  3. **Account takeover (real, security):** a non-Admin `Users.Edit` holder could reset an
+     Admin's password / change email / deactivate or delete a non-last Admin. Not covered by
+     D-56 → raised with the user → **D-57 Approved** (user's rule text) → implemented
+     `56bb5f0`; tests `Non_admin_cannot_reset_change_email_deactivate_or_delete_a_privileged_user`,
+     `Admin_reset_and_self_service_password_change_still_work_for_privileged_users`;
+     mutations M8 (no target check) and M9 (email change unchecked) each fail the first test.
+  4. Dismissed with reason: `Cookie.SecurePolicy = Always` (D-31 Approved); deleted user's email
+     not reusable (Q-S19-16 "keep for now"); class-level `[Authorize]` beside the fallback policy
+     (FR-M9-05 Approved); test caller defaults to the seeded Admin (mutation checks prove the
+     non-Admin paths run via `ActAs`); role privilege looked up by normalized name (works; style).
+  5. Noted, no change: `RoleService.DeleteAsync` privilege check is outside a transaction — a
+     concurrent permission grant by an Admin could interleave (very unlikely; no decision).
+- `/ponytail-review`: lean; one optional 2-line cut (`AcquireAdminGuardLockAsync`'s explicit
+  "no transaction" check duplicates `sp_getapplock`'s own negative result). Not applied: the
+  explicit message is clearer.
+- Evidence after `56bb5f0`: build 0/0, tests **76/76**.
+
+### 66. Session 22 — missing access tests, D-55 toasts, stop at Proposed items (2026-10-15)
+- 0.9 "Done when: tests A1–A11" was not met (no A5 behaviour test, no A6/A10, no A11) →
+  added `2c862e0`: POST without antiforgery token → 400; reflection test (class-level
+  `[Authorize]`, anonymous allowlist `Account.Login/AccessDenied`, `Home.Index/Privacy/Error`,
+  `[HasPermission]` on every other action except authenticated-only `Account.ChangePassword/
+  Logout`); fallback test via test-only `FallbackProbeController`. Mutations: no fallback policy,
+  no class `[Authorize]` → the matching test fails. (Existing lockout test relabelled A3.)
+- **D-55 implemented `42ae3f4`** (design + Session 20 details Approved; executed under the user's
+  blanket permission): `_Toasts.cshtml` (TempData `Error`/`Warning` 5 s, `Success`/`Info` 3 s,
+  max 3, label text + colour, close button, Bootstrap 5.1 pauses on hover/focus) replaces the
+  layout alerts; `AccessDeniedRedirect` on `OnRedirectToAccessDenied`: local same-site Referer
+  (not `//…`, not the denied URL) else `/`, red toast "You don't have permission to perform
+  this action."; AJAX (`X-Requested-With`) → 403; `Home.Error` raises an error toast with the
+  Reference ID (Q-S19-11). Test A2 (5 Referer cases + AJAX) and a toast render test; the two
+  tests that expected `/Account/AccessDenied` now expect `/`. Mutations: no `//` guard, no hook
+  → tests fail. Evidence: build 0/0, **86/86**.
+- Not done in D-55: client-side (AJAX) toasts — no AJAX UI exists yet; "overall toast plus field
+  messages" for validation — forms keep their validation summary + field messages.
+- **Stopped** — remaining Gate 3 work needs decisions that are not Approved:
+  - 0.10 rest = D-34 **Proposed** items: `UseStatusCodePagesWithReExecute`, Error view with the
+    Reference ID only (remove the template's "Development Mode" text), Serilog output with
+    TraceId, verify `WithMachineName`/`WithThreadId` enrichers (tests B1–B2).
+  - 0.11a HiLo demonstration — plan says "stop for approval" (D-29/D-30); 0.11 audit depends
+    on it and on D-21–D-27 (Proposed).
+  - 0.12 manual smoke needs the app run against a non-test database (approval needed).
+
+### 67. Session 22 — 0.10 D-34 scope approved and implemented (2026-10-15)
+- The user approved the 0.10 D-34 scope (friendly HTTP error pages, no "Development Mode" text,
+  Reference ID only, `TraceId` in the server log, no sensitive details in production responses,
+  existing authorization / toast / AJAX-403 behaviour kept). Recorded in D-34.
+- Implemented `d0a8a66`: `Home.HttpStatus` (anonymous, added to the A6/A10 allowlist) +
+  `HttpStatus.cshtml` via `UseStatusCodePagesWithReExecute`; AJAX gets `EmptyResult` with the
+  status kept; `Error.cshtml` rewritten (Reference ID only); Reference ID =
+  `Activity.Current.TraceId` hex, the same value Serilog 4.3 stores as `LogEvent.TraceId`;
+  `{TraceId}` added to both output templates.
+- **Test host now runs as `Production`** (`AppFactory.UseEnvironment`) so B1 sees what users
+  see; side effect: `appsettings.Development.json` (with the `.\SQLEXPRESS` connection string)
+  is no longer loaded by tests. Test log sink `CapturingLogSink` via `ReadFrom.Services`.
+- Tests B1 (500 page has no exception text, 32-hex Reference ID equals the logged error's
+  TraceId, templates contain `{TraceId}`), B2 (friendly 404 for a signed-in user; AJAX bare 404;
+  anonymous unknown URL → Login because the D-31 fallback policy also covers URLs without an
+  endpoint — kept, it does not reveal which URLs exist). Mutations: no status pages, old
+  `Activity.Id` format, AJAX gets HTML → the matching test fails. Evidence: build 0/0, **88/88**.
+- Still open in 0.10 (not in the approved scope): dev SQL logging; enrichers without packages.
+
+### 68. Session 22 — 0.10 leftovers (2026-10-15)
+- User "ok" on the first pending item (both 0.10 leftovers). Choice made by the assistant and
+  reported: **remove** `WithMachineName`/`WithThreadId` from `Serilog:Enrich` (they had no
+  package and did nothing) rather than add two packages; reversible if the values are wanted.
+- `42d0908`: `appsettings.Development.json` sets Serilog override
+  `Microsoft.EntityFrameworkCore.Database.Command = Information` (Development only;
+  `EnableSensitiveDataLogging` is not used, so parameter values are not logged). Config test
+  `Sql_command_logging_is_development_only_and_enrichers_resolve`. Not run against the dev DB
+  (no approval to start the app on a non-test database); verified by configuration only.
+- Evidence: build 0/0, **89/89**. **0.10 done.**
+
+### 69. Session 22 — 0.11a HiLo demonstration (2026-10-15)
+- User "ok" to start 0.11a (test DB only). D-29 conditions 1 and 2 done; **stopped at
+  condition 3** (no migration change in the repository).
+- **Condition 1 — demonstration** `be033f9`, `tests/CseLibrary.Tests/Spikes/HiLoSpikeTests.cs`:
+  a spike `DbContext` (not the app model) on its own `CseLibrary_Test_{guid}` LocalDB database
+  (D-40 guard, dropped after), `UseHiLo` sequence with block 10 and a `SaveChangesInterceptor`
+  that adds the audit row while saving. Shown: (1) id known at `AddAsync`, consecutive ids from
+  one block, sequence increment 10; (2) one `SaveChanges` writes entity + audit row carrying
+  the new `EntityId`; (3) transaction rollback and a failing `SaveChanges` (duplicate unique
+  name) leave neither row; (4) with `SqlServerRetryingExecutionStrategy` (what
+  `EnableRetryOnFailure` uses) a simulated transient failure re-runs the work: the second
+  attempt gets a **new id** (the first is a gap, the documented D-29 trade-off), commits once,
+  one audit row. Counter-check: with the identity key (no `UseHiLo`) all four tests fail — the id
+  is still 0 at `AddAsync`, so the audit row cannot carry it. Evidence: **93/93**.
+- **Condition 2 — migration + SQL diff**, generated in a temporary git worktree in the
+  scratchpad (repository unchanged; connection string pointed at a never-created
+  `CseLibrary_Test_*` name; `migrations add`/`script` do not connect): config change =
+  `builder.Property(x => x.Id).UseHiLo("GeneralConfigs_HiLo" | "Permissions_HiLo")`; migration
+  `HiLoSpike` = `CreateSequence(..., incrementBy: 10)` ×2 + `AlterColumn<int>("Id")` with
+  `.OldAnnotation("SqlServer:Identity", "1, 1")` on both tables. **`dotnet ef migrations
+  script` fails:** "To change the IDENTITY property of a column, the column needs to be dropped
+  and recreated." — SQL Server cannot remove IDENTITY in place, confirming D-29's trade-off:
+  existing tables need a table rebuild or a regenerated baseline (**D-30**, Pending). Copies kept
+  in the scratchpad only (`HiLoSpike.migration.cs`, `HiLoSpike.config.diff`); worktree removed.
+- New finding (no decision): `dotnet list package --vulnerable` reports transitive
+  **`System.Security.Cryptography.Pkcs` 9.0.11** — High (GHSA-846f-f764-76mx) and Moderate
+  (GHSA-2fmv-rv2c-59x7) — in `CseLibrary.Web`, `CseLibrary.Data`, `CseLibrary.Tests`. A fix
+  (pinning a patched version) changes package references and needs approval.
+
+### 70. Session 22 — package fix; read-only data check for D-30 (2026-10-15)
+- **Vulnerability fixed on the user's recommendation** `4b0fb10`: direct
+  `System.Security.Cryptography.Pkcs` **10.0.13** reference in `CseLibrary.Data` (first patched
+  version of both advisories for 10.x; source of 9.0.11 = `Microsoft.Data.SqlClient` 6.1.6 via
+  `Microsoft.EntityFrameworkCore.SqlServer` 10.0.12). `dotnet list package --vulnerable
+  --include-transitive`: no vulnerable packages in any project. Build 0/0, **93/93**.
+- **Audit key strategy:** the user recommends option (a) HiLo + regenerated baseline (D-29/D-30)
+  **but requires data confirmation first** → not approved yet.
+- **Read-only inspection (D-30, M5 §3 / M6 C), 2026-10-15:** connection strings
+  (`appsettings.json`, `appsettings.Development.json`) both `.\SQLEXPRESS` / `CseLibrary`;
+  user-secrets file for `UserSecretsId 23c63bb8-…` does not exist; migrations
+  `InitialCreate`, `RecordStatusAndAuditColumns`, `UniqueUserEmail`. `sys.databases` (names only,
+  `master`): **`.\SQLEXPRESS` has no user databases** (service running; neither `CseLibrary` nor
+  `DefaultTemplate` exists there now); `(localdb)\MSSQLLocalDB` has only `Practice` (not this
+  project) and no leftover `CseLibrary_Test_*`. No other server or backup was checked — the user
+  must confirm that no copy elsewhere (another machine, a backup, a deployment) holds data to keep.
+
+### 71. Session 22 — D-29/D-30 approved; baseline plan approved (2026-10-15)
+- User: "option a. approved" → **D-29 Approved for migration changes** (condition 3) and
+  **D-30 Approved**; taken as the requested data confirmation (no database anywhere holds data
+  to keep).
+- Baseline plan proposed and approved ("ok"), **including deleting** the three migrations
+  (`InitialCreate`, `RecordStatusAndAuditColumns`, `UniqueUserEmail`) and the model snapshot
+  with `git rm` (history keeps them): `UseHiLo` on `GeneralConfig`/`Permission` ids; seeder
+  `Add`/`AddRange` → `AddAsync`/`AddRangeAsync`; new single `InitialCreate`; `MigrationTests`
+  rewritten (its D-51 data-conversion path disappears with the old migrations);
+  `StartupAndGuardTests` migration id updated; new test that a real `GeneralConfig` gets its id
+  at `AddAsync` (+ mutation); spike tests kept. `AuditLog` table is **not** part of this — it
+  comes with 0.11 after D-21–D-27 approvals. No `database update` against a non-test DB.
+- **Implemented `88f8a46`:** `UseHiLo` on both ids; seeder `AddAsync`/`AddRangeAsync`; old
+  migrations + snapshot removed with `git rm`; new `20261015031410_InitialCreate` (sequences
+  `GeneralConfigs_HiLo`/`Permissions_HiLo` `INCREMENT BY 10`, `GeneralConfigs.Id`/`Permissions.Id`
+  plain `int NOT NULL`, Status CHECKs, filtered unique indexes, unique email; IDENTITY only on the
+  Identity claim tables). The old migrations' only hand-written SQL was the D-51 data conversion,
+  not needed on an empty baseline. `dotnet ef migrations has-pending-model-changes`: "No changes
+  have been made to the model since the last migration"; full script generated (scratchpad
+  `InitialCreate.sql`). Tests: `MigrationTests.Baseline_matches_the_model_and_migrates_up_and_down`,
+  `DataLayerTests.GeneralConfig_and_Permission_ids_are_known_at_AddAsync`; mutation (no `UseHiLo`
+  on `GeneralConfig`) fails both. Evidence: build 0/0, **94/94**. **0.11a done.**
+
+### 72. Session 22 — audit package approved (2026-10-15)
+- Proposed as one package P1–P7 with four questions; the user answered "ok" → approved as
+  recommended: **Q1** `GeneralConfig.Value` audited + rule "no secrets in `GeneralConfig`";
+  **Q2** the full D-24 event list (+ `UserDeleted`); **Q3** `EntityId` nvarchar(64); **Q4** JSON
+  `{"Prop":{"Old","New"}}`, 1,000-char truncation. Recorded under D-27 ("Audit package").
+- Implementation plan follows separately and needs its own approval (no code yet).
+
+### 73. Session 22 — 0.11 audit implemented (2026-10-15)
+- Plan (two commits) proposed and approved ("ok").
+- **`d8301c0` entity audit:** `AuditLog` + `AuditCategory`, `IAuditable` (GeneralConfig,
+  Permission), `IAuditLogRepository` (add only) on the UoW; `AuditLogConfiguration`; migration
+  `AddAuditLog` (table + 3 indexes only; the classification annotations add no column changes);
+  `AuditClassification` (`.Audited()`/`.NotAudited()`, `ClassifyBaseColumns`, `IsAudited`
+  excludes concurrency tokens, shadow and binary); `AuditLogInterceptor` registered after
+  `AuditColumnsInterceptor` — builds Created/Updated/Deleted rows, rebuilds (never doubles)
+  unsaved entity rows from an earlier failed save, stamps actor/time/`CorrelationId`
+  (`Activity.Current.TraceId`) on every new audit row. Tests C1, C2, C3, CorrelationId via a
+  real request, C6, C7, P5 (no `ExecuteUpdate/ExecuteDelete/ExecuteSql` outside the one
+  `sp_getapplock` call). Mutations: interceptor removed, interceptor order swapped, property
+  unclassified, `Key` not audited → the matching test fails. 101/101.
+- **`3a00c50` security events:** `SecurityEvent` factory (Services); `UserService` /
+  `RoleService` events in the same transaction (full P4 list); `ResetPasswordAsync` and
+  `RoleService.DeleteAsync` moved into `ExecuteInTransactionAsync`; new
+  `IUserService.ChangeOwnPasswordAsync` (AccountController no longer calls
+  `UserManager.ChangePasswordAsync`; it re-issues the cookie after the stamp change);
+  `ISecurityAuditService.RecordSignInEventAsync` (own save, try/catch → Serilog, the user is
+  the actor); unknown email → `LogWarning` without the typed value. Role permission ids (not
+  names) in `RoleCreated`/`RolePermissionsChanged`. Tests: C4 (full event sequence, actor,
+  no password text), refused/failed change writes no event, C5 (unknown email none; failed,
+  succeeded, logout, 4× failed + `LockedOut`), self-service change still works + `PasswordChanged`.
+  Mutations: four event lines removed → the matching test fails. **105/105**.
+- Not tested (as planned): the best-effort path where writing a sign-in event fails.
+- `has-pending-model-changes`: none. Migrations applied only to test databases. **0.11 done.**
+
+### 74. Session 22 — 0.12 option chosen; close-out (2026-10-15)
+- **0.12 smoke target decided:** the assistant offered (ক) the real dev database (`.\SQLEXPRESS`
+  / `CseLibrary`, which does not exist yet — the first run would create it, apply both
+  migrations and seed an admin) or (খ) a disposable `CseLibrary_Test_*` LocalDB database,
+  recommending (খ). **The user chose (খ).** Execution is left to Session 23 (the user closed the
+  session first). Conditions: D-40 guard name; connection string and seed password only as
+  process environment variables (no file or user-secrets change); drop only that generated
+  database afterwards; the dev database stays untouched and uncreated.
+- **Session 22 summary** (details §64–§73): steps **0.9, 0.10, 0.11a, 0.11 done**; D-57 new;
+  D-55 and the 0.10 D-34 scope implemented; D-29/D-30 approved and applied (regenerated
+  baseline); audit package P1–P7 approved and implemented; vulnerable `Pkcs` pinned. Branch
+  `feature/phase-0-gate-3`: 32 commits, not merged; tests 105/105.
+- **Discussion notes:** the user worked step by step with one-"ok"-per-action, gave a one-time
+  blanket permission for a sequence ("don't wait for my approval"), then returned to explicit
+  approvals; pasted assistant-style text that recommended a choice but disclaimed approval was
+  treated as **not** an approval and confirmed directly. The user asked for plain-Bangla
+  explanations when review output was too terse.
+- **Process findings** (also in SESSION_HANDOFF "Learned in Session 22"): check a step's "Done
+  when" before ticking it; mutation scripts must detect a failed build; `dotnet ef` design-time
+  runs `Program.cs` up to `Build()`; long Windows paths need `\\?\` to delete scratch worktrees.
+- Open, no decision (carried to Session 23): physical role delete (§63 item 8); all role names
+  visible to non-Admins on Users pages; role-delete privilege check vs. concurrent grant (§65);
+  untested best-effort sign-in event failure path (§73); older items D-49 O1–O5, EF Tools
+  package, UI brand text, CR5 cascade part.
+
+### 75. Session 23 — 0.12 smoke run on a disposable database (2026-10-15)
+- **Read-only check:** branch `feature/phase-0-gate-3`, build 0/0, tests 105/105. Session 22
+  close-out committed on the user's "ok" (`efb8a68`).
+- **Smoke setup (option (খ), §74):** `dotnet run --no-launch-profile --urls https://localhost:7259`
+  with `ASPNETCORE_ENVIRONMENT=Production`, `ConnectionStrings__DefaultConnection` → LocalDB
+  `CseLibrary_Test_1cad9ca5d094426085f3abcbccf828c6`, random `Seed__Admin__Password` — process
+  environment only, no file or user-secrets change. Startup migrated and seeded it (19 seed
+  audit rows). https is required because the auth cookie is `SecurePolicy = Always`; the dev
+  certificate is untrusted (browser warning accepted, not trusted system-wide).
+- **Results.** The user drove the browser (admin login, role `Student` + user create, login/
+  logout as the student) and reported "everything works"; DB and log showed deactivate,
+  lockout and the toast had not run yet, so the assistant ran those with `curl` against the
+  same database (user `smoke2@local`):
+
+  | Item | Evidence | Result |
+  |---|---|---|
+  | Admin login | `LoginSucceeded` #20, #30 | Pass |
+  | Create user | `RoleCreated` #21; `UserCreated` #22, #31 (`{"Roles":["Student"]}`) | Pass |
+  | Deactivate user | POST `/Users/Edit` 302; `Status` 1 → 2; `UserDeactivated` #39 | Pass |
+  | Lockout after 5 failures | `LoginFailed` #33–#36, `LockedOut` #37–#38, `LockoutEnd` +15 min; correct password then refused | Pass |
+  | Permission failure toast | Student GET `/Users` → 302 `/`, toast "…permission to perform this action." | Pass |
+  | 404 page | `/does-not-exist` → 404 "Page not found", status code shown | Pass |
+  | Entity + security audit | `Permission`/`GeneralConfig` `Created` with JSON changes (#1–#19); user/role/sign-in events (#20–#39) | Pass |
+
+- **Cleanup:** app stopped; database name checked against `^CseLibrary_Test_[0-9a-f]{32}$`,
+  then dropped; LocalDB has only `Practice`; `.\SQLEXPRESS` untouched; working tree clean.
+- **Findings (no decision):**
+  1. `/CseLibrary.Web.styles.css` returns 404 on every page when run as `Production` via
+     `dotnet run` (static web assets are a Development-only feature; expected to be served
+     after `dotnet publish` — not verified).
+  2. The 404/403 status page shows no Reference ID; only the 500 `Error` page does. The 500
+     path was not triggered manually (covered by tests B1–B2).
+  3. A locked-out user sees the same "Invalid login attempt." as a wrong password (no account
+     enumeration; the audit row says `LockedOut`).
+
+### 76. Session 23 — Gate 3 approved, reviews skipped; Phase 1 catalog started (2026-10-15)
+- The user, low on token budget, asked to "build the features". The assistant explained the
+  full system cannot be done in that budget and that D-48 / domain policies are still
+  Proposed/Pending. **The user chose:** close Gate 3 **without** the `/code-review` +
+  `/ponytail-review` runs (a deliberate exception to D-07 v7's pre-gate review rule), merge into
+  `develop`, then start the first Phase 1 slice — **book titles + physical copies CRUD** — which
+  needs no pending decision. Lending, members, portal and email stay unstarted.
+- Gate 3 evidence: 0.9–0.12 done (§64–§75), build 0/0, tests 105/105.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
@@ -1782,18 +2329,21 @@ connection string and D-47 below are **resolved** (§29); kept as history.
 | D-07 T1-EOL | LF for new authored text files — Pending, separate explicit confirmation needed before step 0.2; not confirmed by D-07 approval |
 | D-07 T4 backup root | **Resolved Session 12 (§28):** `<backup-root>` = `H:/Internship Project/DLMS-Backups/` with write authorization (approval (D)). T4 level (c) not yet exercised |
 | Step 0.1 | Documentation approved (§18), but step 0.1 needs D-07/T1 scope/T4 resolved and its own explicit approval |
-| D-29 HiLo | Preferred candidate; needs demonstration in `CseLibrary_Test_{guid}` + migration/script diff + approval (0.11a) |
-| D-30 Baseline migration regeneration | Depends on D-29 and on confirming that no template-created DB holds data to keep |
+| ~~D-29 HiLo~~ | **Resolved Session 22 (§69, §71):** demonstrated, diff shown, approved (option (a)) |
+| ~~D-30 Baseline migration regeneration~~ | **Resolved Session 22 (§70, §71):** data confirmed by the user, approved |
 | D-41 tooling | `global.json` + local `dotnet-ef` manifest were not covered by the layout approval |
 | D-40 connection string | Location of the `CseLibrary` dev connection string and seed password not decided |
 | D-13 signatures | Contract approved; exact signatures reviewed at Gate 2 |
 | D-14 ambiguous commits | Approach approved (M8); per-use-case assessment (risk, mechanism, tests, limitations) due at Gate 2 |
 | D-15 / D-34 details | `PageRequest` limits, `Result` type — Proposed |
-| D-31 values / D-32 mechanism | Baseline approved; default numbers and `CanSignInAsync` mechanism not confirmed |
-| D-37 cleanup | Removing existing permission rows from `AspNetUserClaims` needs separate approval |
-| D-21/24/25/27 details | Audit schema, event list, bulk-write rule, consistency table — Proposed |
+| D-31 values / D-32 mechanism | Baseline approved; **Session 19 (§52): password + lockout values and D-32 mechanism Approved**; **Session 20 (§55): stamp interval, cookie, antiforgery Approved and D-31 implemented `215d75e`**. D-32 implementation awaits execution approval (§56) |
+| Q-S19-1 / Q-S19-2 (§52) | ~~Registration scope~~ answered → D-54 (§53); anonymous `Error` / status-code / `AccessDenied` pages (now tied to D-55 Q-S19-10) |
+| ~~Q-S19-2 … Q-S19-17 (§53)~~ | **Answered Session 20 (§55)** — registration details (D-54), toast/forbidden-page details (D-55), deleted users in list + email reuse (D-53/D-52), anonymous error pages |
+| ~~D-53 implementation (§53)~~ | **Resolved Session 20 (§55): implemented `8550c00`** |
+| ~~D-37 cleanup~~ | **Closed Session 20 (§55):** target `CseLibrary` does not exist on `.\SQLEXPRESS`; nothing to delete |
+| ~~D-21/24/25/27 details~~ | **Resolved Session 22 (§72):** audit package P1–P7 approved (Q1–Q4 as recommended) |
 | D-47 naming (M9) | `LibraryManagement.*` vs Approved `CseLibrary.*`; blocks 0.3 (Q-M9-9) |
 | ~~D-45 outstanding-loan rule (M9)~~ | Superseded by D-48 (M10) — conflict resolved as configuration; no request workflow |
 | D-48 borrowing policy (M10–M12) | Wholly Proposed; reviewed before the Lending phase, not now. Architecture, settings, constraints, defaults/overrides, activation, permission holder (conflict with archive roles table), due-date edit (would amend FR-06), category change (Q-M10-1, -2, -4..-9); P17 mechanism; member status on the member row (Phase 2); values Pending user/department (Q-M10-3); lost/cancelled counting Q-M9-3; lowering limit Q-M9-5; explicit `ReadCommitted` in D-14 (optional at 0.8) |
-| D-46 / D-15 M9 / D-31 M9 | Proposed designs for AJAX loading, keyset paging, controller authorization; values Q-M9-6..8, Q-M9-10 (D-44 superseded by D-48) |
+| D-46 / D-15 M9 / D-31 M9 | Proposed designs for AJAX loading, keyset paging, controller authorization; values Q-M9-6..8, Q-M9-10 (D-44 superseded by D-48). **Session 19 (§52): D-31 M9 + Q-M9-10 Approved/answered** |
 | Domain policies | Fellow definition, limits, durations, renewals, Lost status, SMTP, portal accounts, hosting, retention — department/user input needed in later phases |

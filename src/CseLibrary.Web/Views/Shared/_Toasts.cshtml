@@ -1,0 +1,30 @@
+@* D-55: one toast mechanism for the whole app, fed by the existing TempData keys. Top-right, at most 3,
+   label text besides colour, Bootstrap pauses the timer on hover/focus. *@
+@{
+    var toasts = new (string Key, string Label, string Css, int Delay)[]
+        {
+            ("Error", "Error", "bg-danger text-white", 5000),
+            ("Warning", "Warning", "bg-warning text-dark", 5000),
+            ("Success", "Success", "bg-success text-white", 3000),
+            ("Info", "Info", "bg-info text-dark", 3000)
+        }
+        .Select(t => (t.Label, t.Css, t.Delay, Message: TempData[t.Key] as string, IsError: t.Key == "Error"))
+        .Where(t => !string.IsNullOrEmpty(t.Message))
+        .Take(3)
+        .ToList();
+}
+@if (toasts.Count > 0)
+{
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080">
+        @foreach (var t in toasts)
+        {
+            <div class="toast align-items-center border-0 @t.Css" data-bs-delay="@t.Delay"
+                 role="@(t.IsError ? "alert" : "status")" aria-live="@(t.IsError ? "assertive" : "polite")" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body"><strong>@t.Label:</strong> @t.Message</div>
+                    <button type="button" class="btn-close @(t.Css.Contains("text-white") ? "btn-close-white" : "") me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        }
+    </div>
+}
