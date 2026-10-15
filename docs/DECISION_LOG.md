@@ -2145,6 +2145,35 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   (no approval to start the app on a non-test database); verified by configuration only.
 - Evidence: build 0/0, **89/89**. **0.10 done.**
 
+### 69. Session 22 — 0.11a HiLo demonstration (2026-10-15)
+- User "ok" to start 0.11a (test DB only). D-29 conditions 1 and 2 done; **stopped at
+  condition 3** (no migration change in the repository).
+- **Condition 1 — demonstration** `be033f9`, `tests/CseLibrary.Tests/Spikes/HiLoSpikeTests.cs`:
+  a spike `DbContext` (not the app model) on its own `CseLibrary_Test_{guid}` LocalDB database
+  (D-40 guard, dropped after), `UseHiLo` sequence with block 10 and a `SaveChangesInterceptor`
+  that adds the audit row while saving. Shown: (1) id known at `AddAsync`, consecutive ids from
+  one block, sequence increment 10; (2) one `SaveChanges` writes entity + audit row carrying
+  the new `EntityId`; (3) transaction rollback and a failing `SaveChanges` (duplicate unique
+  name) leave neither row; (4) with `SqlServerRetryingExecutionStrategy` (what
+  `EnableRetryOnFailure` uses) a simulated transient failure re-runs the work: the second
+  attempt gets a **new id** (the first is a gap, the documented D-29 trade-off), commits once,
+  one audit row. Counter-check: with the identity key (no `UseHiLo`) all four tests fail — the id
+  is still 0 at `AddAsync`, so the audit row cannot carry it. Evidence: **93/93**.
+- **Condition 2 — migration + SQL diff**, generated in a temporary git worktree in the
+  scratchpad (repository unchanged; connection string pointed at a never-created
+  `CseLibrary_Test_*` name; `migrations add`/`script` do not connect): config change =
+  `builder.Property(x => x.Id).UseHiLo("GeneralConfigs_HiLo" | "Permissions_HiLo")`; migration
+  `HiLoSpike` = `CreateSequence(..., incrementBy: 10)` ×2 + `AlterColumn<int>("Id")` with
+  `.OldAnnotation("SqlServer:Identity", "1, 1")` on both tables. **`dotnet ef migrations
+  script` fails:** "To change the IDENTITY property of a column, the column needs to be dropped
+  and recreated." — SQL Server cannot remove IDENTITY in place, confirming D-29's trade-off:
+  existing tables need a table rebuild or a regenerated baseline (**D-30**, Pending). Copies kept
+  in the scratchpad only (`HiLoSpike.migration.cs`, `HiLoSpike.config.diff`); worktree removed.
+- New finding (no decision): `dotnet list package --vulnerable` reports transitive
+  **`System.Security.Cryptography.Pkcs` 9.0.11** — High (GHSA-846f-f764-76mx) and Moderate
+  (GHSA-2fmv-rv2c-59x7) — in `CseLibrary.Web`, `CseLibrary.Data`, `CseLibrary.Tests`. A fix
+  (pinning a patched version) changes package references and needs approval.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

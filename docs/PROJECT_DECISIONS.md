@@ -1023,6 +1023,11 @@ sequential GUID keys (larger keys/indexes, unreadable ids).
    `CseLibrary_Test_{guid}` under the D-40 guard — **not** the `CseLibrary` development database.
 2. Show the migration and generated SQL script diff.
 3. Obtain the user's explicit approval before applying any consequential database change.
+**Session 22 (DECISION_LOG §69):** conditions 1 and 2 met — demonstration tests green
+(`be033f9`, spike model on a disposable test DB); migration diff shown. The SQL script cannot be
+generated for the existing tables ("To change the IDENTITY property of a column, the column
+needs to be dropped and recreated"), so applying D-29 needs D-30 (regenerated baseline) or a
+table rebuild. **Condition 3 open:** D-29 still not approved for migration changes.
 
 ### D-30 Regenerate baseline migration — Pending
 Proposed together with D-29 and the rename (D-41): regenerate `InitialCreate` instead of

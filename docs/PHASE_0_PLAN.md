@@ -142,6 +142,9 @@ _Session 19 notes (DECISION_LOG §52–§53):_
   Reference ID = TraceId, `{TraceId}` in logs; B1–B2; 88/88; test host runs as Production).
   Leftovers done on the user's "ok" `42d0908` (§68): dev SQL command logging, package-less
   enrichers removed. **0.10 done** (89/89)._
+- _Session 22 (§69): 0.11a demonstration tests green `be033f9` (93/93); migration diff shown —
+  script generation refuses to drop IDENTITY in place, so D-29 needs D-30 or a table rebuild.
+  0.11a stays unchecked until the user's approval is recorded (D-29 condition 3)._
 
 **⛔ Gate 3 review — stop and wait for user approval before Phase 1.**
 

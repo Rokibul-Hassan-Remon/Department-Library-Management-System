@@ -8,10 +8,11 @@
   **`ac24fd7` menu from DB permissions (D-37 regression) + case-insensitive role diff** ·
   **`56bb5f0` D-57** · `946ac49` docs · **`2c862e0` access tests A5/A6/A10/A11** ·
   **`42ae3f4` D-55 toasts + A2** · `94865bc` docs · **`d0a8a66` D-34 0.10 scope (B1–B2)** ·
-  `ccc191f` docs · **`42d0908` dev SQL logging + enrichers** · docs commit after it.
-- Evidence at `42d0908`: build 0 errors / 0 warnings; tests **89/89**; mutation checks for every
-  new rule (DECISION_LOG §64–§68). No migration; no non-test database touched. Test host now
-  runs as `Production`.
+  `ccc191f` docs · **`42d0908` dev SQL logging + enrichers** · `915f667` docs ·
+  **`be033f9` 0.11a HiLo demonstration** · docs commit after it.
+- Evidence at `be033f9`: build 0 errors / 0 warnings; tests **93/93**; mutation checks for every
+  new rule (DECISION_LOG §64–§69). No migration in the repository; no non-test database
+  touched. Test host now runs as `Production`.
 - After the D-56 diff the user gave **blanket permission for the remaining sequence**
   ("don't wait for my approval"); limits kept: no destructive command, no Proposed/Pending
   decision treated as Approved.
@@ -29,10 +30,16 @@
   TraceId, `{TraceId}` in logs, tests B1–B2) — §67. Leftovers (dev SQL logging, enrichers
   removed) done on the user's "ok" — §68. **Steps 0.9 and 0.10 done.**
 
+- **0.11a HiLo demonstration done** (D-29 conditions 1–2; §69): spike tests green; migration
+  diff shown; script generation fails on the IDENTITY change → needs D-30.
+
 ### ⛔ Next action — waiting for the user (each a separate approval)
-1. Approve starting **0.11a HiLo demonstration** (test DB only, D-29/D-30); review the 0.10
-   result first, as the user asked.
-2. Then 0.11 audit (D-21–D-27 approvals), 0.12 smoke (needs approval to run against a
+1. **D-29 condition 3 / D-30:** decide the audit key strategy — (a) HiLo + regenerated baseline
+   (needs confirmation that no template-created DB holds data to keep), (b) HiLo + table rebuild
+   migration, or (c) an alternative from D-29 (two SaveChanges / sequential GUID keys).
+2. **Vulnerable package** `System.Security.Cryptography.Pkcs` 9.0.11 (High + Moderate,
+   transitive): approve pinning a patched version, or defer.
+3. Then 0.11 audit (D-21–D-27 approvals), 0.12 smoke (needs approval to run against a
    non-test DB), Gate 3 report → approval → merge.
 
 ## Session 21 (2026-10-14) — superseded by the Session 22 block above where they differ
