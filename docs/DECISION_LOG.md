@@ -2221,6 +2221,33 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   `{"Prop":{"Old","New"}}`, 1,000-char truncation. Recorded under D-27 ("Audit package").
 - Implementation plan follows separately and needs its own approval (no code yet).
 
+### 73. Session 22 — 0.11 audit implemented (2026-10-15)
+- Plan (two commits) proposed and approved ("ok").
+- **`d8301c0` entity audit:** `AuditLog` + `AuditCategory`, `IAuditable` (GeneralConfig,
+  Permission), `IAuditLogRepository` (add only) on the UoW; `AuditLogConfiguration`; migration
+  `AddAuditLog` (table + 3 indexes only; the classification annotations add no column changes);
+  `AuditClassification` (`.Audited()`/`.NotAudited()`, `ClassifyBaseColumns`, `IsAudited`
+  excludes concurrency tokens, shadow and binary); `AuditLogInterceptor` registered after
+  `AuditColumnsInterceptor` — builds Created/Updated/Deleted rows, rebuilds (never doubles)
+  unsaved entity rows from an earlier failed save, stamps actor/time/`CorrelationId`
+  (`Activity.Current.TraceId`) on every new audit row. Tests C1, C2, C3, CorrelationId via a
+  real request, C6, C7, P5 (no `ExecuteUpdate/ExecuteDelete/ExecuteSql` outside the one
+  `sp_getapplock` call). Mutations: interceptor removed, interceptor order swapped, property
+  unclassified, `Key` not audited → the matching test fails. 101/101.
+- **`3a00c50` security events:** `SecurityEvent` factory (Services); `UserService` /
+  `RoleService` events in the same transaction (full P4 list); `ResetPasswordAsync` and
+  `RoleService.DeleteAsync` moved into `ExecuteInTransactionAsync`; new
+  `IUserService.ChangeOwnPasswordAsync` (AccountController no longer calls
+  `UserManager.ChangePasswordAsync`; it re-issues the cookie after the stamp change);
+  `ISecurityAuditService.RecordSignInEventAsync` (own save, try/catch → Serilog, the user is
+  the actor); unknown email → `LogWarning` without the typed value. Role permission ids (not
+  names) in `RoleCreated`/`RolePermissionsChanged`. Tests: C4 (full event sequence, actor,
+  no password text), refused/failed change writes no event, C5 (unknown email none; failed,
+  succeeded, logout, 4× failed + `LockedOut`), self-service change still works + `PasswordChanged`.
+  Mutations: four event lines removed → the matching test fails. **105/105**.
+- Not tested (as planned): the best-effort path where writing a sign-in event fails.
+- `has-pending-model-changes`: none. Migrations applied only to test databases. **0.11 done.**
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

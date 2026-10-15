@@ -11,11 +11,12 @@
   `ccc191f` docs · **`42d0908` dev SQL logging + enrichers** · `915f667` docs ·
   **`be033f9` 0.11a HiLo demonstration** · `ccd35f4` docs · **`4b0fb10` Pkcs 10.0.13 pin** ·
   `2759552` docs · `16ab130` docs (D-29/D-30 approval) · **`88f8a46` HiLo + regenerated baseline**
-  · docs commit after it.
-- Evidence at `88f8a46`: build 0 errors / 0 warnings; tests **94/94**; no vulnerable packages; no
-  pending model changes; mutation checks for every new rule (DECISION_LOG §64–§71). **The
-  migrations were regenerated** (one `InitialCreate`); applied only to test databases. Test host
-  runs as `Production`.
+  · `d7024e0` · `cd52af8` docs · **`d8301c0` entity audit** · **`3a00c50` security events** ·
+  docs commit after it.
+- Evidence at `3a00c50`: build 0 errors / 0 warnings; tests **105/105**; no vulnerable packages;
+  no pending model changes; mutation checks for every new rule (DECISION_LOG §64–§73).
+  Migrations = regenerated `InitialCreate` + `AddAuditLog`, applied only to test databases.
+  Test host runs as `Production`.
 - After the D-56 diff the user gave **blanket permission for the remaining sequence**
   ("don't wait for my approval"); limits kept: no destructive command, no Proposed/Pending
   decision treated as Approved.
@@ -33,16 +34,21 @@
   TraceId, `{TraceId}` in logs, tests B1–B2) — §67. Leftovers (dev SQL logging, enrichers
   removed) done on the user's "ok" — §68. **Steps 0.9 and 0.10 done.**
 
-- **0.11a HiLo demonstration done** (D-29 conditions 1–2; §69): spike tests green; migration
+- **0.11a done** (§69–§71: demonstration, D-29/D-30 approved, HiLo + regenerated baseline) and
+  **0.11 audit done** (§72–§73: entity audit + security events, C1–C7).
+- (history) 0.11a demonstration: spike tests green; migration
   diff shown; script generation fails on the IDENTITY change → needs D-30.
 
 ### ⛔ Next action — waiting for the user (each a separate approval)
 1. ~~D-29/D-30~~ **Approved and implemented `88f8a46`** (§71); **0.11a done**.
 2. ~~Vulnerable package~~ **fixed `4b0fb10`** (§70).
-3. **0.11 audit:** package P1–P7 **approved** (§72, recorded under D-27 "Audit package"). Next:
-   propose the implementation plan; no code before its approval.
-4. Then 0.12 smoke (needs approval to run against a non-test DB), Gate 3 report → approval →
-   merge.
+3. ~~0.11 audit~~ **done** `d8301c0` + `3a00c50` (§72–§73); steps 0.9 – 0.11 all done.
+4. **0.12 manual smoke** (admin login, create/deactivate user, lockout, error page, audit row):
+   needs the user's approval to run the app against a non-test database — the dev connection
+   string points at `.\SQLEXPRESS` / `CseLibrary`, which does not exist yet, so the first run
+   would **create** it and apply both migrations. Alternative: smoke against a disposable
+   `CseLibrary_Test_*` LocalDB database.
+5. Then the Gate 3 report → user approval → merge `feature/phase-0-gate-3` into `develop` (`--no-ff`).
 
 ## Session 21 (2026-10-14) — superseded by the Session 22 block above where they differ
 Session 21 closed at the user's request (conversation too long) — Session 22 started here.
