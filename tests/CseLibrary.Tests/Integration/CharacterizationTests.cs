@@ -6,6 +6,7 @@ using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -123,6 +124,46 @@ public class CharacterizationTests(AppFactory app)
         Assert.Contains("class=\"toast ", html);
         Assert.Contains("<strong>Success:</strong>", html);
         Assert.Contains("data-bs-dismiss=\"toast\"", html);
+    }
+
+    [Fact] // B1 (D-34): an unexpected exception shows only a Reference ID, and that ID is the logged error's TraceId
+    public async Task Unexpected_exception_shows_only_a_reference_id_that_is_in_the_log()
+    {
+        var client = await app.LoggedInClient(AppFactory.AdminEmail, AppFactory.AdminPassword);
+
+        var response = await client.GetAsync("/FallbackProbe/Throw");
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        var html = await response.Content.ReadAsStringAsync();
+        foreach (var leak in new[] { FallbackProbeController.SecretDetail, "InvalidOperationException", "FallbackProbeController", "Development Mode" })
+            Assert.DoesNotContain(leak, html);
+        var id = System.Text.RegularExpressions.Regex.Match(html, "<code>([0-9a-f]{32})</code>").Groups[1].Value;
+        Assert.NotEmpty(id);
+        Assert.Contains($"Reference ID: {id}", html); // D-55 error toast carries it too
+        Assert.Contains(app.Logs.Events, e => e.Exception?.Message == FallbackProbeController.SecretDetail && e.TraceId?.ToHexString() == id);
+
+        var sinks = app.Services.GetRequiredService<IConfiguration>().GetSection("Serilog:WriteTo").GetChildren().ToList();
+        Assert.NotEmpty(sinks);
+        Assert.All(sinks, s => Assert.Contains("{TraceId}", s["Args:outputTemplate"]));
+    }
+
+    [Fact] // B2 (D-34): an unknown URL gets a friendly 404 page; AJAX keeps the bare status.
+           // Anonymous callers are sent to Login first (D-31 fallback also covers URLs without an endpoint).
+    public async Task Unknown_page_shows_a_friendly_404_page()
+    {
+        var anonymous = await app.NewClient().GetAsync("/No/Such/Page");
+        Assert.Contains("/Account/Login", anonymous.Headers.Location?.OriginalString);
+
+        var client = await app.LoggedInClient(AppFactory.AdminEmail, AppFactory.AdminPassword);
+        var response = await client.GetAsync("/No/Such/Page");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains("Page not found", await response.Content.ReadAsStringAsync());
+
+        var ajax = new HttpRequestMessage(HttpMethod.Get, "/No/Such/Page");
+        ajax.Headers.Add("X-Requested-With", "XMLHttpRequest");
+        var bare = await client.SendAsync(ajax);
+        Assert.Equal(HttpStatusCode.NotFound, bare.StatusCode);
+        Assert.Empty(await bare.Content.ReadAsStringAsync());
     }
 
     [Fact] // A11 (D-31): an endpoint with no authorization metadata is still guarded by the fallback policy

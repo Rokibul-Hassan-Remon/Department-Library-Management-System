@@ -37,6 +37,7 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public TestDatabase Database { get; } = new();
     public SqlCommandCounter Commands { get; } = new();
+    public CapturingLogSink Logs { get; } = new();
 
     public AppFactory()
     {
@@ -46,12 +47,14 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable(SeedPasswordVar, AdminPassword);
     }
 
+    // Production, so error handling is what users get (B1); appsettings.Development.json is not loaded either.
     protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-        builder.ConfigureTestServices(services =>
+        builder.UseEnvironment("Production").ConfigureTestServices(services =>
         {
             GuardDbContext(services, Commands);
             services.AddScoped<ICurrentUser, TestCurrentUser>();
-            services.AddControllersWithViews().AddApplicationPart(typeof(FallbackProbeController).Assembly); // A11
+            services.AddControllersWithViews().AddApplicationPart(typeof(FallbackProbeController).Assembly); // A11, B1
+            services.AddSingleton<Serilog.Core.ILogEventSink>(Logs);
         });
 
     /// <summary>

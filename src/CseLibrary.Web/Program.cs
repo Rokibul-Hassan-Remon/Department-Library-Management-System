@@ -67,6 +67,7 @@ try
         app.UseExceptionHandler("/Home/Error");
         app.UseHsts();
     }
+    app.UseStatusCodePagesWithReExecute("/Home/HttpStatus/{0}"); // D-34: friendly page for bodiless 4xx/5xx
 
     app.UseHttpsRedirection();
     app.UseStaticFiles();

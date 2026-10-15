@@ -33,7 +33,7 @@ public class ArchitectureTests
            // every other action has [HasPermission] unless it is authenticated-only
     public void Every_controller_requires_login_and_only_the_allowlist_is_anonymous()
     {
-        string[] allowlist = ["Account.AccessDenied", "Account.Login", "Home.Error", "Home.Index", "Home.Privacy"];
+        string[] allowlist = ["Account.AccessDenied", "Account.Login", "Home.Error", "Home.HttpStatus", "Home.Index", "Home.Privacy"];
         string[] authenticatedOnly = ["Account.ChangePassword", "Account.Logout"];
 
         var controllers = Web.GetTypes().Where(t => typeof(ControllerBase).IsAssignableFrom(t) && !t.IsAbstract).ToList();
