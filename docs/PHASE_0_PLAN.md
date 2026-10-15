@@ -150,6 +150,9 @@ _Session 19 notes (DECISION_LOG §52–§53):_
 - _Session 22 (§72–§73): audit package approved; entity audit `d8301c0` + security events
   `3a00c50` (C1–C7, 105/105). **0.11 done.** Next: 0.12 smoke (needs approval to run the app
   against a non-test DB)._
+- _Session 22 (§74): **0.12 target approved = option (খ), a disposable `CseLibrary_Test_*`
+  LocalDB database** (env-var connection string + seed password, dropped afterwards; the dev
+  database is not created). Not yet run — first task of Session 23, then the Gate 3 report._
 
 **⛔ Gate 3 review — stop and wait for user approval before Phase 1.**
 

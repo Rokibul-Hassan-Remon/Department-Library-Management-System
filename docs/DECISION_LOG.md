@@ -2248,6 +2248,31 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - Not tested (as planned): the best-effort path where writing a sign-in event fails.
 - `has-pending-model-changes`: none. Migrations applied only to test databases. **0.11 done.**
 
+### 74. Session 22 — 0.12 option chosen; close-out (2026-10-15)
+- **0.12 smoke target decided:** the assistant offered (ক) the real dev database (`.\SQLEXPRESS`
+  / `CseLibrary`, which does not exist yet — the first run would create it, apply both
+  migrations and seed an admin) or (খ) a disposable `CseLibrary_Test_*` LocalDB database,
+  recommending (খ). **The user chose (খ).** Execution is left to Session 23 (the user closed the
+  session first). Conditions: D-40 guard name; connection string and seed password only as
+  process environment variables (no file or user-secrets change); drop only that generated
+  database afterwards; the dev database stays untouched and uncreated.
+- **Session 22 summary** (details §64–§73): steps **0.9, 0.10, 0.11a, 0.11 done**; D-57 new;
+  D-55 and the 0.10 D-34 scope implemented; D-29/D-30 approved and applied (regenerated
+  baseline); audit package P1–P7 approved and implemented; vulnerable `Pkcs` pinned. Branch
+  `feature/phase-0-gate-3`: 32 commits, not merged; tests 105/105.
+- **Discussion notes:** the user worked step by step with one-"ok"-per-action, gave a one-time
+  blanket permission for a sequence ("don't wait for my approval"), then returned to explicit
+  approvals; pasted assistant-style text that recommended a choice but disclaimed approval was
+  treated as **not** an approval and confirmed directly. The user asked for plain-Bangla
+  explanations when review output was too terse.
+- **Process findings** (also in SESSION_HANDOFF "Learned in Session 22"): check a step's "Done
+  when" before ticking it; mutation scripts must detect a failed build; `dotnet ef` design-time
+  runs `Program.cs` up to `Build()`; long Windows paths need `\\?\` to delete scratch worktrees.
+- Open, no decision (carried to Session 23): physical role delete (§63 item 8); all role names
+  visible to non-Admins on Users pages; role-delete privilege check vs. concurrent grant (§65);
+  untested best-effort sign-in event failure path (§73); older items D-49 O1–O5, EF Tools
+  package, UI brand text, CR5 cascade part.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

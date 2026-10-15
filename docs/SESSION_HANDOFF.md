@@ -1,54 +1,85 @@
 # Session Handoff
 
-## ▶ Session 22 (2026-10-14) — read first; overrides the Session 21 block where they differ
+## ▶ Session 22 (2026-10-14 → 2026-10-15) — read first; overrides the Session 21 block where they differ
+Session 22 closed at the user's request (conversation too long) — **Session 23 starts here.**
 
-### State
-- Branch **`feature/phase-0-gate-3`**, not merged. New this session: `21869c6` docs (Session 21
-  close-out) · **`b1bba18` D-56 staff-side rules + `UsersController` role list** · `b5e8b3b` docs ·
-  **`ac24fd7` menu from DB permissions (D-37 regression) + case-insensitive role diff** ·
-  **`56bb5f0` D-57** · `946ac49` docs · **`2c862e0` access tests A5/A6/A10/A11** ·
-  **`42ae3f4` D-55 toasts + A2** · `94865bc` docs · **`d0a8a66` D-34 0.10 scope (B1–B2)** ·
-  `ccc191f` docs · **`42d0908` dev SQL logging + enrichers** · `915f667` docs ·
-  **`be033f9` 0.11a HiLo demonstration** · `ccd35f4` docs · **`4b0fb10` Pkcs 10.0.13 pin** ·
-  `2759552` docs · `16ab130` docs (D-29/D-30 approval) · **`88f8a46` HiLo + regenerated baseline**
-  · `d7024e0` · `cd52af8` docs · **`d8301c0` entity audit** · **`3a00c50` security events** ·
-  docs commit after it.
-- Evidence at `3a00c50`: build 0 errors / 0 warnings; tests **105/105**; no vulnerable packages;
-  no pending model changes; mutation checks for every new rule (DECISION_LOG §64–§73).
-  Migrations = regenerated `InitialCreate` + `AddAuditLog`, applied only to test databases.
-  Test host runs as `Production`.
-- After the D-56 diff the user gave **blanket permission for the remaining sequence**
-  ("don't wait for my approval"); limits kept: no destructive command, no Proposed/Pending
-  decision treated as Approved.
+### State (verified 2026-10-15)
+- Branch **`feature/phase-0-gate-3`** (from `develop` @ `5bb43bc`), **32 commits, not merged**.
+  Session 22 commits, code in bold: `21869c6` docs · **`b1bba18` D-56** · `b5e8b3b` ·
+  **`ac24fd7` menu + role-name case** · **`56bb5f0` D-57** · `946ac49` · **`2c862e0` tests
+  A5/A6/A10/A11** · **`42ae3f4` D-55** · `94865bc` · **`d0a8a66` D-34** · `ccc191f` ·
+  **`42d0908` dev SQL logging/enrichers** · `915f667` · **`be033f9` HiLo spike** · `ccd35f4` ·
+  **`4b0fb10` Pkcs pin** · `2759552` · `16ab130` · **`88f8a46` HiLo + regenerated baseline** ·
+  `d7024e0` · `cd52af8` · **`d8301c0` entity audit** · **`3a00c50` security events** · `cd6eda9`.
+  Top: `cd6eda9` (or a close-out docs commit after it).
+- Evidence at `3a00c50`: build 0 errors / 0 warnings; tests **105/105**; `dotnet list package
+  --vulnerable` clean; `has-pending-model-changes` none; a mutation check for every new rule
+  (DECISION_LOG §64–§73).
+- **Migrations were regenerated (D-30):** `20261015031410_InitialCreate` + `…_AddAuditLog`;
+  applied only to `CseLibrary_Test_*` databases. `.\SQLEXPRESS` has no user database;
+  LocalDB only `Practice` (read-only check §70).
+- Test host runs as **`Production`** (`AppFactory`), so `appsettings.Development.json` is not
+  loaded by tests. Test caller outside a request = seeded Admin unless `TestCurrentUser.ActAs`.
+- Close-out docs of this session: uncommitted unless the user asks to commit them.
 
-### Done this session (DECISION_LOG §64)
-- D-56 Q-S21-4 … 15 implemented: `SystemRoles.Admin`; `Seed:Admin:Role` removed; privileged
-  role assign/remove Admin-only (`UserService`); last-effective-Admin guard under
-  `sp_getapplock`; `RoleService` Admin-role rules; `UsersController` → `IRoleService.GetNamesAsync`.
-- Gate 3 `/code-review` + `/ponytail-review` done (§65): menu bug fixed; **D-57 Approved and
-  implemented** (only an Admin may reset/re-email/deactivate/delete a privileged user).
-- Missing 0.9 tests A5/A6/A10/A11 added; **D-55 implemented** (toasts, permission failure →
-  safe local page + toast, AJAX 403, test A2) — §66.
+### Done this session (details: DECISION_LOG §64–§74)
+- **0.9 done:** D-56 staff-side rules (fixed `Admin` role, privileged-role changes Admin-only,
+  last-effective-Admin guard under `sp_getapplock`, `RoleService` Admin-role rules,
+  `UsersController` → `IRoleService`); **D-57** (only an Admin may reset/re-email/deactivate/
+  delete a privileged user); menu now uses DB permissions (D-37 regression fixed); missing
+  access tests A5/A6/A10/A11.
+- **0.10 done:** D-55 toasts + permission failure → safe local page with toast (AJAX 403, A2);
+  D-34 status pages, Reference ID = TraceId, `{TraceId}` in log templates (B1–B2), dev SQL
+  command logging, package-less enrichers removed.
+- **0.11a done:** HiLo demonstrated; IDENTITY cannot be dropped in place → D-29/D-30 approved
+  (option (a)); HiLo on `GeneralConfig`/`Permission` + regenerated baseline.
+- **0.11 done:** audit package P1–P7 approved; `AuditLogs` + interceptor (C1–C3, C6, C7, P5);
+  security events for user/role/sign-in actions (C4, C5).
+- Security finding fixed: `System.Security.Cryptography.Pkcs` 9.0.11 → pinned 10.0.13.
 
-- **D-34 0.10 scope approved by the user and implemented** (status pages, Reference ID =
-  TraceId, `{TraceId}` in logs, tests B1–B2) — §67. Leftovers (dev SQL logging, enrichers
-  removed) done on the user's "ok" — §68. **Steps 0.9 and 0.10 done.**
+### Decisions this session (all recorded in PROJECT_DECISIONS)
+D-56 implementation choices (lock = `sp_getapplock`; codes `SECURITY.FORBIDDEN`,
+`SECURITY.LAST_ADMIN`) · **D-57** new · D-55 implemented · D-34 0.10 scope approved ·
+**D-29 / D-30 Approved** · **audit package P1–P7** (under D-27; Q1 `GeneralConfig.Value`
+audited + no secrets in `GeneralConfig`, Q2 full event list, Q3 `EntityId` nvarchar(64), Q4
+JSON old/new, 1,000 chars) · **0.12 smoke on a disposable test database (option (খ), §74)**.
 
-- **0.11a done** (§69–§71: demonstration, D-29/D-30 approved, HiLo + regenerated baseline) and
-  **0.11 audit done** (§72–§73: entity audit + security events, C1–C7).
-- (history) 0.11a demonstration: spike tests green; migration
-  diff shown; script generation fails on the IDENTITY change → needs D-30.
+### Open findings without a decision
+- `RoleService.DeleteAsync` still deletes roles physically (§63 item 8).
+- Non-Admins still see all role names on the Users pages (server refuses privileged ones).
+- `RoleService.DeleteAsync` privilege check vs. a concurrent permission grant (§65 item 5).
+- Best-effort sign-in event failure path is not tested (§73).
+- Still open from earlier sessions: D-49 O1–O5, `EF Tools` package, UI brand text
+  ("DefaultTemplate"), CR5 cascade part.
 
-### ⛔ Next action — waiting for the user (each a separate approval)
-1. ~~D-29/D-30~~ **Approved and implemented `88f8a46`** (§71); **0.11a done**.
-2. ~~Vulnerable package~~ **fixed `4b0fb10`** (§70).
-3. ~~0.11 audit~~ **done** `d8301c0` + `3a00c50` (§72–§73); steps 0.9 – 0.11 all done.
-4. **0.12 manual smoke** (admin login, create/deactivate user, lockout, error page, audit row):
-   needs the user's approval to run the app against a non-test database — the dev connection
-   string points at `.\SQLEXPRESS` / `CseLibrary`, which does not exist yet, so the first run
-   would **create** it and apply both migrations. Alternative: smoke against a disposable
-   `CseLibrary_Test_*` LocalDB database.
-5. Then the Gate 3 report → user approval → merge `feature/phase-0-gate-3` into `develop` (`--no-ff`).
+### Learned in Session 22
+- A bare "ok" still approves only the first pending item; the user also gave a one-time
+  **blanket permission** for a sequence, then returned to step-by-step approvals — treat any
+  blanket permission as limited to that sequence (never destructive commands, never
+  upgrading Proposed/Pending decisions).
+- Pasted text that recommends a choice but says "I am not assuming approval" is **not** an
+  approval — ask the user directly.
+- Before marking a plan step `[x]`, check its "Done when" column (0.9 was missing A5/A6/A10/A11).
+- A mutation run must fail the build loudly: a sed that breaks compilation leaves old binaries
+  and a false result (M4 in §64).
+- `dotnet ef` design-time runs `Program.cs` until `Build()`: point
+  `ConnectionStrings__DefaultConnection` at a never-created `CseLibrary_Test_*` name anyway.
+- Windows long paths: remove scratch worktrees with `Remove-Item -LiteralPath "\?\…"`.
+
+### ⛔ Next action (Session 23), in order
+1. Verify read-only: branch `feature/phase-0-gate-3`, `git log --oneline -3`, `git status`,
+   `dotnet build` + `dotnet test` (**105/105**).
+2. If this close-out is uncommitted, ask the user before committing it.
+3. **0.12 manual smoke — option (খ) approved (§74):** run the app against a **disposable
+   `CseLibrary_Test_{guid}` LocalDB database** (D-40 guard name), never `.\SQLEXPRESS` /
+   `CseLibrary`; set `ConnectionStrings__DefaultConnection` and `Seed__Admin__Password` as
+   process environment variables only (no file changes, no user-secrets). Smoke list: admin
+   login, create + deactivate a user, lockout after 5 failures, 404 + error page with Reference
+   ID, toast on a permission failure, audit rows (entity + security) in `AuditLogs`. Record the
+   results, then drop the database (its own generated name only). Propose the exact commands
+   first if anything is unclear.
+4. Then: Gate 3 report (all of 0.9–0.12, evidence, open findings) → user approval → merge
+   `feature/phase-0-gate-3` into `develop` with `--no-ff` (each a separate approval).
 
 ## Session 21 (2026-10-14) — superseded by the Session 22 block above where they differ
 Session 21 closed at the user's request (conversation too long) — Session 22 started here.
