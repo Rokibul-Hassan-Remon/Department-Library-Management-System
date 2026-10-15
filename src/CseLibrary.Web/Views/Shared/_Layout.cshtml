@@ -48,6 +48,19 @@
                             {
                                 <li class="nav-item"><a class="nav-link text-dark" asp-controller="Permissions" asp-action="Index">Permissions</a></li>
                             }
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="MyLoans">My books</a></li>
+                            @if (await Can(Permissions.Registrations.Review))
+                            {
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="Pending">Registrations</a></li>
+                            }
+                            @if (await Can(Permissions.Lending.View))
+                            {
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Loans" asp-action="Index">Loans</a></li>
+                            }
+                            @if (await Can(Permissions.Members.View))
+                            {
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Members" asp-action="Index">Members</a></li>
+                            }
                             @if (await Can(Permissions.Books.View))
                             {
                                 <li class="nav-item"><a class="nav-link text-dark" asp-controller="Books" asp-action="Index">Books</a></li>
@@ -71,6 +84,7 @@
                         else
                         {
                             <li class="nav-item"><a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a></li>
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="Register">Register</a></li>
                         }
                     </ul>
                 </div>

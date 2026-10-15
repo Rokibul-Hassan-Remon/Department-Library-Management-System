@@ -43,7 +43,7 @@
                 <td>@c.AccessionNumber</td>
                 <td>@c.ShelfLocation</td>
                 <td>@c.AcquisitionDate</td>
-                <td>@c.CopyStatus</td>
+                <td>@c.CopyStatus @(c.HeldBy != null ? $"({c.HeldBy})" : "")</td>
                 <td>@c.Notes</td>
                 <td class="text-end">
                     <a class="btn btn-sm btn-outline-secondary" asp-action="EditCopy" asp-route-id="@c.Id">Edit</a>

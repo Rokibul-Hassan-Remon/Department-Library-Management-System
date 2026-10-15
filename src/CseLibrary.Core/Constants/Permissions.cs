@@ -45,6 +45,26 @@ public static class Permissions
         public const string Delete = "Books.Delete";
     }
 
+    public static class Members
+    {
+        public const string View = "Members.View";
+        public const string Create = "Members.Create";
+        public const string Edit = "Members.Edit";
+        public const string Delete = "Members.Delete";
+    }
+
+    public static class Lending
+    {
+        public const string View = "Lending.View";
+        public const string Issue = "Lending.Issue";
+        public const string Return = "Lending.Return";
+    }
+
+    public static class Registrations
+    {
+        public const string Review = "Registrations.Review";
+    }
+
     public static IEnumerable<(string Name, string Module)> All()
     {
         yield return (Users.View, "Users");
@@ -72,5 +92,16 @@ public static class Permissions
         yield return (Books.Create, "Books");
         yield return (Books.Edit, "Books");
         yield return (Books.Delete, "Books");
+
+        yield return (Members.View, "Members");
+        yield return (Members.Create, "Members");
+        yield return (Members.Edit, "Members");
+        yield return (Members.Delete, "Members");
+
+        yield return (Lending.View, "Lending");
+        yield return (Lending.Issue, "Lending");
+        yield return (Lending.Return, "Lending");
+
+        yield return (Registrations.Review, "Registrations");
     }
 }

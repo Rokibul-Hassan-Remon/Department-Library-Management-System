@@ -31,6 +31,12 @@ namespace CseLibrary.Data.Migrations
             modelBuilder.HasSequence("GeneralConfigs_HiLo")
                 .IncrementsBy(10);
 
+            modelBuilder.HasSequence("Loans_HiLo")
+                .IncrementsBy(10);
+
+            modelBuilder.HasSequence("Members_HiLo")
+                .IncrementsBy(10);
+
             modelBuilder.HasSequence("Permissions_HiLo")
                 .IncrementsBy(10);
 
@@ -420,6 +426,161 @@ namespace CseLibrary.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CseLibrary.Core.Entities.Loan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "Loans_HiLo");
+
+                    b.Property<int>("BookCopyId")
+                        .HasColumnType("int")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<DateTime>("IssuedAtUtc")
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("int")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<int>("RenewCount")
+                        .HasColumnType("int")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<DateTime?>("ReturnedAtUtc")
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookCopyId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Loans_ActiveCopy")
+                        .HasFilter("[ReturnedAtUtc] IS NULL AND [Status] <> 3");
+
+                    b.HasIndex("DueDate")
+                        .HasFilter("[ReturnedAtUtc] IS NULL");
+
+                    b.HasIndex("MemberId", "ReturnedAtUtc");
+
+                    b.ToTable("Loans", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Loans_Status", "[Status] IN (1, 2, 3)");
+                        });
+                });
+
+            modelBuilder.Entity("CseLibrary.Core.Entities.Member", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "Members_HiLo");
+
+                    b.Property<byte>("Approval")
+                        .HasColumnType("tinyint")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<string>("MemberCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<byte>("MemberType")
+                        .HasColumnType("tinyint")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FullName");
+
+                    b.HasIndex("MemberCode")
+                        .IsUnique()
+                        .HasFilter("[Status] <> 3");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
+
+                    b.ToTable("Members", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Members_MemberType", "[MemberType] IN (1, 2)");
+
+                            t.HasCheckConstraint("CK_Members_Status", "[Status] IN (1, 2, 3)");
+                        });
+                });
+
             modelBuilder.Entity("CseLibrary.Core.Entities.Permission", b =>
                 {
                     b.Property<int>("Id")
@@ -617,6 +778,33 @@ namespace CseLibrary.Data.Migrations
                     b.Navigation("Book");
                 });
 
+            modelBuilder.Entity("CseLibrary.Core.Entities.Loan", b =>
+                {
+                    b.HasOne("CseLibrary.Core.Entities.BookCopy", "BookCopy")
+                        .WithMany()
+                        .HasForeignKey("BookCopyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CseLibrary.Core.Entities.Member", "Member")
+                        .WithMany("Loans")
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BookCopy");
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("CseLibrary.Core.Entities.Member", b =>
+                {
+                    b.HasOne("CseLibrary.Core.Entities.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("CseLibrary.Core.Entities.RolePermission", b =>
                 {
                     b.HasOne("CseLibrary.Core.Entities.Permission", "Permission")
@@ -695,6 +883,11 @@ namespace CseLibrary.Data.Migrations
             modelBuilder.Entity("CseLibrary.Core.Entities.Book", b =>
                 {
                     b.Navigation("Copies");
+                });
+
+            modelBuilder.Entity("CseLibrary.Core.Entities.Member", b =>
+                {
+                    b.Navigation("Loans");
                 });
 
             modelBuilder.Entity("CseLibrary.Core.Entities.Permission", b =>

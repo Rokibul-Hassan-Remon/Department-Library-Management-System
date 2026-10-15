@@ -47,4 +47,5 @@ public class BookCopyDto
     public DateOnly? AcquisitionDate { get; set; }
     public CopyStatus CopyStatus { get; set; } = CopyStatus.Available;
     [StringLength(500)] public string? Notes { get; set; }
+    public string? HeldBy { get; set; } // read-only: member holding an issued copy
 }

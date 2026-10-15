@@ -40,7 +40,9 @@ public class BookRepository(ApplicationDbContext db) : Repository<Book>(db), IBo
             Copies = b.Copies.OrderBy(c => c.AccessionNumber).Select(c => new BookCopyDto
             {
                 Id = c.Id, BookId = c.BookId, AccessionNumber = c.AccessionNumber, ShelfLocation = c.ShelfLocation,
-                AcquisitionDate = c.AcquisitionDate, CopyStatus = c.CopyStatus, Notes = c.Notes
+                AcquisitionDate = c.AcquisitionDate, CopyStatus = c.CopyStatus, Notes = c.Notes,
+                HeldBy = Db.Loans.Where(l => l.BookCopyId == c.Id && l.ReturnedAtUtc == null)
+                    .Select(l => l.Member.MemberCode + " " + l.Member.FullName).FirstOrDefault()
             }).ToList()
         }).FirstOrDefaultAsync(ct);
 
@@ -62,4 +64,7 @@ public class BookCopyRepository(ApplicationDbContext db) : Repository<BookCopy>(
 
     public Task<bool> AccessionExistsAsync(string accessionNumber, int? excludeId, CancellationToken ct = default) =>
         Db.BookCopies.AnyAsync(c => c.AccessionNumber == accessionNumber && c.Id != excludeId, ct);
+
+    public Task<BookCopy?> FindByAccessionForUpdateAsync(string accessionNumber, CancellationToken ct = default) =>
+        Db.BookCopies.FirstOrDefaultAsync(c => c.AccessionNumber == accessionNumber, ct);
 }

@@ -1,0 +1,24 @@
+using CseLibrary.Core.DTOs;
+using CseLibrary.Core.Paging;
+using CseLibrary.Core.Results;
+
+namespace CseLibrary.Core.Interfaces.Services;
+
+public interface IMemberService
+{
+    Task<PagedResult<MemberDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default);
+    Task<MemberDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default);
+    /// <summary>The member linked to a portal login, or null.</summary>
+    Task<MemberDetailsDto?> GetForUserAsync(string userId, CancellationToken ct = default);
+    Task<Result<int>> CreateAsync(MemberDto dto, CancellationToken ct = default);
+    Task<Result> UpdateAsync(MemberDto dto, CancellationToken ct = default);
+    Task<Result> DeleteAsync(int id, CancellationToken ct = default);
+}
+
+public interface ILendingService
+{
+    Task<PagedResult<LoanDto>> GetPageAsync(PageRequest page, LoanFilter filter, string? search, CancellationToken ct = default);
+    Task<Result> IssueAsync(IssueDto dto, CancellationToken ct = default);
+    Task<Result> ReturnAsync(int loanId, CancellationToken ct = default);
+    Task<Result> RenewAsync(int loanId, CancellationToken ct = default);
+}
