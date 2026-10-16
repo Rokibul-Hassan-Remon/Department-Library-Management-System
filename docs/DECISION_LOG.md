@@ -2503,6 +2503,9 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   The hidden-button test now checks for the `/Books/Create` link (the label no longer has "+").
 - Evidence: build 0/0; tests 128/128; mutation: showing "New Book" without the permission fails the test;
   running app serves the icon CSS and font (HTTP 200).
+- Brand text "DefaultTemplate" (open finding since Session 4) replaced: tab title and navbar "CSE Library",
+  footer "CSE Department Library"; seeded `Site.Name` default for new databases "CSE Library" (an existing
+  database keeps its value). Build 0/0, tests 128/128.
 
 ## Unresolved decisions and why
 
