@@ -20,3 +20,7 @@ html {
 body {
   margin-bottom: 60px;
 }
+/* Reports: the browser print shows the table only (FR-12 printable output). */
+@media print {
+  header, footer, .no-print, .pagination { display: none !important; }
+}

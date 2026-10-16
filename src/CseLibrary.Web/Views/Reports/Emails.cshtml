@@ -1,0 +1,37 @@
+@model CseLibrary.Core.Paging.PagedResult<EmailLogDto>
+@{
+    ViewData["Title"] = "Email notification status";
+    var status = Context.Request.Query["status"].ToString();
+}
+
+@await Html.PartialAsync("_Header", (string)ViewData["Title"]!)
+
+<form method="get" class="row g-2 mb-3 no-print">
+    <div class="col-md-3">
+        <select name="status" class="form-select" asp-items="Enum.GetNames<DeliveryStatus>().Select(s => new SelectListItem(s, s, s == status))">
+            <option value="">All</option>
+        </select>
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-primary">Show</button></div>
+</form>
+
+<table class="table table-sm table-striped">
+    <thead><tr><th>Created</th><th>Type</th><th>Recipient</th><th>Subject</th><th>Status</th><th>Attempts</th><th>Sent</th><th>Last error</th></tr></thead>
+    <tbody>
+        @foreach (var e in Model.Items)
+        {
+            <tr class="@(e.DeliveryStatus == DeliveryStatus.Failed ? "table-danger" : "")">
+                <td>@e.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                <td>@e.EmailType</td>
+                <td>@e.Recipient</td>
+                <td>@e.Subject</td>
+                <td>@e.DeliveryStatus</td>
+                <td>@e.Attempts</td>
+                <td>@e.SentAtUtc?.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                <td>@e.LastError</td>
+            </tr>
+        }
+        @if (Model.Items.Count == 0) { <tr><td colspan="8" class="text-muted">No emails.</td></tr> }
+    </tbody>
+</table>
+<partial name="_Pager" model="(Model.Page, Model.TotalPages, Model.TotalCount)" />

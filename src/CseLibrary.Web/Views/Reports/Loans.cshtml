@@ -1,0 +1,25 @@
+@model CseLibrary.Core.Paging.PagedResult<LoanDto>
+@{
+    ViewData["Title"] = "Issue and return report";
+    var q = Context.Request.Query;
+    var filter = q["filter"].ToString() is { Length: > 0 } f ? f : nameof(LoanFilter.All);
+    var range = q["from"].ToString() + q["to"].ToString() == "" ? "" : $", issued or returned {q["from"]} – {q["to"]}";
+    var search = q["search"].ToString() == "" ? "" : $", matching \"{q["search"]}\"";
+}
+
+@await Html.PartialAsync("_Header", (string)ViewData["Title"]!)
+
+<form method="get" class="row g-2 mb-3 no-print align-items-end">
+    <div class="col-md-2">
+        <label class="form-label">Loans</label>
+        <select name="filter" class="form-select" asp-items="Enum.GetNames<LoanFilter>().Select(s => new SelectListItem(s, s, s == filter))"></select>
+    </div>
+    <div class="col-md-2"><label class="form-label">Issued or returned from</label><input name="from" type="date" value="@q["from"]" class="form-control" /></div>
+    <div class="col-md-2"><label class="form-label">to</label><input name="to" type="date" value="@q["to"]" class="form-control" /></div>
+    <div class="col-md-4"><label class="form-label">Member code / name, title or accession no.</label><input name="search" value="@q["search"]" class="form-control" /></div>
+    <div class="col-auto"><button class="btn btn-outline-primary">Show</button></div>
+</form>
+
+<p class="text-muted">@filter loans@(range)@(search)</p>
+<partial name="_LoanTable" model="Model.Items" />
+<partial name="_Pager" model="(Model.Page, Model.TotalPages, Model.TotalCount)" />

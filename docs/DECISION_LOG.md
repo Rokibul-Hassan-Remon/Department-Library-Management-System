@@ -2450,6 +2450,17 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - Evidence: build 0/0; tests 123/123; mutation checks: removing the allowlist filter and removing the
   "+ New Book" gate each fail the new test.
 
+### 85. Session 24 — reports (FR-12) (2026-10-16)
+- User chose "Reports" as the next slice. Built on `feature/phase-1-reports` with no new decision needed:
+  permission `Reports.View` (seeded; Admin gets it), `/Reports` page with the ten FR-12 reports as filtered
+  views: copies by status (inventory, available, lost, damaged; counts per status), loans (issued, overdue,
+  member-wise history via search, issue/return by local date range, both days inclusive), membership by type,
+  email notification status. Server-side paging; "Print" uses the browser print with nav/filters hidden.
+- Reused: `ILoanRepository.GetPageAsync` and `ILibraryMemberRepository.GetPageAsync` gained the range / type
+  filters; `_LoanTable`; new `IReportService` (UoW only). No schema change.
+- Not built: CSV/Excel export (FR-12 "may be included"), printing more than one page at a time.
+- Evidence: build 0/0; tests 129/129; mutation: removing the date-range filter fails the new test.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
