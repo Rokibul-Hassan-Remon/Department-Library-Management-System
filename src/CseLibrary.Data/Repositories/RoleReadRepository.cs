@@ -1,3 +1,4 @@
+using CseLibrary.Core.Constants;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces.Repositories;
@@ -22,6 +23,7 @@ public class RoleReadRepository(ApplicationDbContext db) : IRoleReadRepository
          where normalizedNames.Contains(r.NormalizedName!)
          join rp in db.RolePermissions on r.Id equals rp.RoleId
          join p in db.Permissions on rp.PermissionId equals p.Id // filtered: deleted permissions drop out
+         where !Permissions.MemberAllowlist.Contains(p.Name)
          select r.Id).AnyAsync(ct);
 
     // Only ids, and only of permissions that are not deleted.

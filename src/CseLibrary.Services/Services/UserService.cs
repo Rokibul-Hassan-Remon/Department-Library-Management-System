@@ -124,14 +124,14 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
     // D-56 Q-S21-4/8: only an effective Admin may assign or remove a privileged role (self-promotion included).
     private async Task<Result?> CheckRoleChangeAsync(ICollection<string> changed, CancellationToken ct) =>
         await IsPrivilegedAsync(changed, ct) && !await CallerIsAdminAsync(ct)
-            ? Result.Failure(ErrorCodes.Forbidden, "Only an Admin can assign or remove a role that has permissions.")
+            ? Result.Failure(ErrorCodes.Forbidden, "Only an Admin can assign or remove a role with staff permissions.")
             : null;
 
     // D-57: only an effective Admin may reset the password of, change the email of, deactivate or delete
     // a user who holds a privileged role (account takeover otherwise bypasses D-56). Other users: unchanged.
     private async Task<Result?> CheckPrivilegedTargetAsync(ICollection<string> targetRoles, CancellationToken ct) =>
         await IsPrivilegedAsync(targetRoles, ct) && !await CallerIsAdminAsync(ct)
-            ? Result.Failure(ErrorCodes.Forbidden, "Only an Admin can reset the password, change the email, deactivate or delete a user whose role has permissions.")
+            ? Result.Failure(ErrorCodes.Forbidden, "Only an Admin can reset the password, change the email, deactivate or delete a user whose role has staff permissions.")
             : null;
 
     private async Task<bool> IsPrivilegedAsync(ICollection<string> roleNames, CancellationToken ct) =>

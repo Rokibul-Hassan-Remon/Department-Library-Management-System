@@ -1,5 +1,7 @@
 @model IReadOnlyList<LibraryPolicyDto>
-@{ ViewData["Title"] = "Lending policies"; }
+@{ ViewData["Title"] = "Lending policies";
+   var canEdit = await Authorization.CanAsync(User, Permissions.GeneralConfig.Edit);
+}
 
 <h2>Lending policies</h2>
 <p class="text-muted">Limits apply to new issues and renewals; existing loans keep their due dates.</p>
@@ -17,7 +19,7 @@
                 <td>
                     <form id="@f" asp-action="Edit" method="post">
                         <input type="hidden" name="Id" value="@p.Id" /><input type="hidden" name="MemberCategory" value="@p.MemberCategory" />
-                        <button class="btn btn-primary">Save</button>
+                        @if (canEdit) { <button class="btn btn-primary">Save</button> }
                     </form>
                 </td>
             </tr>

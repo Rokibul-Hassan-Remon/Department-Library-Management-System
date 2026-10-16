@@ -65,6 +65,12 @@ public static class Permissions
         public const string Review = "Registrations.Review";
     }
 
+    /// <summary>
+    /// D-56 Q-S21-5: the permissions a library member role may hold (Session 24). A role holding any other permission
+    /// is privileged: it cannot be a registration default, and only an Admin may assign it.
+    /// </summary>
+    public static readonly string[] MemberAllowlist = [Books.View];
+
     public static IEnumerable<(string Name, string Module)> All()
     {
         yield return (Users.View, "Users");

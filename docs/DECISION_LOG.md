@@ -2435,6 +2435,21 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   tab or another app instance — unconfirmed).
 - **Findings carried to Session 24:** see SESSION_HANDOFF "Open findings without a decision".
 
+### 84. Session 24 — default member roles and permission-aware buttons (2026-10-16)
+- Start: Session 23 close-out committed `7d44415` (a misplaced D-58 "Done" note moved back from D-60);
+  `feature/d58-library-member-rename` merged into `develop` `00a21fc`. Build 0/0, tests 122/122.
+- User chose (multiple choice): member-permission **allowlist = `Books.View` only** (Q-S21-5; ends the
+  Q-S21-10 interim rule) and default roles stored as **GeneralConfig keys** (Q-S21-1).
+- Built on `feature/phase-1-default-roles`: `Permissions.MemberAllowlist`; `AnyPrivilegedAsync` ignores
+  allowlisted permissions (so a non-Admin may now assign a `Books.View`-only role); keys
+  `Registration.StudentDefaultRole` / `Registration.FellowDefaultRole` seeded empty; `GeneralConfigService`
+  refuses an unknown or privileged role; `RegistrationService` adds the role to a Student at registration and
+  to a Fellow on approval (rechecked at that time, skipped if no longer valid). Buttons on Books, Library
+  Members, Loans, Policies, Users, Roles, Permissions and Configs pages are shown only with the permission
+  (`IAuthorizationService.CanAsync`, same D-37 database check); the server still refuses on its own.
+- Evidence: build 0/0; tests 123/123; mutation checks: removing the allowlist filter and removing the
+  "+ New Book" gate each fail the new test.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

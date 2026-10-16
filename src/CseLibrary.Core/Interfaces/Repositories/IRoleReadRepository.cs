@@ -11,7 +11,7 @@ public interface IRoleReadRepository
 
     /// <summary>
     /// True when a role with one of <paramref name="normalizedNames"/> holds a permission that is not deleted.
-    /// Every such role is privileged until the member-permission allowlist exists (D-56 Q-S21-5, Q-S21-10).
+    /// Permissions in <see cref="Constants.Permissions.MemberAllowlist"/> do not count (D-56 Q-S21-5).
     /// </summary>
     Task<bool> AnyPrivilegedAsync(IReadOnlyCollection<string> normalizedNames, CancellationToken ct = default);
 }

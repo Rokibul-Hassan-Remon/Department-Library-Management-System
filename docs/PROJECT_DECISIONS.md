@@ -1662,7 +1662,7 @@ via `UserManager.UpdateAsync` in one transaction; `UpdateAsync` refuses to chang
 tests: row kept, sign-in refused, existing cookie denied, edit cannot resurrect.
 
 ### D-54 Self-registration (Q-S19-1) — design Approved (Session 19); implementation not approved
-**Session 23 status: implementation approved by the user ("member নিজে register করবে") and built** (DECISION_LOG §79): the `LibraryMembers` row is the registration application record (Q-S19-8 / Q-S21-2) with `Approval` (Approved/Pending/Rejected) and `IdentityUserId`; Pending/Rejected accounts are Inactive so sign-in refuses them; existing member codes are linked, not duplicated (Q-S19-5); `Registrations.Review` approves/rejects. **Not built:** per-type default roles (Q-S21-1), email confirmation (Q-S19-3), re-application with the same email after rejection (Q-S19-7).
+**Session 23 status: implementation approved by the user ("member নিজে register করবে") and built** (DECISION_LOG §79): the `LibraryMembers` row is the registration application record (Q-S19-8 / Q-S21-2) with `Approval` (Approved/Pending/Rejected) and `IdentityUserId`; Pending/Rejected accounts are Inactive so sign-in refuses them; existing member codes are linked, not duplicated (Q-S19-5); `Registrations.Review` approves/rejects. **Not built:** email confirmation (Q-S19-3), re-application with the same email after rejection (Q-S19-7).
 **Source:** user, Session 19 (DECISION_LOG §53). Recorded as a design decision; building it needs
 separate approval.
 1. **Form:** one Registration form with a radio choice **`Student`** / **`Dept. Fellow`**.
@@ -1787,6 +1787,7 @@ details stay in force. Registration is still built outside Phase 0 (Q-S19-9).
   Both must be **non-privileged**; the server validates the configuration and refuses a
   privileged role as a registration default. The Student role is applied on successful Student
   registration, the Fellow role only on approval (item 5).
+  **Built Session 24 (DECISION_LOG §84):** GeneralConfig keys `Registration.StudentDefaultRole` / `Registration.FellowDefaultRole` (empty = no role); saving refuses an unknown or privileged role; the role is rechecked when applied and skipped if it became privileged.
 - **Q-S21-2 Storage:** `RegistrationType` is stored on the **registration application record**
   (Q-S19-8). It is a business classification only — never an authorization role, claim or
   permission.
@@ -1803,6 +1804,7 @@ details stay in force. Registration is still built outside Phase 0 (Q-S19-9).
   approved member-permission allowlist**. The allowlist is defined when member-portal permissions
   are designed; until then it is empty, so every role holding at least one permission counts as
   privileged (confirmed by Q-S21-10).
+  **Session 24 (DECISION_LOG §84): allowlist defined = `Books.View` only** (`Permissions.MemberAllowlist`); the Q-S21-10 interim rule ends.
 - **Q-S21-6 Admin identification:** Admin-specific security checks use the **literal role name
   `"Admin"`**. Conflict with the configurable seed role name resolved by Q-S21-9 (fixed constant).
 - **Q-S21-7 Last effective Admin:** the server refuses any operation that would leave no
@@ -1825,6 +1827,7 @@ details stay in force. Registration is still built outside Phase 0 (Q-S19-9).
   defined, **every role with one or more permissions is privileged** (Q-S21-5). In Gate 3 a
   non-Admin `Users.Create`/`Users.Edit` holder can therefore assign or remove only roles without
   permissions.
+  **Superseded Session 24 (§84)** by the allowlist in Q-S21-5.
 - **Q-S21-11 Lockout (Option B):** an `Admin` with `Status = Active` **counts as an effective
   Admin even during a temporary authentication lockout** (D-31); lockout state is not part of
   the Q-S21-7 count.

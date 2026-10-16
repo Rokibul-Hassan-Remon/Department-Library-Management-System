@@ -1,3 +1,4 @@
+using CseLibrary.Core.Constants;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces;
@@ -135,4 +136,61 @@ public class PortalTests(AppFactory app)
         Assert.True(await app.WithServiceAsync(sp => sp.GetRequiredService<IReminderService>().SendDueRemindersAsync()) >= 1);
         Assert.Equal(0, await app.WithServiceAsync(sp => sp.GetRequiredService<IReminderService>().SendDueRemindersAsync())); // idempotency key: never twice
     }
+
+    // D-56 Q-S21-1/Q-S21-5: per-type default roles; only Books.View is a member permission.
+    [Fact]
+    public async Task Default_roles_are_validated_and_given_to_students_at_once_and_fellows_on_approval()
+    {
+        var (member, staff) = (await CreateRole(Permissions.Books.View), await CreateRole(Permissions.Books.Edit));
+        try
+        {
+            Assert.Equal(ErrorCodes.InvalidState, (await SetConfig(RegistrationConfigKeys.StudentDefaultRole, staff)).ErrorCode);
+            Assert.Equal(ErrorCodes.InvalidState, (await SetConfig(RegistrationConfigKeys.StudentDefaultRole, "NoSuchRole")).ErrorCode);
+            Assert.True((await SetConfig(RegistrationConfigKeys.StudentDefaultRole, member)).Succeeded);
+            Assert.True((await SetConfig(RegistrationConfigKeys.FellowDefaultRole, member)).Succeeded);
+
+            var student = Form(RegistrationType.Student);
+            Assert.True((await Register(student)).Succeeded);
+            Assert.Equal([member], await RolesOf(student.Email));
+
+            var fellow = Form(RegistrationType.DepartmentFellow);
+            Assert.True((await Register(fellow)).Succeeded);
+            Assert.Empty(await RolesOf(fellow.Email));
+            var fellowId = (await MemberOf(fellow.Email))!.Id;
+            Assert.True((await app.WithServiceAsync(sp => sp.GetRequiredService<IRegistrationService>().ApproveAsync(fellowId))).Succeeded);
+            Assert.Equal([member], await RolesOf(fellow.Email));
+
+            // The member role opens the catalog, but buttons for permissions it lacks are hidden.
+            var client = await app.LoggedInClient(student.Email, student.Password);
+            var books = await client.GetStringAsync("/Books");
+            Assert.Contains("<h2>Books</h2>", books);
+            Assert.DoesNotContain("+ New Book", books);
+        }
+        finally
+        {
+            await SetConfig(RegistrationConfigKeys.StudentDefaultRole, null);
+            await SetConfig(RegistrationConfigKeys.FellowDefaultRole, null);
+        }
+    }
+
+    private Task<string> CreateRole(string permission) => app.WithServiceAsync(async sp =>
+    {
+        var name = Unique("Role_");
+        var ids = (await sp.GetRequiredService<IPermissionService>().GetAllAsync()).Where(p => p.Name == permission).Select(p => p.Id).ToList();
+        Assert.True((await sp.GetRequiredService<IRoleService>().CreateAsync(new CreateRoleDto { Name = name, PermissionIds = ids })).Succeeded);
+        return name;
+    });
+
+    private Task<Result> SetConfig(string key, string? value) => app.WithServiceAsync(async sp =>
+    {
+        var configs = sp.GetRequiredService<IGeneralConfigService>();
+        var c = (await configs.GetByKeyAsync(key))!;
+        return await configs.UpdateAsync(new UpdateGeneralConfigDto { Id = c.Id, Key = c.Key, Value = value, Group = c.Group, Description = c.Description });
+    });
+
+    private Task<IList<string>> RolesOf(string email) => app.WithServiceAsync(async sp =>
+    {
+        var users = sp.GetRequiredService<UserManager<ApplicationUser>>();
+        return await users.GetRolesAsync((await users.FindByEmailAsync(email))!);
+    });
 }
