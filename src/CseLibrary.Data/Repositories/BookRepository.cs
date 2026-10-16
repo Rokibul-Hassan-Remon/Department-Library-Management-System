@@ -10,10 +10,11 @@ namespace CseLibrary.Data.Repositories;
 
 public class BookRepository(ApplicationDbContext db) : Repository<Book>(db), IBookRepository
 {
-    public async Task<PagedResult<BookListItemDto>> GetPageAsync(PageRequest page, string? search, int? categoryId, CancellationToken ct = default)
+    public async Task<PagedResult<BookListItemDto>> GetPageAsync(PageRequest page, string? search, int? categoryId, int? authorId, CancellationToken ct = default)
     {
         var books = Db.Books.AsQueryable();
         if (categoryId != null) books = books.Where(b => b.CategoryId == categoryId);
+        if (authorId != null) books = books.Where(b => b.BookAuthors.Any(ba => ba.AuthorId == authorId));
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim();
@@ -46,10 +47,11 @@ public class BookRepository(ApplicationDbContext db) : Repository<Book>(db), IBo
                 PublicationYear = b.PublicationYear, Category = b.Category!.Name, Description = b.Description,
                 Copies = b.Copies.AsQueryable().OrderBy(c => c.AccessionNumber).Select(copyDto).ToList()
             },
-            Authors = b.BookAuthors.OrderBy(ba => ba.Order).Select(ba => ba.Author.Name).ToList()
+            Authors = b.BookAuthors.OrderBy(ba => ba.Order).Select(ba => new AuthorOptionDto(ba.AuthorId, ba.Author.Name)).ToList()
         }).FirstOrDefaultAsync(ct);
         if (row == null) return null;
-        row.Book.Authors = string.Join(", ", row.Authors);
+        row.Book.AuthorList = row.Authors;
+        row.Book.AuthorIds = row.Authors.Select(a => a.Id).ToList();
         return row.Book;
     }
 
@@ -116,8 +118,38 @@ public class CategoryRepository(ApplicationDbContext db) : Repository<Category>(
 
 public class AuthorRepository(ApplicationDbContext db) : Repository<Author>(db), IAuthorRepository
 {
-    public async Task<IReadOnlyList<Author>> FindByNamesForUpdateAsync(IReadOnlyCollection<string> names, CancellationToken ct = default) =>
-        await Db.Authors.Where(a => names.Contains(a.Name)).ToListAsync(ct);
+    public async Task<PagedResult<AuthorListItemDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default)
+    {
+        var authors = Db.Authors.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(search)) authors = authors.Where(a => a.Name.Contains(search.Trim()));
+
+        var total = await authors.CountAsync(ct);
+        page = page.ClampTo(total);
+        var items = await authors.OrderBy(a => a.Name).ThenBy(a => a.Id).Skip(page.Skip).Take(page.PageSize)
+            .Select(a => new AuthorListItemDto(a.Id, a.Name, Db.Books.Count(b => b.BookAuthors.Any(ba => ba.AuthorId == a.Id))))
+            .ToListAsync(ct);
+        return new PagedResult<AuthorListItemDto>(items, total, page.Page, page.PageSize);
+    }
+
+    public Task<AuthorFormDto?> GetFormAsync(int id, CancellationToken ct = default) =>
+        Db.Authors.Where(a => a.Id == id).Select(a => new AuthorFormDto { Id = a.Id, Name = a.Name }).FirstOrDefaultAsync(ct);
+
+    public async Task<IReadOnlyList<AuthorOptionDto>> SearchAsync(string? term, int take, CancellationToken ct = default)
+    {
+        var authors = Db.Authors.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(term)) authors = authors.Where(a => a.Name.Contains(term.Trim()));
+        return await authors.OrderBy(a => a.Name).Take(take).Select(a => new AuthorOptionDto(a.Id, a.Name)).ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<AuthorOptionDto>> GetOptionsAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default) =>
+        await Db.Authors.Where(a => ids.Contains(a.Id)).Select(a => new AuthorOptionDto(a.Id, a.Name)).ToListAsync(ct);
+
+    public Task<bool> NameExistsAsync(string name, int? excludeId, CancellationToken ct = default) =>
+        Db.Authors.AnyAsync(a => a.Name == name && a.Id != excludeId, ct);
+
+    // Through Books, so a soft-deleted book (query filter) does not keep its authors undeletable.
+    public Task<bool> HasBooksAsync(int id, CancellationToken ct = default) =>
+        Db.Books.AnyAsync(b => b.BookAuthors.Any(ba => ba.AuthorId == id), ct);
 }
 
 public class LibraryPolicyRepository(ApplicationDbContext db) : Repository<LibraryPolicy>(db), ILibraryPolicyRepository

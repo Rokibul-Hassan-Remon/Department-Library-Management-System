@@ -1,0 +1,43 @@
+@model AuthorFormDto
+@{
+    ViewData["Title"] = Model.Name;
+    var books = (CseLibrary.Core.Paging.PagedResult<BookListItemDto>)ViewData["Books"]!;
+    var canEdit = await Authorization.CanAsync(User, Permissions.Books.Edit);
+    var canDelete = await Authorization.CanAsync(User, Permissions.Books.Delete);
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <a class="small" asp-action="Index"><i class="bi bi-arrow-left" aria-hidden="true"></i> Authors</a>
+        <h2>@Model.Name</h2>
+    </div>
+    <div>
+        @if (canEdit) { <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a> }
+        @if (canDelete)
+        {
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this author?');">
+                <button class="btn btn-outline-danger"><i class="bi bi-trash" aria-hidden="true"></i> Delete</button>
+            </form>
+        }
+    </div>
+</div>
+
+<h4>Books <span class="text-muted fs-6">(@books.TotalCount)</span></h4>
+<table class="table table-striped">
+    <thead><tr><th>Title</th><th>Authors</th><th>ISBN</th><th>Category</th><th class="text-end">Available / Total</th></tr></thead>
+    <tbody>
+        @foreach (var b in books.Items)
+        {
+            <tr>
+                <td><a asp-controller="Books" asp-action="Details" asp-route-id="@b.Id">@b.Title</a></td>
+                <td>@b.Authors</td>
+                <td>@b.Isbn</td>
+                <td>@b.Category</td>
+                <td class="text-end">@b.AvailableCopies / @b.TotalCopies</td>
+            </tr>
+        }
+        @if (books.Items.Count == 0) { <tr><td colspan="5" class="text-muted">No books by this author yet.</td></tr> }
+    </tbody>
+</table>
+
+<partial name="_Pager" model="(books.Page, books.TotalPages, books.TotalCount)" />

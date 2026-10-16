@@ -2525,6 +2525,36 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   (`git diff` branch vs `develop`) instead of a rebuild.
 - **Carried to Session 25:** see SESSION_HANDOFF "Open findings without a decision" and "Next action".
 
+### 90. Session 25 — sidebar navigation in the CSE MBSTU colours (2026-10-16)
+- User: move the top navbar to the side, keep login/logout top-right "like other websites", review every UI
+  change "like a 10Y+ UI/UX engineer", colours from https://cse.mbstu.ac.bd/. Its default theme gives maroon
+  `hsl(0 54% 36%)` `#8d2a2a`, copper `hsl(17 44% 45%)` `#a55d40`, tan `#e4b8a0`, cream `#f6eedf` (tokens in
+  `site.css :root`).
+- Built: maroon sidebar (static >= lg, Bootstrap offcanvas below — 5.1 has no `offcanvas-lg`, CSS pins it);
+  top bar with the user menu (Change password, Logout) or Login/Register top-right. User follow-ups: only the
+  core groups show (Library, Administration as collapsible groups, the current page's group open, one at a
+  time), and the Home link was removed (the logo goes home, `title="Home"`).
+- Layout CSS moved from `_Layout.cshtml.css` to `site.css`: scoped CSS does not reach tag-helper `<a>`
+  elements (seen in screenshots) and the §75 scoped-CSS 404 no longer affects the layout.
+- Evidence: build 0/0; tests 128/128; headless-Edge screenshots desktop/mobile (Edge cannot go below ~500px).
+
+### 91. Session 25 — Authors register; the book form picks authors with Select2 (2026-10-16)
+- **User finding:** the `Authors` table existed (§80) but had no screens; authors were typed comma separated
+  on the book form and created on save. **User decision:** authors are registered first (New Author, author
+  index, which author has which books); the book form only chooses registered authors from a Select2 dropdown
+  with suggestions. Books never create authors.
+- Built: `AuthorsController` Index (search, server paging, book count) / Details (the author's books, server
+  paged, via the existing book list query with an `authorId` filter) / Create / Edit / Delete (soft; refused
+  while a non-deleted book names the author) / `Lookup` (Select2 AJAX source, max 20 names). `BookFormDto.Authors`
+  (text) replaced by `AuthorIds` (order kept, de-duplicated; an unknown id is refused). Sidebar: Library →
+  Authors. Book details link each author. No migration (schema unchanged).
+- **Default taken, not asked:** Authors use the `Books.*` permissions (catalog); separate `Authors.*`
+  permissions if the user wants them. A book may still have no author (unchanged).
+- Select2 4.0.13 (MIT, stable; local copy in `wwwroot/lib/select2`, like the other libs), themed in `site.css`.
+- Evidence: build 0/0; tests 128/128 (the catalog author test rewritten); mutations — no registered-author
+  check → test fails; delete not refused with books → test fails; restored → green. Running app: Authors pages,
+  Lookup and the book form HTTP 200, unknown author 404.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

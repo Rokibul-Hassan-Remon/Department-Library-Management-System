@@ -1,5 +1,6 @@
 @model BookFormDto
 @inject CseLibrary.Core.Interfaces.Services.IBookService Books
+@inject CseLibrary.Core.Interfaces.Services.IAuthorService Authors
 @{ var isNew = Model.Id == 0; ViewData["Title"] = isNew ? "New Book" : "Edit Book"; }
 
 <h2>@ViewData["Title"]</h2>
@@ -7,7 +8,17 @@
     <input type="hidden" asp-for="Id" />
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="mb-3"><label asp-for="Title" class="form-label"></label><input asp-for="Title" class="form-control" /><span asp-validation-for="Title" class="text-danger"></span></div>
-    <div class="mb-3"><label asp-for="Authors" class="form-label">Authors (comma separated)</label><input asp-for="Authors" class="form-control" /></div>
+    @* Authors come from the Authors register only (Select2, server search); the chosen order is kept. *@
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-baseline">
+            <label for="AuthorIds" class="form-label">Authors</label>
+            <a class="small" asp-controller="Authors" asp-action="Create" target="_blank" rel="noopener"><i class="bi bi-plus-lg" aria-hidden="true"></i> Register a new author</a>
+        </div>
+        <select id="AuthorIds" name="AuthorIds" multiple class="form-select" data-lookup="@Url.Action("Lookup", "Authors")">
+            @foreach (var a in await Authors.GetOptionsAsync(Model.AuthorIds)) { <option value="@a.Id" selected>@a.Name</option> }
+        </select>
+        <div class="form-text">Type to search registered authors. Not listed? Register the author first.</div>
+    </div>
     <div class="row">
         <div class="col-md-6 mb-3"><label asp-for="Isbn" class="form-label">ISBN</label><input asp-for="Isbn" class="form-control" /><span asp-validation-for="Isbn" class="text-danger"></span></div>
         <div class="col-md-6 mb-3"><label asp-for="Category" class="form-label"></label><input asp-for="Category" class="form-control" list="categories" />
@@ -21,4 +32,16 @@
     @if (isNew) { <a class="btn btn-secondary" asp-action="Index"><i class="bi bi-x-lg" aria-hidden="true"></i> Cancel</a> }
     else { <a class="btn btn-secondary" asp-action="Details" asp-route-id="@Model.Id"><i class="bi bi-x-lg" aria-hidden="true"></i> Cancel</a> }
 </form>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+@section Styles { <link rel="stylesheet" href="~/lib/select2/dist/css/select2.min.css" /> }
+@section Scripts
+{
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/lib/select2/dist/js/select2.min.js"></script>
+    <script>
+        $("#AuthorIds").select2({
+            width: "100%",
+            placeholder: "Search authors",
+            ajax: { url: $("#AuthorIds").data("lookup"), dataType: "json", delay: 250, data: p => ({ term: p.term }) }
+        });
+    </script>
+}

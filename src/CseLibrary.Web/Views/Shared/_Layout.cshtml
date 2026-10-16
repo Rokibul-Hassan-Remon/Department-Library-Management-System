@@ -23,7 +23,11 @@
     if (signedIn)
     {
         var library = new List<(string, string, string, string)>();
-        if (await Can(Permissions.Books.View)) library.Add(("Books", "bi-book", "Books", "Index"));
+        if (await Can(Permissions.Books.View))
+        {
+            library.Add(("Books", "bi-book", "Books", "Index"));
+            library.Add(("Authors", "bi-person-lines-fill", "Authors", "Index"));
+        }
         if (await Can(Permissions.Lending.View)) library.Add(("Loans", "bi-arrow-left-right", "Loans", "Index"));
         if (await Can(Permissions.LibraryMembers.View)) library.Add(("Library Members", "bi-person-vcard", "LibraryMembers", "Index"));
         if (await Can(Permissions.Registrations.Review)) library.Add(("Registrations", "bi-person-check", "Portal", "Pending"));
@@ -53,6 +57,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/CseLibrary.Web.styles.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
     <a class="visually-hidden-focusable skip-link" href="#main">Skip to content</a>

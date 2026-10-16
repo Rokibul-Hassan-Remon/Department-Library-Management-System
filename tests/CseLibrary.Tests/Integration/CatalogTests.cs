@@ -33,24 +33,36 @@ public class CatalogTests(AppFactory app)
         });
     }
 
-    [Fact] // database model M15: Authors + BookAuthors, Categories
-    public async Task Authors_and_category_are_shared_rows_found_by_name()
+    [Fact] // database model M15: Authors + BookAuthors, Categories; authors are registered before a book names them
+    public async Task Books_name_registered_authors_in_order_and_an_author_with_books_is_not_deleted()
     {
         await app.WithServiceAsync(async sp =>
         {
-            var books = sp.GetRequiredService<IBookService>();
-            var (author, category) = (Unique("Knuth "), Unique("Algorithms "));
-            var first = (await books.CreateAsync(new BookFormDto { Title = "TAOCP 1", Authors = $"{author}, Co Author, {author.ToUpperInvariant()}", Category = category })).Value;
-            var second = (await books.CreateAsync(new BookFormDto { Title = "TAOCP 2", Authors = " " + author + " ", Category = category })).Value;
+            var (books, authors) = (sp.GetRequiredService<IBookService>(), sp.GetRequiredService<IAuthorService>());
+            var (knuth, coName, category) = (Unique("Knuth "), Unique("Co "), Unique("Algorithms "));
+            var knuthId = (await authors.CreateAsync(new AuthorFormDto { Name = " " + knuth + " " })).Value;
+            Assert.Equal(ErrorCodes.Duplicate, (await authors.CreateAsync(new AuthorFormDto { Name = knuth.ToUpperInvariant() })).ErrorCode);
+            var coId = (await authors.CreateAsync(new AuthorFormDto { Name = coName })).Value;
 
-            Assert.Equal($"{author}, Co Author", (await books.GetDetailsAsync(first))!.Authors); // trimmed, de-duplicated, ordered
+            var first = (await books.CreateAsync(new BookFormDto { Title = "TAOCP 1", AuthorIds = [coId, knuthId, coId], Category = category })).Value;
+            var second = (await books.CreateAsync(new BookFormDto { Title = "TAOCP 2", AuthorIds = [knuthId], Category = category })).Value;
+            Assert.Equal(new[] { coId, knuthId }, (await books.GetDetailsAsync(first))!.AuthorIds); // de-duplicated, chosen order kept
+            Assert.Equal(ErrorCodes.NotFound, (await books.CreateAsync(new BookFormDto { Title = "X", AuthorIds = [int.MaxValue] })).ErrorCode); // unregistered
+
             var categoryId = Assert.Single(await books.GetCategoriesAsync(), c => c.Name == category).Id; // one row for both books
-            var page = await books.GetPageAsync(new PageRequest(1, 100), author, categoryId);
-            Assert.Equal([first, second], page.Items.Select(b => b.Id).Order());
+            Assert.Equal([first, second], (await books.GetPageAsync(new PageRequest(1, 100), knuth, categoryId)).Items.Select(b => b.Id).Order());
+            Assert.Equal([first, second], (await books.GetPageAsync(new PageRequest(1, 100), null, authorId: knuthId)).Items.Select(b => b.Id).Order());
+            Assert.Equal(2, Assert.Single((await authors.GetPageAsync(new PageRequest(), knuth)).Items).BookCount);
+            Assert.Equal(knuthId, Assert.Single(await authors.SearchAsync(knuth)).Id); // the book form picker
 
-            Assert.True((await books.UpdateAsync(new BookFormDto { Id = second, Title = "TAOCP 2", Authors = "Someone Else" })).Succeeded);
+            Assert.True((await books.UpdateAsync(new BookFormDto { Id = second, Title = "TAOCP 2", AuthorIds = [coId] })).Succeeded);
             var updated = (await books.GetDetailsAsync(second))!;
-            Assert.Equal(("Someone Else", (string?)null), (updated.Authors, updated.Category));
+            Assert.Equal((coName, (string?)null), (updated.Authors, updated.Category));
+
+            Assert.Equal(ErrorCodes.InUse, (await authors.DeleteAsync(knuthId)).ErrorCode); // still named by TAOCP 1
+            Assert.True((await books.DeleteAsync(first)).Succeeded);
+            Assert.True((await authors.DeleteAsync(knuthId)).Succeeded); // a deleted book does not block
+            Assert.Null(await authors.GetAsync(knuthId));
         });
     }
 
