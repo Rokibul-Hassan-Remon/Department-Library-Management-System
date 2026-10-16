@@ -2392,6 +2392,18 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - Evidence: build 0/0; tests 122/122; mutation — reminder idempotency check removed → reminder
   test failed, restored → green.
 
+### 81. Session 23 — "Borrower" naming proposed (D-58) (2026-10-16)
+- The user asked the difference between Member and User; the assistant explained (User = login
+  account with roles; Member = borrower record with type, limits and loans; 0..1 link). The user
+  then pasted a recommendation to rename Member → Borrower (`Borrowers`, `BorrowerCode`,
+  `BorrowerId`, `BorrowerType`), explicitly "not now": record the naming in documentation first,
+  then a separately approved impact analysis and migration plan.
+- Recorded as **D-58 Proposed** — pasted text recommending a choice is not an approval (Session
+  22 lesson); awaiting the user's own approval. No code changed.
+- **The user then chose "Library Member"** over "Borrower": entity `LibraryMember`, table
+  `LibraryMembers`. D-58 updated (Borrower Rejected); the assistant's column-name proposal
+  (`LibraryMemberId` FKs, keep `MemberCode`/`MemberType`) **approved by the user ("ok")**.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
