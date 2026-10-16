@@ -22,6 +22,9 @@ public interface IBookCopyRepository : IRepository<BookCopy>
     Task<BookCopy?> FindByAccessionForUpdateAsync(string accessionNumber, CancellationToken ct = default);
     /// <summary>The save fails with a concurrency conflict unless the row still has <paramref name="rowVersion"/>.</summary>
     void ExpectVersion(BookCopy copy, byte[] rowVersion);
+    /// <summary>All copies (or one status), ordered by accession number, with the holder of an issued copy.</summary>
+    Task<PagedResult<BookCopyDto>> GetPageAsync(PageRequest page, CopyStatus? status, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<CopyStatus, int>> CountByStatusAsync(CancellationToken ct = default);
 }
 
 public interface ICategoryRepository : IRepository<Category>
@@ -44,4 +47,5 @@ public interface ILibraryPolicyRepository : IRepository<LibraryPolicy>
 public interface IEmailNotificationLogRepository : IRepository<EmailNotificationLog>
 {
     Task<EmailNotificationLog?> FindByKeyForUpdateAsync(string idempotencyKey, CancellationToken ct = default);
+    Task<PagedResult<EmailLogDto>> GetPageAsync(PageRequest page, DeliveryStatus? status, CancellationToken ct = default);
 }

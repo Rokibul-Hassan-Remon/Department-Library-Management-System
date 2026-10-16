@@ -10,9 +10,9 @@ namespace CseLibrary.Data.Repositories;
 
 public class LibraryMemberRepository(ApplicationDbContext db) : Repository<LibraryMember>(db), ILibraryMemberRepository
 {
-    public async Task<PagedResult<LibraryMemberDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default)
+    public async Task<PagedResult<LibraryMemberDto>> GetPageAsync(PageRequest page, string? search, MemberType? type, CancellationToken ct = default)
     {
-        var members = Db.LibraryMembers.AsQueryable();
+        var members = Db.LibraryMembers.Where(m => type == null || m.MemberType == type);
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim();
@@ -63,7 +63,8 @@ public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILo
         IssueDateUtc = l.IssueDateUtc, DueDate = l.DueDate, ReturnDateUtc = l.ReturnDateUtc, RenewCount = l.RenewCount
     };
 
-    public async Task<PagedResult<LoanDto>> GetPageAsync(PageRequest page, LoanFilter filter, string? search, DateOnly today, CancellationToken ct = default)
+    public async Task<PagedResult<LoanDto>> GetPageAsync(PageRequest page, LoanFilter filter, string? search, DateOnly today,
+        DateTime? fromUtc, DateTime? toUtc, CancellationToken ct = default)
     {
         var loans = filter switch
         {
@@ -77,6 +78,8 @@ public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILo
             loans = loans.Where(l => l.LibraryMember.MemberCode == s || l.LibraryMember.FullName.Contains(s)
                                      || l.BookCopy.AccessionNumber == s || l.BookCopy.Book.Title.Contains(s));
         }
+        if (fromUtc != null && toUtc != null)
+            loans = loans.Where(l => (l.IssueDateUtc >= fromUtc && l.IssueDateUtc < toUtc) || (l.ReturnDateUtc >= fromUtc && l.ReturnDateUtc < toUtc));
         var total = await loans.CountAsync(ct);
         page = page.ClampTo(total);
         var items = await (filter == LoanFilter.All ? loans.OrderByDescending(l => l.IssueDateUtc) : loans.OrderBy(l => l.DueDate))

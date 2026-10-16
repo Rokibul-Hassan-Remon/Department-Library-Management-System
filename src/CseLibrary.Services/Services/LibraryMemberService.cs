@@ -10,7 +10,7 @@ namespace CseLibrary.Services.Services;
 public class LibraryMemberService(IUnitOfWork uow) : ILibraryMemberService
 {
     public Task<PagedResult<LibraryMemberDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default) =>
-        uow.LibraryMembers.GetPageAsync(page, search, ct);
+        uow.LibraryMembers.GetPageAsync(page, search, null, ct);
 
     public Task<LibraryMemberDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default) => uow.LibraryMembers.GetDetailsAsync(id, ct);
 

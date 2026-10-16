@@ -5,8 +5,11 @@
   `develop` **`00a21fc`** (build 0/0, 122/122).
 - **D-56 Q-S21-1 default roles + permission-aware buttons** on `feature/phase-1-default-roles`
   (DECISION_LOG §84): allowlist = `Books.View`; GeneralConfig keys
-  `Registration.StudentDefaultRole` / `Registration.FellowDefaultRole`. Build 0/0, tests **123/123**.
-  Not committed yet.
+  `Registration.StudentDefaultRole` / `Registration.FellowDefaultRole`. Committed `805cb7a`, merged into
+  `develop` **`58c027c`** (123/123).
+- **Reports (FR-12)** on `feature/phase-1-reports` (DECISION_LOG §85): `Reports.View`, `/Reports` with the
+  ten reports as filtered, paged, printable views. Build 0/0, tests **129/129**. Not committed yet;
+  CSV export not built.
 - Resolved from the Session 23 open findings: buttons without the permission; D-54 per-type
   default roles. Everything else in that list is still open.
 

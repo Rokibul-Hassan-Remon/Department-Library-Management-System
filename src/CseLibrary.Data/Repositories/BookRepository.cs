@@ -85,6 +85,25 @@ public class BookCopyRepository(ApplicationDbContext db) : Repository<BookCopy>(
 
     public void ExpectVersion(BookCopy copy, byte[] rowVersion) =>
         Db.Entry(copy).Property(c => c.RowVersion).OriginalValue = rowVersion;
+
+    public async Task<PagedResult<BookCopyDto>> GetPageAsync(PageRequest page, CopyStatus? status, CancellationToken ct = default)
+    {
+        var copies = Db.BookCopies.Where(c => status == null || c.CopyStatus == status);
+        var total = await copies.CountAsync(ct);
+        page = page.ClampTo(total);
+        var items = await copies.OrderBy(c => c.AccessionNumber).ThenBy(c => c.Id).Skip(page.Skip).Take(page.PageSize)
+            .Select(c => new BookCopyDto
+            {
+                Id = c.Id, BookId = c.BookId, BookTitle = c.Book.Title, AccessionNumber = c.AccessionNumber, ShelfLocation = c.ShelfLocation,
+                AcquisitionDate = c.AcquisitionDate, CopyStatus = c.CopyStatus, Notes = c.Notes,
+                HeldBy = Db.Loans.Where(l => l.BookCopyId == c.Id && l.TransactionStatus == LendingStatus.Issued)
+                    .Select(l => l.LibraryMember.MemberCode + " " + l.LibraryMember.FullName).FirstOrDefault()
+            }).ToListAsync(ct);
+        return new PagedResult<BookCopyDto>(items, total, page.Page, page.PageSize);
+    }
+
+    public async Task<IReadOnlyDictionary<CopyStatus, int>> CountByStatusAsync(CancellationToken ct = default) =>
+        await Db.BookCopies.GroupBy(c => c.CopyStatus).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, ct);
 }
 
 public class CategoryRepository(ApplicationDbContext db) : Repository<Category>(db), ICategoryRepository
@@ -120,4 +139,15 @@ public class EmailNotificationLogRepository(ApplicationDbContext db) : Repositor
 {
     public Task<EmailNotificationLog?> FindByKeyForUpdateAsync(string idempotencyKey, CancellationToken ct = default) =>
         Db.EmailNotificationLogs.FirstOrDefaultAsync(e => e.IdempotencyKey == idempotencyKey, ct);
+
+    public async Task<PagedResult<EmailLogDto>> GetPageAsync(PageRequest page, DeliveryStatus? status, CancellationToken ct = default)
+    {
+        var emails = Db.EmailNotificationLogs.Where(e => status == null || e.DeliveryStatus == status);
+        var total = await emails.CountAsync(ct);
+        page = page.ClampTo(total);
+        var items = await emails.OrderByDescending(e => e.CreatedAt).ThenByDescending(e => e.Id).Skip(page.Skip).Take(page.PageSize)
+            .Select(e => new EmailLogDto(e.CreatedAt, e.EmailType, e.Recipient, e.Subject, e.DeliveryStatus, e.Attempts, e.SentAtUtc, e.LastError))
+            .ToListAsync(ct);
+        return new PagedResult<EmailLogDto>(items, total, page.Page, page.PageSize);
+    }
 }

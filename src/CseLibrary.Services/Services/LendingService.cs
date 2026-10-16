@@ -16,7 +16,7 @@ public class LendingService(IUnitOfWork uow, ICurrentUser currentUser, TimeProvi
     private DateOnly Today => DateOnly.FromDateTime(time.GetLocalNow().DateTime);
 
     public Task<PagedResult<LoanDto>> GetPageAsync(PageRequest page, LoanFilter filter, string? search, CancellationToken ct = default) =>
-        uow.Loans.GetPageAsync(page, filter, search, Today, ct);
+        uow.Loans.GetPageAsync(page, filter, search, Today, null, null, ct);
 
     public Task<Result> IssueAsync(IssueDto dto, CancellationToken ct = default)
     {

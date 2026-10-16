@@ -62,3 +62,7 @@ public class LibraryPolicyDto
     [Range(1, 365), Display(Name = "Loan days")] public int LoanDays { get; set; }
     [Range(0, 10), Display(Name = "Max renewals")] public int MaxRenewals { get; set; }
 }
+
+/// <summary>A row of the email notification status report (FR-12 item 10).</summary>
+public record EmailLogDto(DateTime CreatedAt, EmailType EmailType, string Recipient, string Subject, DeliveryStatus DeliveryStatus,
+    int Attempts, DateTime? SentAtUtc, string? LastError);

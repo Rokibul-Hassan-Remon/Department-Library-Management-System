@@ -65,6 +65,11 @@ public static class Permissions
         public const string Review = "Registrations.Review";
     }
 
+    public static class Reports
+    {
+        public const string View = "Reports.View";
+    }
+
     /// <summary>
     /// D-56 Q-S21-5: the permissions a library member role may hold (Session 24). A role holding any other permission
     /// is privileged: it cannot be a registration default, and only an Admin may assign it.
@@ -109,5 +114,7 @@ public static class Permissions
         yield return (Lending.Return, "Lending");
 
         yield return (Registrations.Review, "Registrations");
+
+        yield return (Reports.View, "Reports");
     }
 }

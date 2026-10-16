@@ -1,0 +1,36 @@
+@model CseLibrary.Core.Paging.PagedResult<LibraryMemberDto>
+@{
+    var type = Context.Request.Query["type"].ToString();
+    ViewData["Title"] = type switch { "Student" => "Student membership", "Fellow" => "Department Fellow membership", _ => "Membership" };
+}
+
+@await Html.PartialAsync("_Header", (string)ViewData["Title"]!)
+
+<form method="get" class="row g-2 mb-3 no-print">
+    <div class="col-md-3">
+        <select name="type" class="form-select" asp-items="Enum.GetNames<MemberType>().Select(s => new SelectListItem(s, s, s == type))">
+            <option value="">All types</option>
+        </select>
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-primary">Show</button></div>
+</form>
+
+<table class="table table-sm table-striped">
+    <thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Email</th><th>Phone</th><th>Status</th><th class="text-end">Books held</th></tr></thead>
+    <tbody>
+        @foreach (var m in Model.Items)
+        {
+            <tr>
+                <td>@m.MemberCode</td>
+                <td>@m.FullName</td>
+                <td>@m.MemberType</td>
+                <td>@m.Email</td>
+                <td>@m.Phone</td>
+                <td>@(m.IsActive ? "Active" : "Inactive")</td>
+                <td class="text-end">@m.ActiveLoans</td>
+            </tr>
+        }
+        @if (Model.Items.Count == 0) { <tr><td colspan="7" class="text-muted">No members.</td></tr> }
+    </tbody>
+</table>
+<partial name="_Pager" model="(Model.Page, Model.TotalPages, Model.TotalCount)" />

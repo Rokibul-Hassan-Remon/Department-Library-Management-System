@@ -61,6 +61,10 @@
                             {
                                 <li class="nav-item"><a class="nav-link text-dark" asp-controller="Books" asp-action="Index">Books</a></li>
                             }
+                            @if (await Can(Permissions.Reports.View))
+                            {
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Reports" asp-action="Index">Reports</a></li>
+                            }
                             @if (await Can(Permissions.GeneralConfig.View))
                             {
                                 <li class="nav-item"><a class="nav-link text-dark" asp-controller="GeneralConfig" asp-action="Index">Configs</a></li>

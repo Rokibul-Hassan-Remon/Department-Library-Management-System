@@ -1,0 +1,35 @@
+@model CseLibrary.Core.Paging.PagedResult<BookCopyDto>
+@{
+    var status = Context.Request.Query["status"].ToString();
+    ViewData["Title"] = string.IsNullOrEmpty(status) ? "Book inventory" : $"{status} books";
+}
+
+@await Html.PartialAsync("_Header", (string)ViewData["Title"]!)
+
+<form method="get" class="row g-2 mb-3 no-print">
+    <div class="col-md-3">
+        <select name="status" class="form-select" asp-items="Enum.GetNames<CopyStatus>().Select(s => new SelectListItem(s, s, s == status))">
+            <option value="">All statuses</option>
+        </select>
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-primary">Show</button></div>
+</form>
+
+<table class="table table-sm table-striped">
+    <thead><tr><th>Accession no.</th><th>Title</th><th>Shelf</th><th>Acquired</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+        @foreach (var c in Model.Items)
+        {
+            <tr>
+                <td>@c.AccessionNumber</td>
+                <td>@c.BookTitle</td>
+                <td>@c.ShelfLocation</td>
+                <td>@c.AcquisitionDate</td>
+                <td>@c.CopyStatus @(c.HeldBy != null ? $"({c.HeldBy})" : "")</td>
+                <td>@c.Notes</td>
+            </tr>
+        }
+        @if (Model.Items.Count == 0) { <tr><td colspan="6" class="text-muted">No copies.</td></tr> }
+    </tbody>
+</table>
+<partial name="_Pager" model="(Model.Page, Model.TotalPages, Model.TotalCount)" />

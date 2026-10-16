@@ -1,0 +1,25 @@
+@model IReadOnlyDictionary<CopyStatus, int>
+@{ ViewData["Title"] = "Reports"; }
+
+<h2>Reports</h2>
+
+<p>
+    Copies: <strong>@Model.Values.Sum()</strong>
+    @foreach (var s in Enum.GetValues<CopyStatus>())
+    {
+        <span> · @s <strong>@Model.GetValueOrDefault(s)</strong></span>
+    }
+</p>
+
+<div class="list-group col-md-6">
+    <a class="list-group-item list-group-item-action" asp-action="Copies">Book inventory</a>
+    <a class="list-group-item list-group-item-action" asp-action="Copies" asp-route-status="Available">Available books</a>
+    <a class="list-group-item list-group-item-action" asp-action="Loans" asp-route-filter="Active">Currently issued books</a>
+    <a class="list-group-item list-group-item-action" asp-action="Loans" asp-route-filter="Overdue">Overdue books</a>
+    <a class="list-group-item list-group-item-action" asp-action="Loans">Issue and return by date range · member-wise borrowing history</a>
+    <a class="list-group-item list-group-item-action" asp-action="Members" asp-route-type="Student">Student membership</a>
+    <a class="list-group-item list-group-item-action" asp-action="Members" asp-route-type="Fellow">Department Fellow membership</a>
+    <a class="list-group-item list-group-item-action" asp-action="Copies" asp-route-status="Lost">Lost books</a>
+    <a class="list-group-item list-group-item-action" asp-action="Copies" asp-route-status="Damaged">Damaged books</a>
+    <a class="list-group-item list-group-item-action" asp-action="Emails">Email notification status</a>
+</div>
