@@ -2418,6 +2418,23 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - Evidence: build 0/0; tests 122/122; `has-pending-model-changes` none; grep shows no leftover
   old identifiers and no `LibraryMemberCode`/`LibraryMemberType`; LocalDB has only `Practice`.
 
+### 83. Session 23 — summary and close-out (2026-10-16)
+- **Done** (details §75–§82): 0.12 smoke; Gate 3 closed (reviews owed); Phase 1 catalog,
+  lending, member portal, log-only reminders; schema aligned with the M15 model (D-59);
+  emails in their own log file (D-60); Member → LibraryMember (D-58). `develop` @ `47488bd`;
+  `feature/d58-library-member-rename` (`eab0522`) not merged. Tests 122/122.
+- **Decisions:** D-48 v1 values; D-54 built; D-35 implemented; D-58 (Library Member, plan
+  Q1–Q6); D-59; D-60; Gate 3 exception (§76); three migration regenerations approved
+  (§80, §82).
+- **Discussion notes:** the user was short on token budget and asked to "just build the
+  features"; the assistant scoped each slice to what needs no Pending decision and asked short
+  multiple-choice questions for the rest (loan policy values, registration, migrations,
+  naming). The user explained Member vs User confusion led to the rename; asked how to set up a
+  Student role (answer: `Books.View` only; issue/return stay with a Librarian role; My books
+  needs no permission) and why Lending permissions were "missing" (they exist; likely an old
+  tab or another app instance — unconfirmed).
+- **Findings carried to Session 24:** see SESSION_HANDOFF "Open findings without a decision".
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

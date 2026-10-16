@@ -1233,6 +1233,7 @@ outside Development; `UseStatusCodePagesWithReExecute`; Error view shows only th
 Verify at runtime: config lists `WithMachineName`/`WithThreadId` enrichers without their packages.
 
 ### D-35 Lending concurrency (Phase 3) — Proposed
+**Session 23 status: implemented** (DECISION_LOG §78, §80): filtered unique index `UX_Lending_ActiveBookCopy` (`TransactionStatus = 1`), `BookCopies.RowVersion`, per-member `sp_getapplock` around the limit check; concurrency tests for one copy and one member. Remaining D-35 text stays Proposed where it goes beyond this.
 `BookCopy.RowVersion` + filtered unique index `UX_Lending_ActiveBookCopy`
 (`WHERE TransactionStatus = Issued`); `LendingTransaction.RowVersion` for double returns;
 `UPDLOCK` on the member row inside the issue transaction for borrowing-limit races; conflicts
@@ -1435,6 +1436,7 @@ Current projects (code-verified, Session 4) → layer → D-41 name → M9 sugge
 - **Blocks:** step 0.3.
 
 ### D-48 Borrowing policy system (FR-M10-01, M10; revised M11, M12) — Proposed
+**Session 23 — v1 values chosen by the user** (DECISION_LOG §78): Student max 3 active loans / 14 days, Fellow 5 / 30, one renewal, a member with an overdue loan gets no new issue. Stored in table `LibraryPolicies` (one row per member type, editable on the Policies page; D-59), not GeneralConfig. Per-member overrides, category rules and the other Proposed parts below stay open.
 Supersedes D-44, D-45. Rules: BR-M10-01..14. Tests: P1–P21 (`requirements.md`).
 **Status: Proposed — the whole entry, until the user reviews the architecture (M11 §3).**
 **Implemented: no · Verified: no** — in particular the concurrency protection stays Proposed
@@ -1660,6 +1662,7 @@ via `UserManager.UpdateAsync` in one transaction; `UpdateAsync` refuses to chang
 tests: row kept, sign-in refused, existing cookie denied, edit cannot resurrect.
 
 ### D-54 Self-registration (Q-S19-1) — design Approved (Session 19); implementation not approved
+**Session 23 status: implementation approved by the user ("member নিজে register করবে") and built** (DECISION_LOG §79): the `LibraryMembers` row is the registration application record (Q-S19-8 / Q-S21-2) with `Approval` (Approved/Pending/Rejected) and `IdentityUserId`; Pending/Rejected accounts are Inactive so sign-in refuses them; existing member codes are linked, not duplicated (Q-S19-5); `Registrations.Review` approves/rejects. **Not built:** per-type default roles (Q-S21-1), email confirmation (Q-S19-3), re-application with the same email after rejection (Q-S19-7).
 **Source:** user, Session 19 (DECISION_LOG §53). Recorded as a design decision; building it needs
 separate approval.
 1. **Form:** one Registration form with a radio choice **`Student`** / **`Dept. Fellow`**.
@@ -1876,6 +1879,34 @@ the user preferred **"Library Member"**. "Member" and "User" are easy to confuse
    `requirements.md` / `business-rules.md` / the ER diagram use "Member"; D-54 "Member link"
    wording; error code `MEMBER.INACTIVE` (archive BR-03).
 5. Until approved and implemented, code and docs keep "Member". **Done:** code, migration `AddLibraryCore` (regenerated, Q1 = A), permissions `LibraryMembers.*`, URL `/LibraryMembers`, `database.md` and the two database diagrams use `LibraryMembers`; historical decision text keeps "Member".
+
+### D-59 The M15 database model is the implementation target — Approved (Session 23); implemented
+**Source:** user, Session 23 (DECISION_LOG §80): "db design-এর সাথে মিল রেখে project db design
+করো এবং এভাবে feature develop করো", after spotting free-text authors/category.
+1. New tables and changes follow `docs/diagrams/database-model.html` / `.json` and archive §4.2
+   (column types and lengths), adapted to project conventions (HiLo ids, `BaseEntity` status
+   and audit columns instead of `IsActive` / `CreatedAtUtc`, D-29 / D-50 / D-51).
+2. Built: `Authors`, `BookAuthors`, `Categories`, `Books`, `BookCopies` (RowVersion),
+   `LibraryMembers` (D-58), `LendingTransactions`, `LibraryPolicies`, `EmailNotificationLogs`.
+   Additions beyond the diagram: `LibraryMembers.Approval` (D-54), `RenewCount`,
+   `LibraryPolicies.MaxRenewals`. Not built yet: `OutboxMessages` (Phase 4), member subtype
+   tables, `CoverImagePath`.
+3. A deviation from the diagram must be raised with the user before it is built.
+4. **Migrations:** a migration never applied outside `CseLibrary_Test_*` may be removed and
+   regenerated (`dotnet ef migrations remove --force`, then `add`) **only with the user's
+   explicit approval**; once any real database has it, changes go in a new migration.
+
+### D-60 No mail server yet: emails are written to the log — Approved (Session 23); implemented
+**Source:** user, Session 23 (DECISION_LOG §79, §80 follow-up): no email account/server now;
+keep the emails in a log file and implement real sending later.
+1. `IEmailSender` with the only implementation `LogEmailSender`: each email (recipient,
+   subject, body) goes to the application log **and** to its own daily file
+   `Logs/emails-YYYYMMDD.txt` (kept indefinitely).
+2. Reminders (`ReminderService`, daily `ReminderWorker`): loans due in
+   `Lending.ReminderDaysBefore` (GeneralConfig, default 2) days and overdue loans; one email per
+   idempotency key in `EmailNotificationLogs`; failed sends are retried on the next run.
+3. Later: an SMTP `IEmailSender` replaces `LogEmailSender` in DI; host, sender and credentials
+   (user-secrets / environment, never GeneralConfig) are to be decided then.
 
 ---
 
