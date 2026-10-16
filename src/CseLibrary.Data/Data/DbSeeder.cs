@@ -120,7 +120,7 @@ public static class DbSeeder
         // Adds only missing keys, so an existing database gets new defaults without losing edits.
         GeneralConfig[] defaults =
         [
-            new() { Key = "Site.Name", Value = "Default Template", Group = "Site" },
+            new() { Key = "Site.Name", Value = "CSE Library", Group = "Site" },
             new() { Key = "Site.SupportEmail", Value = "support@local", Group = "Site" },
             new() { Key = LendingConfigKeys.ReminderDaysBefore, Value = LendingConfigKeys.DefaultReminderDaysBefore.ToString(), Group = "Lending" },
             .. RegistrationConfigKeys.All.Select(k => new GeneralConfig { Key = k, Group = "Registration", Description = "Role a registered member gets (only Books.View allowed); empty = no role" })

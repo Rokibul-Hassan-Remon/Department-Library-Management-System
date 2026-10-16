@@ -17,8 +17,10 @@
   Committed `128a1ff`, merged into `develop` **`73b4003`** (128/128). All review findings are now closed.
 - **`CseLibrary` database on `.\SQLEXPRESS` created** with the user's approval (§88): all 3 migrations
   applied, admin `admin@local`, password in user-secrets. `AddLibraryCore` can no longer be regenerated.
-- **Icons across the UI** (Bootstrap Icons, local) on `feature/ui-icons` (§88). Build 0/0, tests **128/128**,
-  not committed yet. The app may still be running (`dotnet run`, https://localhost:7259) — stop it before builds.
+- **Icons across the UI** (Bootstrap Icons, local) on `feature/ui-icons` (§88). Committed `be3c76d`,
+  merged into `develop` **`644737b`**.
+- **Brand "CSE Library"** replaces "DefaultTemplate" on `feature/ui-brand` (§88). Build 0/0, tests
+  **128/128**, not committed yet. The app may still be running (`dotnet run`, https://localhost:7259) — stop it before builds.
 - Resolved from the Session 23 open findings: buttons without the permission; D-54 per-type
   default roles. Everything else in that list is still open.
 
