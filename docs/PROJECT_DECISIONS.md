@@ -1867,7 +1867,7 @@ the user preferred **"Library Member"**. "Member" and "User" are easy to confuse
    (e.g. `LendingTransactions.LibraryMemberId`); keep `MemberCode` and `MemberType` (already
    unambiguous inside `LibraryMembers`, smaller change); `LibraryPolicies.MemberCategory` stays;
    `IdentityUserId` stays.
-3. **Not now.** Order: (a) ~~the user approves item 2~~ done; (b) a separate, separately approved
+3. Order: (a) item 2 approved; (b) plan `docs/plans/D-58-library-member-rename.md` **Approved** (Q1–Q6 as recommended); (c) implementation in progress. Originally: (b) a separate, separately approved
    **impact analysis and migration plan**; (c) implementation.
 4. **Known impact for (b)** (not yet analysed in full): 33 C# / Razor files reference the
    `Member*` names (entities, EF configurations, repositories, services, controllers, views,
