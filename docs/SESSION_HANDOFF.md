@@ -1,31 +1,74 @@
 # Session Handoff
 
 ## ▶ Session 24 (2026-10-16) — read first; overrides the Session 23 block where they differ
-- Session 23 close-out committed `7d44415`; `feature/d58-library-member-rename` merged into
-  `develop` **`00a21fc`** (build 0/0, 122/122).
-- **D-56 Q-S21-1 default roles + permission-aware buttons** on `feature/phase-1-default-roles`
-  (DECISION_LOG §84): allowlist = `Books.View`; GeneralConfig keys
-  `Registration.StudentDefaultRole` / `Registration.FellowDefaultRole`. Committed `805cb7a`, merged into
-  `develop` **`58c027c`** (123/123).
-- **Reports (FR-12)** on `feature/phase-1-reports` (DECISION_LOG §85): `Reports.View`, `/Reports` with the
-  ten reports as filtered, paged, printable views. Committed `184752d`, merged into `develop` **`f752d91`**;
-  CSV export not built.
-- **Owed reviews done** (DECISION_LOG §86) on Gate 3 + Phase 1; fixes on `feature/phase-1-review-fixes`,
-  committed `4e12bf5`, merged into `develop` **`f69a3c4`** (131/131).
-- **Review #1, #6, spike** on `feature/phase-1-registration-claim` (DECISION_LOG §87): registration on an
-  existing ID needs a matching email or review; copies/members with loans are not deleted; spike test removed.
-  Committed `128a1ff`, merged into `develop` **`73b4003`** (128/128). All review findings are now closed.
-- **`CseLibrary` database on `.\SQLEXPRESS` created** with the user's approval (§88): all 3 migrations
-  applied, admin `admin@local`, password in user-secrets. `AddLibraryCore` can no longer be regenerated.
-- **Icons across the UI** (Bootstrap Icons, local) on `feature/ui-icons` (§88). Committed `be3c76d`,
-  merged into `develop` **`644737b`**.
-- **Brand "CSE Library"** replaces "DefaultTemplate" on `feature/ui-brand` (§88). Build 0/0, tests
-  **128/128**, not committed yet. The app may still be running (`dotnet run`, https://localhost:7259) — stop it before builds.
-- Resolved from the Session 23 open findings: buttons without the permission; D-54 per-type
-  default roles. Everything else in that list is still open.
+Session 24 closed at the user's request (conversation too long) — **Session 25 starts here.**
 
-## ▶ Session 23 (2026-10-15 → 2026-10-16) — read first; overrides the Session 22 block where they differ
-Session 23 closed at the user's request (conversation too long) — **Session 24 starts here.**
+### State (verified 2026-10-16)
+- `develop` @ **`b8d43f1`**; everything from this session is merged (`--no-ff`). The close-out docs are on
+  `docs/session-24-closeout` (see "Next action" — check whether they were committed and merged).
+- Merged this session (branch → merge commit): `feature/d58-library-member-rename` → `00a21fc` ·
+  `feature/phase-1-default-roles` → `58c027c` · `feature/phase-1-reports` → `f752d91` ·
+  `feature/phase-1-review-fixes` → `f69a3c4` · `feature/phase-1-registration-claim` → `73b4003` ·
+  `feature/ui-icons` → `644737b` · `feature/ui-brand` → `b8d43f1`.
+- Evidence (last full run on `feature/ui-brand`, tree identical to `develop`): build 0 errors / 0 warnings;
+  tests **128/128** (131 − 4 deleted spike tests + 1). Every behaviour fix has a mutation check (§84–§88).
+- **Database — changed this session:** `.\SQLEXPRESS` now has a **persistent `CseLibrary` database**
+  (user-approved, §88): `InitialCreate`, `AddAuditLog`, `AddLibraryCore` applied, 21 tables, seeded admin
+  `admin@local` (password in user-secrets `Seed:Admin:Password` of `src/CseLibrary.Web`, never in a file),
+  30 permissions, 2 lending policies. **`AddLibraryCore` can no longer be regenerated — schema changes need a
+  new migration (D-59 item 4).** Its `Site.Name` config row still says "Default Template" (new DBs seed
+  "CSE Library"). LocalDB still has only `Practice`.
+- **App may still be running** from Session 24 (`dotnet run --launch-profile https`, https://localhost:7259).
+  A running app locks build outputs: stop it (`Get-Process CseLibrary.Web | Stop-Process`) before building.
+- No Phase 1 plan document yet; Phase 1 work is recorded in DECISION_LOG §77–§88.
+
+### Done this session (details: DECISION_LOG §84–§89)
+- **D-56 Q-S21-1 default member roles** (§84): GeneralConfig keys `Registration.StudentDefaultRole` /
+  `Registration.FellowDefaultRole` (empty = no role), refused if unknown or privileged; Student gets it at
+  registration, Fellow on approval. **Permission-aware buttons** on every page (`IAuthorizationService.CanAsync`).
+- **Reports, FR-12** (§85): `Reports.View`, `/Reports` — the ten reports as filtered, server-paged views
+  (copies by status, loans incl. date range and member history, membership by type, email status); "Print"
+  uses the browser print. CSV/Excel export not built.
+- **Owed reviews done** (§86): `/code-review` + `/ponytail-review` on `5bb43bc..develop` (Gate 3 + Phase 1);
+  all 10 + 6 findings fixed or answered (§86, §87). Notable: renew rules, registration on an existing ID needs
+  a matching email or review (security), copies/members with loans are never deleted, reminders cover a range.
+- **App run on `.\SQLEXPRESS`** (§88) so the user can see the tables in SSMS.
+- **UI:** Bootstrap Icons on every button and navbar link (local copy, MIT); brand "CSE Library" (§88).
+
+### Decisions this session (recorded in PROJECT_DECISIONS)
+D-56 **Q-S21-5 allowlist = `Books.View`** (ends Q-S21-10 interim) · **Q-S21-1 built** (GeneralConfig keys) ·
+D-54 **Q-S19-5 refined**: link at once only with a matching email, otherwise review; reject unlinks ·
+D-59 note: **no soft delete of a copy/member with loans** · persistent `CseLibrary` on `.\SQLEXPRESS`
+(§88) · icon set = Bootstrap Icons, local (§88). No decision is pending from this session.
+
+### Open findings without a decision (carried forward)
+- Student "request a book online" would contradict M10 (no request workflow) — needs a decision.
+- D-54: email confirmation (Q-S19-3) and re-application after rejection (Q-S19-7) not built.
+- Smoke findings §75: scoped CSS 404 under `dotnet run` as Production; status pages show no Reference ID;
+  locked-out message equals wrong-password message.
+- Not built: CSV export, SMTP sender, `OutboxMessages`, member subtype tables, cover images.
+- A failed `SaveChanges` ends that day's reminder run (rest retried next day) — accepted for now (§86).
+- Still open from earlier: physical role delete (§63), role names visible to non-Admins, D-49 O1–O5,
+  EF Tools package; `requirements.md` / `business-rules.md` have no Phase 1 FR/BR entries yet.
+
+### Learned in Session 24
+- The user reads replies in Bangla and answers "ok" a lot: one "ok" approves only the **first** pending item
+  (commit, then merge, then the next task) — list the next step explicitly each time.
+- The user wants to **see** the data: they asked for a real database in SSMS and a running app, not only tests.
+- "Design" requests mean the whole UI: the icon request was extended to "puro project er frontend design e".
+- `HiLoSpikeTests` is gone; the HiLo evidence lives in DECISION_LOG §69.
+- Shell heredocs with Razor (`@`, quotes) fail in the Bash tool — write `.cshtml` files with the Write tool.
+
+### ⛔ Next action (Session 25), in order
+1. Verify read-only: `git branch --show-current`, `git log --oneline -5`, `git status`; check whether
+   `docs/session-24-closeout` was committed and merged into `develop` (if not, ask the user).
+2. Stop any running `CseLibrary.Web`, then `dotnet build` + `dotnet test` (**128/128**).
+3. Ask what to build next — candidates: `docs/PHASE_1_PLAN.md` (record built slices and what is left);
+   CSV export for reports; email confirmation / re-application (D-54); the smoke findings (§75); the
+   "request a book" decision.
+
+## Session 23 (2026-10-15 → 2026-10-16) — superseded by the Session 24 block above where they differ
+Session 23 closed at the user's request (conversation too long) — Session 24 started here.
 
 ### State (verified 2026-10-16)
 - `develop` @ **`47488bd`** (Phase 0 Gate 3 + Phase 1 catalog, lending, portal, schema alignment,

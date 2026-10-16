@@ -1904,6 +1904,8 @@ the user preferred **"Library Member"**. "Member" and "User" are easy to confuse
 4. **Migrations:** a migration never applied outside `CseLibrary_Test_*` may be removed and
    regenerated (`dotnet ef migrations remove --force`, then `add`) **only with the user's
    explicit approval**; once any real database has it, changes go in a new migration.
+   **Session 24 (DECISION_LOG §88):** `AddLibraryCore` is applied to `.\SQLEXPRESS/CseLibrary` (user-approved), so
+   from now on every schema change is a new migration.
 
 ### D-60 No mail server yet: emails are written to the log — Approved (Session 23); implemented
 **Source:** user, Session 23 (DECISION_LOG §79, §80 follow-up): no email account/server now;
