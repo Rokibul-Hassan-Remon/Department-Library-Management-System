@@ -2481,6 +2481,17 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   duplicate (2 lines) and the Members report table kept — not worth a shared helper.
 - Evidence: build 0/0; tests 131/131; 7 mutations (one per fix) each fail a test.
 
+### 87. Session 24 — registration claims, delete with history, spike removed (2026-10-16)
+- User approved the three open review items (§86) with the assistant's recommendations.
+- **#1 (security):** an existing member ID is linked at once only when the registration email matches the
+  record's email. Otherwise: Pending for review, the record unchanged; the Pending page shows both emails and a
+  "claims existing ID" badge; approve links the login (staff status kept); reject unlinks it. D-54 Q-S19-5 note.
+- **#6:** a copy or member with any loan is not deleted (retire the copy / set the member Inactive); the
+  soft-delete query filter therefore never hides lending history. D-59 note.
+- `tests/CseLibrary.Tests/Spikes/HiLoSpikeTests.cs` deleted (step 0.11a spike; HiLo is covered by the real
+  entities and tests; its result stays recorded in §69).
+- Evidence: build 0/0; tests 128/128 (131 − 4 spike + 1); 5 mutations each fail a test.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

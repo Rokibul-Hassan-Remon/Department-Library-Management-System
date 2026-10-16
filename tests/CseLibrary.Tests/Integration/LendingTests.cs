@@ -149,13 +149,18 @@ public class LendingTests(AppFactory app)
     }
 
     [Fact]
-    public async Task A_member_holding_books_is_not_deleted_and_lending_policy_is_seeded()
+    public async Task A_member_or_copy_with_loan_history_is_not_deleted_and_lending_policy_is_seeded()
     {
         var (member, memberId, copies) = await Arrange(MemberType.Student, 1);
         Assert.True((await Issue(member, copies[0])).Succeeded);
+        var loanId = Assert.Single((await LibraryMember(memberId)).Loans).Id;
+        Assert.True((await app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().ReturnAsync(loanId))).Succeeded);
         await app.WithServiceAsync(async sp =>
         {
+            // review #6: a soft delete would hide the loan from history and reports, even after the return
             Assert.Equal(ErrorCodes.InUse, (await sp.GetRequiredService<ILibraryMemberService>().DeleteAsync(memberId)).ErrorCode);
+            var copyId = (await sp.GetRequiredService<IUnitOfWork>().BookCopies.FindByAccessionForUpdateAsync(copies[0]))!.Id;
+            Assert.Equal(ErrorCodes.InUse, (await sp.GetRequiredService<IBookService>().DeleteCopyAsync(copyId)).ErrorCode);
             var configs = sp.GetRequiredService<IGeneralConfigService>();
             Assert.Equal(LendingConfigKeys.DefaultReminderDaysBefore.ToString(), (await configs.GetByKeyAsync(LendingConfigKeys.ReminderDaysBefore))?.Value);
         });

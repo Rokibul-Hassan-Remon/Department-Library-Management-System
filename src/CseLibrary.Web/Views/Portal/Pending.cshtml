@@ -1,9 +1,11 @@
 @model IReadOnlyList<PendingRegistrationDto>
 @{ ViewData["Title"] = "Pending registrations"; }
 
-<h2>Pending Dept. Fellow registrations</h2>
+<h2>Pending registrations</h2>
+<p class="text-muted">Dept. Fellows, and anyone registering with an existing ID whose email does not match the library record.
+    Rejecting such a claim leaves the record unchanged.</p>
 <table class="table table-striped">
-    <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Registered</th><th></th></tr></thead>
+    <thead><tr><th>ID</th><th>Name</th><th>Email (record)</th><th>Applicant email</th><th>Registered</th><th></th></tr></thead>
     <tbody>
         @foreach (var r in Model)
         {
@@ -11,6 +13,7 @@
                 <td>@r.MemberCode</td>
                 <td>@r.FullName</td>
                 <td>@r.Email</td>
+                <td>@r.ApplicantEmail @if (!string.Equals(r.Email, r.ApplicantEmail, StringComparison.OrdinalIgnoreCase)) { <span class="badge bg-warning text-dark">claims existing ID</span> }</td>
                 <td>@r.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                 <td class="text-end">
                     <form asp-action="Review" method="post" class="d-inline">
@@ -24,6 +27,6 @@
                 </td>
             </tr>
         }
-        @if (Model.Count == 0) { <tr><td colspan="5" class="text-muted">No pending registrations.</td></tr> }
+        @if (Model.Count == 0) { <tr><td colspan="6" class="text-muted">No pending registrations.</td></tr> }
     </tbody>
 </table>

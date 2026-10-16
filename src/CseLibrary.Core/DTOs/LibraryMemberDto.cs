@@ -61,7 +61,8 @@ public class PendingRegistrationDto
     public int LibraryMemberId { get; set; }
     public string MemberCode { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
-    public string? Email { get; set; }
+    public string? Email { get; set; } // on the member record
+    public string? ApplicantEmail { get; set; } // the login; differs when the applicant claims an existing ID
     public DateTime CreatedAt { get; set; }
 }
 

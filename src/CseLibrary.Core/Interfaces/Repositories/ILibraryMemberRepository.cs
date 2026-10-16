@@ -25,7 +25,9 @@ public interface ILoanRepository : IRepository<Loan>
         DateTime? fromUtc, DateTime? toUtc, CancellationToken ct = default);
     Task<int> CountActiveAsync(int memberId, CancellationToken ct = default);
     Task<bool> HasOverdueAsync(int memberId, DateOnly today, CancellationToken ct = default);
-    Task<bool> HasActiveAsync(int memberId, CancellationToken ct = default);
+    /// <summary>Any loan, returned or not: such a member or copy is history and is not deleted (review #6).</summary>
+    Task<bool> AnyForMemberAsync(int memberId, CancellationToken ct = default);
+    Task<bool> AnyForCopyAsync(int copyId, CancellationToken ct = default);
     /// <summary>Tracked, with its copy and member, for return and renew.</summary>
     Task<Loan?> GetActiveForUpdateAsync(int id, CancellationToken ct = default);
     /// <summary>

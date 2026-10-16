@@ -50,7 +50,8 @@ public class LibraryMemberRepository(ApplicationDbContext db) : Repository<Libra
 
     public async Task<IReadOnlyList<PendingRegistrationDto>> GetPendingAsync(CancellationToken ct = default) =>
         await Db.LibraryMembers.Where(m => m.Approval == ApprovalStatus.Pending).OrderBy(m => m.CreatedAt)
-            .Select(m => new PendingRegistrationDto { LibraryMemberId = m.Id, MemberCode = m.MemberCode, FullName = m.FullName, Email = m.Email, CreatedAt = m.CreatedAt })
+            .Select(m => new PendingRegistrationDto { LibraryMemberId = m.Id, MemberCode = m.MemberCode, FullName = m.FullName, Email = m.Email,
+                ApplicantEmail = Db.Users.Where(u => u.Id == m.IdentityUserId).Select(u => u.Email).FirstOrDefault(), CreatedAt = m.CreatedAt })
             .ToListAsync(ct);
 }
 
@@ -93,8 +94,9 @@ public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILo
     public Task<bool> HasOverdueAsync(int memberId, DateOnly today, CancellationToken ct = default) =>
         Db.Loans.AnyAsync(l => l.LibraryMemberId == memberId && l.TransactionStatus == LendingStatus.Issued && l.DueDate < today, ct);
 
-    public Task<bool> HasActiveAsync(int memberId, CancellationToken ct = default) =>
-        Db.Loans.AnyAsync(l => l.LibraryMemberId == memberId && l.TransactionStatus == LendingStatus.Issued, ct);
+    public Task<bool> AnyForMemberAsync(int memberId, CancellationToken ct = default) => Db.Loans.AnyAsync(l => l.LibraryMemberId == memberId, ct);
+
+    public Task<bool> AnyForCopyAsync(int copyId, CancellationToken ct = default) => Db.Loans.AnyAsync(l => l.BookCopyId == copyId, ct);
 
     public async Task<IReadOnlyList<ReminderTarget>> GetReminderTargetsAsync(DateOnly dueOn, CancellationToken ct = default) =>
         await Db.Loans.Where(l => l.TransactionStatus == LendingStatus.Issued && l.DueDate <= dueOn && l.LibraryMember.Email != null)

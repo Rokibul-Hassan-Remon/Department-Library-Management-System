@@ -77,11 +77,11 @@ public class PortalTests(AppFactory app)
     [Fact] // BR-03 and D-54: registering or a staff edit never activates a member behind staff or review
     public async Task Registration_keeps_a_staff_deactivation_and_an_edit_cannot_activate_a_pending_fellow()
     {
-        var code = Unique("R");
-        await app.WithServiceAsync(sp => sp.GetRequiredService<ILibraryMemberService>().CreateAsync(
-            new LibraryMemberDto { MemberCode = code, FullName = "Blocked", MemberType = MemberType.Student, IsActive = false }));
-        var student = Form(RegistrationType.Student, code);
+        var student = Form(RegistrationType.Student);
+        await app.WithServiceAsync(sp => sp.GetRequiredService<ILibraryMemberService>().CreateAsync(new LibraryMemberDto
+            { MemberCode = student.MemberCode, FullName = "Blocked", Email = student.Email.ToUpperInvariant(), IsActive = false })); // same email, other case
         Assert.True((await Register(student)).Succeeded);
+        Assert.True(await CanSignIn(student.Email)); // matching email: linked at once
         Assert.False((await MemberOf(student.Email))!.IsActive);
 
         var fellow = Form(RegistrationType.DepartmentFellow);
@@ -113,15 +113,46 @@ public class PortalTests(AppFactory app)
     [Fact]
     public async Task Existing_member_is_linked_not_duplicated_and_cannot_register_twice()
     {
-        var code = Unique("R");
-        var memberId = (await app.WithServiceAsync(sp => sp.GetRequiredService<ILibraryMemberService>()
-            .CreateAsync(new LibraryMemberDto { MemberCode = code, FullName = "Created by staff" }))).Value;
+        var form = Form(RegistrationType.Student);
+        var code = form.MemberCode;
+        var memberId = await StaffRecord(code, form.Email);
 
-        var form = Form(RegistrationType.Student, code);
         Assert.True((await Register(form)).Succeeded);
         Assert.Equal(memberId, (await MemberOf(form.Email))!.Id);
         Assert.Equal(ErrorCodes.AlreadyRegistered, (await Register(Form(RegistrationType.Student, code))).ErrorCode);
     }
+
+    [Fact] // review #1: an existing ID with another email is a claim; a reviewer decides and the record stays as staff left it
+    public async Task Claiming_an_existing_id_with_another_email_waits_for_review()
+    {
+        var owner = Form(RegistrationType.Student);
+        var memberId = await StaffRecord(owner.MemberCode, owner.Email);
+        var claimer = Form(RegistrationType.DepartmentFellow, owner.MemberCode);
+        Assert.True((await Register(claimer)).Succeeded);
+        Assert.False(await CanSignIn(claimer.Email));
+        var record = (await MemberOf(claimer.Email))!;
+        Assert.Equal((memberId, "Created by staff", MemberType.Student, true), (record.Id, record.FullName, record.MemberType, record.IsActive));
+        var pending = await app.WithServiceAsync(sp => sp.GetRequiredService<IRegistrationService>().GetPendingAsync());
+        Assert.Equal(claimer.Email, Assert.Single(pending, p => p.LibraryMemberId == memberId).ApplicantEmail);
+
+        Assert.True((await Review(memberId, approve: false)).Succeeded);
+        Assert.False(await CanSignIn(claimer.Email));
+        Assert.True((await Register(owner)).Succeeded); // rejected claim is unlinked: the real owner can still register
+        Assert.Equal(memberId, (await MemberOf(owner.Email))!.Id);
+
+        var other = Form(RegistrationType.Student);
+        var otherId = await StaffRecord(other.MemberCode, "staff-record@test.local", active: false);
+        Assert.True((await Register(other)).Succeeded);
+        Assert.True((await Review(otherId, approve: true)).Succeeded);
+        Assert.True(await CanSignIn(other.Email));
+        Assert.False((await MemberOf(other.Email))!.IsActive); // approval links the login; the staff status stays
+    }
+
+    private Task<int> StaffRecord(string code, string? email, bool active = true) => app.WithServiceAsync(async sp =>
+        (await sp.GetRequiredService<ILibraryMemberService>().CreateAsync(new LibraryMemberDto { MemberCode = code, FullName = "Created by staff", Email = email, IsActive = active })).Value);
+
+    private Task<Result> Review(int memberId, bool approve) => app.WithServiceAsync(sp =>
+        approve ? sp.GetRequiredService<IRegistrationService>().ApproveAsync(memberId) : sp.GetRequiredService<IRegistrationService>().RejectAsync(memberId));
 
     [Fact]
     public async Task Reminders_cover_loans_due_soon_and_overdue_only()
