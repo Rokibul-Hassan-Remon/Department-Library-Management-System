@@ -2507,6 +2507,24 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   footer "CSE Department Library"; seeded `Site.Name` default for new databases "CSE Library" (an existing
   database keeps its value). Build 0/0, tests 128/128.
 
+### 89. Session 24 — summary and close-out (2026-10-16)
+- **Done** (details §84–§88): D-56 default member roles + permission-aware buttons; FR-12 reports; the reviews
+  owed since §76 (`/code-review` + `/ponytail-review` on Gate 3 + Phase 1) with all findings fixed or answered;
+  registration on an existing ID needs a matching email or review; members/copies with loans are never
+  deleted; HiLo spike test removed; persistent `CseLibrary` database on `.\SQLEXPRESS`; Bootstrap Icons on
+  every button and navbar link; brand "CSE Library". `develop` @ `b8d43f1`, tests 128/128.
+- **Decisions:** D-56 Q-S21-5 allowlist `Books.View` (Q-S21-10 interim ended); Q-S21-1 storage = GeneralConfig
+  keys; D-54 Q-S19-5 refinement (email match or review; reject unlinks); D-59 note (no soft delete with loans);
+  first real database `.\SQLEXPRESS/CseLibrary` (so `AddLibraryCore` is frozen); icon set Bootstrap Icons.
+- **Discussion notes:** the user picked "Reports" first, then the owed reviews; approved every proposed fix
+  as recommended. The user asked whether a database existed to look at in SSMS (none did: tests drop theirs),
+  then said "app run koro" and chose the persistent SQLEXPRESS database and a generated admin password. While
+  looking at the app they asked for pencil/dustbin icons, extended to "the whole project's frontend".
+- **Process:** each commit and merge got its own "ok"; feature branches from `develop`, `--no-ff`; every
+  behaviour fix was mutation-checked; merges made while the app was running were verified by an identical tree
+  (`git diff` branch vs `develop`) instead of a rebuild.
+- **Carried to Session 25:** see SESSION_HANDOFF "Open findings without a decision" and "Next action".
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40
@@ -2530,10 +2548,11 @@ connection string and D-47 below are **resolved** (§29); kept as history.
 | Q-S19-1 / Q-S19-2 (§52) | ~~Registration scope~~ answered → D-54 (§53); anonymous `Error` / status-code / `AccessDenied` pages (now tied to D-55 Q-S19-10) |
 | ~~Q-S19-2 … Q-S19-17 (§53)~~ | **Answered Session 20 (§55)** — registration details (D-54), toast/forbidden-page details (D-55), deleted users in list + email reuse (D-53/D-52), anonymous error pages |
 | ~~D-53 implementation (§53)~~ | **Resolved Session 20 (§55): implemented `8550c00`** |
-| ~~D-37 cleanup~~ | **Closed Session 20 (§55):** target `CseLibrary` does not exist on `.\SQLEXPRESS`; nothing to delete |
+| ~~D-37 cleanup~~ | **Closed Session 20 (§55):** target `CseLibrary` does not exist on `.\SQLEXPRESS`; nothing to delete. **Session 24 (§88):** `CseLibrary` now exists there, created fresh by migrations, so it has no legacy claim rows |
 | ~~D-21/24/25/27 details~~ | **Resolved Session 22 (§72):** audit package P1–P7 approved (Q1–Q4 as recommended) |
 | D-47 naming (M9) | `LibraryManagement.*` vs Approved `CseLibrary.*`; blocks 0.3 (Q-M9-9) |
 | ~~D-45 outstanding-loan rule (M9)~~ | Superseded by D-48 (M10) — conflict resolved as configuration; no request workflow |
 | D-48 borrowing policy (M10–M12) | Wholly Proposed; reviewed before the Lending phase, not now. Architecture, settings, constraints, defaults/overrides, activation, permission holder (conflict with archive roles table), due-date edit (would amend FR-06), category change (Q-M10-1, -2, -4..-9); P17 mechanism; member status on the member row (Phase 2); values Pending user/department (Q-M10-3); lost/cancelled counting Q-M9-3; lowering limit Q-M9-5; explicit `ReadCommitted` in D-14 (optional at 0.8) |
 | D-46 / D-15 M9 / D-31 M9 | Proposed designs for AJAX loading, keyset paging, controller authorization; values Q-M9-6..8, Q-M9-10 (D-44 superseded by D-48). **Session 19 (§52): D-31 M9 + Q-M9-10 Approved/answered** |
 | Domain policies | Fellow definition, limits, durations, renewals, Lost status, SMTP, portal accounts, hosting, retention — department/user input needed in later phases |
+| Phase 1 open items (Session 24, §89) | "Request a book online" vs M10 (no request workflow); D-54 email confirmation (Q-S19-3) and re-application (Q-S19-7); smoke findings §75; CSV export; Phase 1 FR/BR entries in `requirements.md` / `business-rules.md`; `docs/PHASE_1_PLAN.md` |
