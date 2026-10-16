@@ -2492,6 +2492,18 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   entities and tests; its result stays recorded in §69).
 - Evidence: build 0/0; tests 128/128 (131 − 4 spike + 1); 5 mutations each fail a test.
 
+### 88. Session 24 — app run on SQLEXPRESS, icons across the UI (2026-10-16)
+- User: "app run koro"; chose (multiple choice) a persistent `CseLibrary` database on `.\SQLEXPRESS` and a
+  generated admin password. `dotnet ef database update` applied `InitialCreate`, `AddAuditLog`, `AddLibraryCore`
+  (21 tables); admin password in user-secrets `Seed:Admin:Password` (not in any file). **From now on
+  `AddLibraryCore` is applied to a real database: schema changes need a new migration (D-59 item 4).**
+- User: pencil for Edit, dustbin for Delete, "puro project er frontend design e". Added Bootstrap Icons 1.11.3
+  (MIT, local copy in `wwwroot/lib/bootstrap-icons`, same as the other libs; no CDN). Every button got an icon;
+  table-row Edit/Delete/Reset password are icon-only with `title` + `aria-label`; navbar links have icons.
+  The hidden-button test now checks for the `/Books/Create` link (the label no longer has "+").
+- Evidence: build 0/0; tests 128/128; mutation: showing "New Book" without the permission fails the test;
+  running app serves the icon CSS and font (HTTP 200).
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

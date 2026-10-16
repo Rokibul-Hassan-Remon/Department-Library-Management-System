@@ -5,12 +5,12 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Library Members</h2>
-    @if (canCreate) { <a class="btn btn-primary" asp-action="Create">+ New Library Member</a> }
+    @if (canCreate) { <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> New Library Member</a> }
 </div>
 
 <form method="get" class="row g-2 mb-3">
     <div class="col-md-6"><input name="search" value="@search" class="form-control" placeholder="Member code, name or email" /></div>
-    <div class="col-auto"><button class="btn btn-outline-primary">Search</button></div>
+    <div class="col-auto"><button class="btn btn-outline-primary"><i class="bi bi-search" aria-hidden="true"></i> Search</button></div>
 </form>
 
 <table class="table table-striped">

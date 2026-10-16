@@ -213,7 +213,7 @@ public class PortalTests(AppFactory app)
             var client = await app.LoggedInClient(student.Email, student.Password);
             var books = await client.GetStringAsync("/Books");
             Assert.Contains("<h2>Books</h2>", books);
-            Assert.DoesNotContain("+ New Book", books);
+            Assert.DoesNotContain("href=\"/Books/Create\"", books); // the "New Book" button is hidden
         }
         finally
         {

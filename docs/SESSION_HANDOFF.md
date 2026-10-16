@@ -14,9 +14,11 @@
   committed `4e12bf5`, merged into `develop` **`f69a3c4`** (131/131).
 - **Review #1, #6, spike** on `feature/phase-1-registration-claim` (DECISION_LOG §87): registration on an
   existing ID needs a matching email or review; copies/members with loans are not deleted; spike test removed.
-  Build 0/0, tests **128/128**, not committed yet. All review findings are now closed.
-- `.\SQLEXPRESS` still has no `CseLibrary` database; the user asked how to view tables — creating it
-  (`dotnet ef database update`) awaits the user's approval.
+  Committed `128a1ff`, merged into `develop` **`73b4003`** (128/128). All review findings are now closed.
+- **`CseLibrary` database on `.\SQLEXPRESS` created** with the user's approval (§88): all 3 migrations
+  applied, admin `admin@local`, password in user-secrets. `AddLibraryCore` can no longer be regenerated.
+- **Icons across the UI** (Bootstrap Icons, local) on `feature/ui-icons` (§88). Build 0/0, tests **128/128**,
+  not committed yet. The app may still be running (`dotnet run`, https://localhost:7259) — stop it before builds.
 - Resolved from the Session 23 open findings: buttons without the permission; D-54 per-type
   default roles. Everything else in that list is still open.
 

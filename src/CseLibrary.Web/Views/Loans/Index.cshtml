@@ -14,7 +14,7 @@
         <form asp-action="Issue" method="post" class="row g-2 align-items-end">
             <div class="col-md-4"><label class="form-label">Member code</label><input name="MemberCode" class="form-control" required maxlength="30" autofocus /></div>
             <div class="col-md-4"><label class="form-label">Accession no.</label><input name="AccessionNumber" class="form-control" required maxlength="50" /></div>
-            <div class="col-md-2"><button class="btn btn-primary">Issue</button></div>
+            <div class="col-md-2"><button class="btn btn-primary"><i class="bi bi-journal-arrow-up" aria-hidden="true"></i> Issue</button></div>
         </form>
     </div></div>
 }
@@ -24,7 +24,7 @@
         <select name="filter" class="form-select" asp-items="Html.GetEnumSelectList<LoanFilter>().Select(i => new SelectListItem(i.Text, ((LoanFilter)int.Parse(i.Value)).ToString(), i.Text == filter.ToString()))"></select>
     </div>
     <div class="col-md-5"><input name="search" value="@search" class="form-control" placeholder="Member code or name, book title or accession number" /></div>
-    <div class="col-auto"><button class="btn btn-outline-primary">Show</button></div>
+    <div class="col-auto"><button class="btn btn-outline-primary"><i class="bi bi-funnel" aria-hidden="true"></i> Show</button></div>
 </form>
 
 <partial name="_LoanTable" model="Model.Items" />

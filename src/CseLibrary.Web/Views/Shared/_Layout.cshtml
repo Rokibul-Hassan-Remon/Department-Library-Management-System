@@ -13,6 +13,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - DefaultTemplate</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/CseLibrary.Web.styles.css" asp-append-version="true" />
 </head>
@@ -28,64 +29,64 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Index"><i class="bi bi-house" aria-hidden="true"></i> Home</a>
                         </li>
                         @if (SignInManager.IsSignedIn(User))
                         {
                             @if (await Can(Permissions.Users.View))
                             {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Users" asp-action="Index">Users</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Users" asp-action="Index"><i class="bi bi-people" aria-hidden="true"></i> Users</a></li>
                             }
                             @if (await Can(Permissions.Roles.View))
                             {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Roles" asp-action="Index">Roles</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Roles" asp-action="Index"><i class="bi bi-shield-lock" aria-hidden="true"></i> Roles</a></li>
                             }
                             @if (await Can(Permissions.PermissionsModule.View))
                             {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Permissions" asp-action="Index">Permissions</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Permissions" asp-action="Index"><i class="bi bi-key" aria-hidden="true"></i> Permissions</a></li>
                             }
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="MyLoans">My books</a></li>
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="MyLoans"><i class="bi bi-bookmark" aria-hidden="true"></i> My books</a></li>
                             @if (await Can(Permissions.Registrations.Review))
                             {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="Pending">Registrations</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="Pending"><i class="bi bi-person-check" aria-hidden="true"></i> Registrations</a></li>
                             }
                             @if (await Can(Permissions.Lending.View))
                             {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Loans" asp-action="Index">Loans</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Loans" asp-action="Index"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> Loans</a></li>
                             }
                             @if (await Can(Permissions.LibraryMembers.View))
                             {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="LibraryMembers" asp-action="Index">Library Members</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="LibraryMembers" asp-action="Index"><i class="bi bi-person-vcard" aria-hidden="true"></i> Library Members</a></li>
                             }
                             @if (await Can(Permissions.Books.View))
                             {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Books" asp-action="Index">Books</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Books" asp-action="Index"><i class="bi bi-book" aria-hidden="true"></i> Books</a></li>
                             }
                             @if (await Can(Permissions.Reports.View))
                             {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Reports" asp-action="Index">Reports</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Reports" asp-action="Index"><i class="bi bi-bar-chart" aria-hidden="true"></i> Reports</a></li>
                             }
                             @if (await Can(Permissions.GeneralConfig.View))
                             {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="GeneralConfig" asp-action="Index">Configs</a></li>
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Policies" asp-action="Index">Policies</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="GeneralConfig" asp-action="Index"><i class="bi bi-gear" aria-hidden="true"></i> Configs</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Policies" asp-action="Index"><i class="bi bi-sliders" aria-hidden="true"></i> Policies</a></li>
                             }
                         }
                     </ul>
                     <ul class="navbar-nav">
                         @if (SignInManager.IsSignedIn(User))
                         {
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Account" asp-action="ChangePassword">@User.Identity!.Name</a></li>
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Account" asp-action="ChangePassword"><i class="bi bi-person-circle" aria-hidden="true"></i> @User.Identity!.Name</a></li>
                             <li class="nav-item">
                                 <form asp-controller="Account" asp-action="Logout" method="post" class="form-inline">
-                                    <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
+                                    <button type="submit" class="nav-link btn btn-link text-dark"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Logout</button>
                                 </form>
                             </li>
                         }
                         else
                         {
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a></li>
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="Register">Register</a></li>
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Account" asp-action="Login"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Login</a></li>
+                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="Register"><i class="bi bi-person-plus" aria-hidden="true"></i> Register</a></li>
                         }
                     </ul>
                 </div>

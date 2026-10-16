@@ -7,7 +7,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Roles</h2>
-    @if (canCreate) { <a class="btn btn-primary" asp-action="Create">+ New Role</a> }
+    @if (canCreate) { <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> New Role</a> }
 </div>
 
 <table class="table table-striped">
@@ -22,8 +22,8 @@
                 <td>@r.Description</td>
                 <td>@r.PermissionIds.Count</td>
                 <td class="text-end">
-                    @if (canEdit) { <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@r.Id">Edit</a> }
-                    @if (canDelete) { <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@r.Id">Delete</a> }
+                    @if (canEdit) { <a class="btn btn-sm btn-outline-secondary" title="Edit" aria-label="Edit" asp-action="Edit" asp-route-id="@r.Id"><i class="bi bi-pencil" aria-hidden="true"></i></a> }
+                    @if (canDelete) { <a class="btn btn-sm btn-outline-danger" title="Delete" aria-label="Delete" asp-action="Delete" asp-route-id="@r.Id"><i class="bi bi-trash" aria-hidden="true"></i></a> }
                 </td>
             </tr>
         }

@@ -23,14 +23,14 @@
                         if (canRenew)
                         {
                             <form asp-controller="Loans" asp-action="Renew" asp-route-id="@l.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
-                                <button class="btn btn-sm btn-outline-secondary">Renew</button>
+                                <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Renew</button>
                             </form>
                         }
                         if (canReturn)
                         {
                             <form asp-controller="Loans" asp-action="Return" asp-route-id="@l.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline-flex gap-1">
                                 <select name="condition" class="form-select form-select-sm w-auto"><option value="Good">Good</option><option value="Damaged">Damaged</option></select>
-                                <button class="btn btn-sm btn-success">Return</button>
+                                <button class="btn btn-sm btn-success"><i class="bi bi-journal-arrow-down" aria-hidden="true"></i> Return</button>
                             </form>
                         }
                     }
