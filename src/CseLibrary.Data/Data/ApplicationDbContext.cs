@@ -14,7 +14,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     public DbSet<GeneralConfig> GeneralConfigs => Set<GeneralConfig>();
     public DbSet<Book> Books => Set<Book>();
     public DbSet<BookCopy> BookCopies => Set<BookCopy>();
-    public DbSet<Member> Members => Set<Member>();
+    public DbSet<LibraryMember> LibraryMembers => Set<LibraryMember>();
     public DbSet<Loan> Loans => Set<Loan>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Author> Authors => Set<Author>();

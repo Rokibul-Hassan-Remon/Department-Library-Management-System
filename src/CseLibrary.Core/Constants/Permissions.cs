@@ -45,12 +45,12 @@ public static class Permissions
         public const string Delete = "Books.Delete";
     }
 
-    public static class Members
+    public static class LibraryMembers
     {
-        public const string View = "Members.View";
-        public const string Create = "Members.Create";
-        public const string Edit = "Members.Edit";
-        public const string Delete = "Members.Delete";
+        public const string View = "LibraryMembers.View";
+        public const string Create = "LibraryMembers.Create";
+        public const string Edit = "LibraryMembers.Edit";
+        public const string Delete = "LibraryMembers.Delete";
     }
 
     public static class Lending
@@ -93,10 +93,10 @@ public static class Permissions
         yield return (Books.Edit, "Books");
         yield return (Books.Delete, "Books");
 
-        yield return (Members.View, "Members");
-        yield return (Members.Create, "Members");
-        yield return (Members.Edit, "Members");
-        yield return (Members.Delete, "Members");
+        yield return (LibraryMembers.View, "LibraryMembers");
+        yield return (LibraryMembers.Create, "LibraryMembers");
+        yield return (LibraryMembers.Edit, "LibraryMembers");
+        yield return (LibraryMembers.Delete, "LibraryMembers");
 
         yield return (Lending.View, "Lending");
         yield return (Lending.Issue, "Lending");

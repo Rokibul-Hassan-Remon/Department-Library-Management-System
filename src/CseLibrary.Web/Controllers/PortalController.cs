@@ -8,9 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CseLibrary.Web.Controllers;
 
-/// <summary>Member self-service (registration, own loans) and the Dept. Fellow review queue (D-54).</summary>
+/// <summary>Library member self-service (registration, own loans) and the Dept. Fellow review queue (D-54).</summary>
 [Authorize]
-public class PortalController(IRegistrationService registrations, IMemberService members, ICurrentUser currentUser) : Controller
+public class PortalController(IRegistrationService registrations, ILibraryMemberService members, ICurrentUser currentUser) : Controller
 {
     [HttpGet, AllowAnonymous]
     public IActionResult Register() => View(new RegisterDto());

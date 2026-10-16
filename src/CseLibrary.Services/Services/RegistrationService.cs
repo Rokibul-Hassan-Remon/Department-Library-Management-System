@@ -31,8 +31,8 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, IUnit
         return uow.ExecuteInTransactionAsync(async attemptCt =>
         {
             var code = dto.MemberCode.Trim();
-            var existingId = await uow.Members.FindIdByCodeAsync(code, attemptCt);
-            var member = existingId == null ? null : await uow.Members.GetForUpdateAsync(existingId.Value, attemptCt);
+            var existingId = await uow.LibraryMembers.FindIdByCodeAsync(code, attemptCt);
+            var member = existingId == null ? null : await uow.LibraryMembers.GetForUpdateAsync(existingId.Value, attemptCt);
             if (member?.IdentityUserId != null)
                 return Result.Failure(ErrorCodes.AlreadyRegistered, "This ID is already registered. Sign in instead.");
 
@@ -48,8 +48,8 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, IUnit
 
             if (member == null)
             {
-                member = new Member { MemberCode = code };
-                await uow.Members.AddAsync(member, attemptCt);
+                member = new LibraryMember { MemberCode = code };
+                await uow.LibraryMembers.AddAsync(member, attemptCt);
             }
             member.FullName = dto.FullName.Trim();
             member.Email = dto.Email.Trim();
@@ -63,7 +63,7 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, IUnit
         .OnDuplicate(Result.Failure(ErrorCodes.Duplicate, "This email or ID is already registered."));
     }
 
-    public Task<IReadOnlyList<PendingRegistrationDto>> GetPendingAsync(CancellationToken ct = default) => uow.Members.GetPendingAsync(ct);
+    public Task<IReadOnlyList<PendingRegistrationDto>> GetPendingAsync(CancellationToken ct = default) => uow.LibraryMembers.GetPendingAsync(ct);
 
     public Task<Result> ApproveAsync(int memberId, CancellationToken ct = default) => ReviewAsync(memberId, ApprovalStatus.Approved, ct);
 
@@ -72,7 +72,7 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, IUnit
     private Task<Result> ReviewAsync(int memberId, ApprovalStatus decision, CancellationToken ct) =>
         uow.ExecuteInTransactionAsync(async attemptCt =>
         {
-            var member = await uow.Members.GetForUpdateAsync(memberId, attemptCt);
+            var member = await uow.LibraryMembers.GetForUpdateAsync(memberId, attemptCt);
             if (member is not { Approval: ApprovalStatus.Pending, IdentityUserId: not null })
                 return Result.Failure(ErrorCodes.NotFound, "Pending registration not found.");
             var user = await userManager.FindByIdAsync(member.IdentityUserId);

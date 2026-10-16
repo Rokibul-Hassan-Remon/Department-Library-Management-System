@@ -2404,6 +2404,20 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   `LibraryMembers`. D-58 updated (Borrower Rejected); the assistant's column-name proposal
   (`LibraryMemberId` FKs, keep `MemberCode`/`MemberType`) **approved by the user ("ok")**.
 
+### 82. Session 23 — D-58 rename plan approved and implemented (2026-10-16)
+- Plan `docs/plans/D-58-library-member-rename.md` (impact: 36 code files, 13 DB objects, docs);
+  the user approved Q1–Q6 as recommended: regenerate `AddLibraryCore` (A), permissions
+  `LibraryMembers.*`, URL `/LibraryMembers`, keep `MEMBER.INACTIVE`, no audit-history rewrite,
+  update living DB docs only.
+- Smoke app stopped and its database dropped first (the running app locked the build output).
+- Done: whole-word renames on an explicit identifier list (never `MemberCode`/`MemberType`);
+  user-visible text restored to "Library Member(s)" / "Member code"; files moved with `git mv`;
+  `AddLibraryCore` removed and regenerated (Up additive only; all 13 objects renamed as planned).
+  Plan steps 1 and 2 were merged into one commit: code and migration must change together or
+  the tests fail in between.
+- Evidence: build 0/0; tests 122/122; `has-pending-model-changes` none; grep shows no leftover
+  old identifiers and no `LibraryMemberCode`/`LibraryMemberType`; LocalDB has only `Practice`.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

@@ -43,10 +43,10 @@ namespace CseLibrary.Data.Migrations
             modelBuilder.HasSequence("LendingTransactions_HiLo")
                 .IncrementsBy(10);
 
-            modelBuilder.HasSequence("LibraryPolicies_HiLo")
+            modelBuilder.HasSequence("LibraryMembers_HiLo")
                 .IncrementsBy(10);
 
-            modelBuilder.HasSequence("Members_HiLo")
+            modelBuilder.HasSequence("LibraryPolicies_HiLo")
                 .IncrementsBy(10);
 
             modelBuilder.HasSequence("Permissions_HiLo")
@@ -625,6 +625,92 @@ namespace CseLibrary.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CseLibrary.Core.Entities.LibraryMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "LibraryMembers_HiLo");
+
+                    b.Property<byte>("Approval")
+                        .HasColumnType("tinyint")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<string>("IdentityUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<string>("MemberCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<byte>("MemberType")
+                        .HasColumnType("tinyint")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)")
+                        .HasAnnotation("CseLibrary:Audited", false);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FullName");
+
+                    b.HasIndex("IdentityUserId")
+                        .IsUnique()
+                        .HasFilter("[IdentityUserId] IS NOT NULL");
+
+                    b.HasIndex("MemberCode")
+                        .IsUnique()
+                        .HasFilter("[Status] <> 3");
+
+                    b.ToTable("LibraryMembers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LibraryMembers_Approval", "[Approval] IN (1, 2, 3)");
+
+                            t.HasCheckConstraint("CK_LibraryMembers_MemberType", "[MemberType] IN (1, 2)");
+
+                            t.HasCheckConstraint("CK_LibraryMembers_Status", "[Status] IN (1, 2, 3)");
+                        });
+                });
+
             modelBuilder.Entity("CseLibrary.Core.Entities.LibraryPolicy", b =>
                 {
                     b.Property<int>("Id")
@@ -719,7 +805,7 @@ namespace CseLibrary.Data.Migrations
                         .HasColumnType("nvarchar(450)")
                         .HasAnnotation("CseLibrary:Audited", true);
 
-                    b.Property<int>("MemberId")
+                    b.Property<int>("LibraryMemberId")
                         .HasColumnType("int")
                         .HasAnnotation("CseLibrary:Audited", true);
 
@@ -770,99 +856,13 @@ namespace CseLibrary.Data.Migrations
 
                     b.HasIndex("ReturnedByUserId");
 
-                    b.HasIndex("MemberId", "TransactionStatus");
+                    b.HasIndex("LibraryMemberId", "TransactionStatus");
 
                     b.ToTable("LendingTransactions", null, t =>
                         {
                             t.HasCheckConstraint("CK_LendingTransactions_ReturnCondition", "[ReturnCondition] IS NULL OR [ReturnCondition] IN (1, 2)");
 
                             t.HasCheckConstraint("CK_LendingTransactions_Status", "[Status] IN (1, 2, 3)");
-                        });
-                });
-
-            modelBuilder.Entity("CseLibrary.Core.Entities.Member", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("CseLibrary:Audited", false);
-
-                    SqlServerPropertyBuilderExtensions.UseHiLo(b.Property<int>("Id"), "Members_HiLo");
-
-                    b.Property<byte>("Approval")
-                        .HasColumnType("tinyint")
-                        .HasAnnotation("CseLibrary:Audited", true);
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2")
-                        .HasAnnotation("CseLibrary:Audited", false);
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)")
-                        .HasAnnotation("CseLibrary:Audited", false);
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(254)
-                        .HasColumnType("nvarchar(254)")
-                        .HasAnnotation("CseLibrary:Audited", true);
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
-                        .HasAnnotation("CseLibrary:Audited", true);
-
-                    b.Property<string>("IdentityUserId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)")
-                        .HasAnnotation("CseLibrary:Audited", true);
-
-                    b.Property<string>("MemberCode")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
-                        .HasAnnotation("CseLibrary:Audited", true);
-
-                    b.Property<byte>("MemberType")
-                        .HasColumnType("tinyint")
-                        .HasAnnotation("CseLibrary:Audited", true);
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
-                        .HasAnnotation("CseLibrary:Audited", true);
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint")
-                        .HasAnnotation("CseLibrary:Audited", true);
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2")
-                        .HasAnnotation("CseLibrary:Audited", false);
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)")
-                        .HasAnnotation("CseLibrary:Audited", false);
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FullName");
-
-                    b.HasIndex("IdentityUserId")
-                        .IsUnique()
-                        .HasFilter("[IdentityUserId] IS NOT NULL");
-
-                    b.HasIndex("MemberCode")
-                        .IsUnique()
-                        .HasFilter("[Status] <> 3");
-
-                    b.ToTable("Members", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_Members_Approval", "[Approval] IN (1, 2, 3)");
-
-                            t.HasCheckConstraint("CK_Members_MemberType", "[MemberType] IN (1, 2)");
-
-                            t.HasCheckConstraint("CK_Members_Status", "[Status] IN (1, 2, 3)");
                         });
                 });
 
@@ -1103,6 +1103,14 @@ namespace CseLibrary.Data.Migrations
                     b.Navigation("LendingTransaction");
                 });
 
+            modelBuilder.Entity("CseLibrary.Core.Entities.LibraryMember", b =>
+                {
+                    b.HasOne("CseLibrary.Core.Entities.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("IdentityUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("CseLibrary.Core.Entities.Loan", b =>
                 {
                     b.HasOne("CseLibrary.Core.Entities.BookCopy", "BookCopy")
@@ -1117,9 +1125,9 @@ namespace CseLibrary.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("CseLibrary.Core.Entities.Member", "Member")
+                    b.HasOne("CseLibrary.Core.Entities.LibraryMember", "LibraryMember")
                         .WithMany("Loans")
-                        .HasForeignKey("MemberId")
+                        .HasForeignKey("LibraryMemberId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -1130,15 +1138,7 @@ namespace CseLibrary.Data.Migrations
 
                     b.Navigation("BookCopy");
 
-                    b.Navigation("Member");
-                });
-
-            modelBuilder.Entity("CseLibrary.Core.Entities.Member", b =>
-                {
-                    b.HasOne("CseLibrary.Core.Entities.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("IdentityUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                    b.Navigation("LibraryMember");
                 });
 
             modelBuilder.Entity("CseLibrary.Core.Entities.RolePermission", b =>
@@ -1223,7 +1223,7 @@ namespace CseLibrary.Data.Migrations
                     b.Navigation("Copies");
                 });
 
-            modelBuilder.Entity("CseLibrary.Core.Entities.Member", b =>
+            modelBuilder.Entity("CseLibrary.Core.Entities.LibraryMember", b =>
                 {
                     b.Navigation("Loans");
                 });

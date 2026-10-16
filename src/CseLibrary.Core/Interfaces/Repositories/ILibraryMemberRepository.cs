@@ -4,11 +4,11 @@ using CseLibrary.Core.Paging;
 
 namespace CseLibrary.Core.Interfaces.Repositories;
 
-public interface IMemberRepository : IRepository<Member>
+public interface ILibraryMemberRepository : IRepository<LibraryMember>
 {
     /// <summary>Matches member code, name or email.</summary>
-    Task<PagedResult<MemberDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default);
-    Task<MemberDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default);
+    Task<PagedResult<LibraryMemberDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default);
+    Task<LibraryMemberDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default);
     Task<int?> FindIdByCodeAsync(string memberCode, CancellationToken ct = default);
     Task<bool> CodeExistsAsync(string memberCode, int? excludeId, CancellationToken ct = default);
     Task<int?> FindIdByUserIdAsync(string userId, CancellationToken ct = default);

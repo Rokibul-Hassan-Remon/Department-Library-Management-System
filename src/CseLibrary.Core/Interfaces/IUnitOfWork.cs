@@ -12,7 +12,7 @@ public interface IUnitOfWork
     IAuditLogRepository AuditLogs { get; }
     IBookRepository Books { get; }
     IBookCopyRepository BookCopies { get; }
-    IMemberRepository Members { get; }
+    ILibraryMemberRepository LibraryMembers { get; }
     ILoanRepository Loans { get; }
     ICategoryRepository Categories { get; }
     IAuthorRepository Authors { get; }

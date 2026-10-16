@@ -1857,7 +1857,7 @@ bypassing D-56. Extends D-56 (Q-S21-4/8); does not replace it.
 5. **Existing flows must keep working** (tested): sign-in, self-service password change
    (`/Account/ChangePassword`, not routed through `UserService`), Admin password reset.
 
-### D-58 Rename "Member" (the borrower record) to "Library Member" — name and column names **Approved** (user, Session 23); not implemented
+### D-58 Rename "Member" (the borrower record) to "Library Member" — name and column names **Approved** (user, Session 23); **implemented** (Session 23, `feature/d58-library-member-rename`)
 **Source:** user, Session 23 (DECISION_LOG §81). A pasted recommendation proposed "Borrower";
 the user preferred **"Library Member"**. "Member" and "User" are easy to confuse:
 `AspNetUsers` is the login account, `Members` is the library borrower record (0..1 link).
@@ -1875,7 +1875,7 @@ the user preferred **"Library Member"**. "Member" and "User" are easy to confuse
    them needs a decision on the existing permission rows and role grants); UI labels;
    `requirements.md` / `business-rules.md` / the ER diagram use "Member"; D-54 "Member link"
    wording; error code `MEMBER.INACTIVE` (archive BR-03).
-5. Until approved and implemented, code and docs keep "Member".
+5. Until approved and implemented, code and docs keep "Member". **Done:** code, migration `AddLibraryCore` (regenerated, Q1 = A), permissions `LibraryMembers.*`, URL `/LibraryMembers`, `database.md` and the two database diagrams use `LibraryMembers`; historical decision text keeps "Member".
 
 ---
 

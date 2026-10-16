@@ -57,9 +57,9 @@
                             {
                                 <li class="nav-item"><a class="nav-link text-dark" asp-controller="Loans" asp-action="Index">Loans</a></li>
                             }
-                            @if (await Can(Permissions.Members.View))
+                            @if (await Can(Permissions.LibraryMembers.View))
                             {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Members" asp-action="Index">Members</a></li>
+                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="LibraryMembers" asp-action="Index">Library Members</a></li>
                             }
                             @if (await Can(Permissions.Books.View))
                             {

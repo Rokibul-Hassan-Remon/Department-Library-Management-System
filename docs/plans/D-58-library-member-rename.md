@@ -1,6 +1,6 @@
 # D-58 rename plan: `Member` → `LibraryMember`
 
-Status: **plan Approved** (user, Session 23: "recommendation approved"; Q1–Q6 as recommended). Implementation in progress. Naming is Approved in D-58
+Status: **plan Approved and implemented** (user, Session 23: "recommendation approved"; Q1–Q6 as recommended). Steps 1–2 done in one commit (code and migration must change together or the build/tests break between them); step 3 done. Naming is Approved in D-58
 (entity `LibraryMember`, table `LibraryMembers`, FK `LibraryMemberId`; keep `MemberCode`,
 `MemberType`, `IdentityUserId`, `LibraryPolicies.MemberCategory`). Items marked **Q** need the
 user's decision before implementation.

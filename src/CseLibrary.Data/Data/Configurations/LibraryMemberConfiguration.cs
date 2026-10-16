@@ -4,17 +4,17 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CseLibrary.Data.Data.Configurations;
 
-public class MemberConfiguration : IEntityTypeConfiguration<Member>
+public class LibraryMemberConfiguration : IEntityTypeConfiguration<LibraryMember>
 {
-    public void Configure(EntityTypeBuilder<Member> builder)
+    public void Configure(EntityTypeBuilder<LibraryMember> builder)
     {
-        builder.ToTable("Members", t =>
+        builder.ToTable("LibraryMembers", t =>
         {
-            t.HasCheckConstraint("CK_Members_MemberType", "[MemberType] IN (1, 2)");
-            t.HasCheckConstraint("CK_Members_Approval", "[Approval] IN (1, 2, 3)");
+            t.HasCheckConstraint("CK_LibraryMembers_MemberType", "[MemberType] IN (1, 2)");
+            t.HasCheckConstraint("CK_LibraryMembers_Approval", "[Approval] IN (1, 2, 3)");
         });
         builder.HasKey(m => m.Id);
-        builder.Property(m => m.Id).UseHiLo("Members_HiLo"); // D-29
+        builder.Property(m => m.Id).UseHiLo("LibraryMembers_HiLo"); // D-29
         builder.Property(m => m.MemberCode).IsRequired().HasMaxLength(30).Audited();
         builder.Property(m => m.FullName).IsRequired().HasMaxLength(150).Audited();
         builder.Property(m => m.MemberType).Audited();
@@ -42,7 +42,7 @@ public class LoanConfiguration : IEntityTypeConfiguration<Loan>
         });
         builder.HasKey(l => l.Id);
         builder.Property(l => l.Id).UseHiLo("LendingTransactions_HiLo"); // D-29
-        builder.Property(l => l.MemberId).Audited();
+        builder.Property(l => l.LibraryMemberId).Audited();
         builder.Property(l => l.BookCopyId).Audited();
         builder.Property(l => l.IssueDateUtc).Audited();
         builder.Property(l => l.DueDate).Audited();
@@ -55,9 +55,9 @@ public class LoanConfiguration : IEntityTypeConfiguration<Loan>
         builder.ClassifyBaseColumns();
         // D-35 / archive §5: one Issued transaction per copy, so two concurrent issues of a copy cannot both commit.
         builder.HasIndex(l => l.BookCopyId).IsUnique().HasFilter("[TransactionStatus] = 1").HasDatabaseName("UX_Lending_ActiveBookCopy");
-        builder.HasIndex(l => new { l.MemberId, l.TransactionStatus });
+        builder.HasIndex(l => new { l.LibraryMemberId, l.TransactionStatus });
         builder.HasIndex(l => l.DueDate).HasFilter("[TransactionStatus] = 1");
-        builder.HasOne(l => l.Member).WithMany(m => m.Loans).HasForeignKey(l => l.MemberId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(l => l.LibraryMember).WithMany(m => m.Loans).HasForeignKey(l => l.LibraryMemberId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(l => l.BookCopy).WithMany().HasForeignKey(l => l.BookCopyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(l => l.IssuedByUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ApplicationUser>().WithMany().HasForeignKey(l => l.ReturnedByUserId).OnDelete(DeleteBehavior.Restrict);

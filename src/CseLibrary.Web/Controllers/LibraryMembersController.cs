@@ -9,27 +9,27 @@ using Microsoft.AspNetCore.Mvc;
 namespace CseLibrary.Web.Controllers;
 
 [Authorize]
-public class MembersController(IMemberService service) : Controller
+public class LibraryMembersController(ILibraryMemberService service) : Controller
 {
-    [HasPermission(Permissions.Members.View)]
+    [HasPermission(Permissions.LibraryMembers.View)]
     public async Task<IActionResult> Index(int page = 1, string? search = null)
     {
         ViewData["Search"] = search;
         return View(await service.GetPageAsync(new PageRequest(page), search));
     }
 
-    [HasPermission(Permissions.Members.View)]
+    [HasPermission(Permissions.LibraryMembers.View)]
     public async Task<IActionResult> Details(int id)
     {
         var member = await service.GetDetailsAsync(id);
         return member == null ? NotFound() : View(member);
     }
 
-    [HttpGet, HasPermission(Permissions.Members.Create)]
-    public IActionResult Create() => View("Form", new MemberDto());
+    [HttpGet, HasPermission(Permissions.LibraryMembers.Create)]
+    public IActionResult Create() => View("Form", new LibraryMemberDto());
 
-    [HttpPost, HasPermission(Permissions.Members.Create), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(MemberDto dto)
+    [HttpPost, HasPermission(Permissions.LibraryMembers.Create), ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(LibraryMemberDto dto)
     {
         if (!ModelState.IsValid) return View("Form", dto);
         var result = await service.CreateAsync(dto);
@@ -38,19 +38,19 @@ public class MembersController(IMemberService service) : Controller
             ModelState.AddModelError(string.Empty, result.Error!);
             return View("Form", dto);
         }
-        TempData["Success"] = "Member created.";
+        TempData["Success"] = "Library member created.";
         return RedirectToAction(nameof(Details), new { id = result.Value });
     }
 
-    [HttpGet, HasPermission(Permissions.Members.Edit)]
+    [HttpGet, HasPermission(Permissions.LibraryMembers.Edit)]
     public async Task<IActionResult> Edit(int id)
     {
         var member = await service.GetDetailsAsync(id);
         return member == null ? NotFound() : View("Form", member);
     }
 
-    [HttpPost, HasPermission(Permissions.Members.Edit), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(MemberDto dto)
+    [HttpPost, HasPermission(Permissions.LibraryMembers.Edit), ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(LibraryMemberDto dto)
     {
         if (!ModelState.IsValid) return View("Form", dto);
         var result = await service.UpdateAsync(dto);
@@ -59,11 +59,11 @@ public class MembersController(IMemberService service) : Controller
             ModelState.AddModelError(string.Empty, result.Error!);
             return View("Form", dto);
         }
-        TempData["Success"] = "Member updated.";
+        TempData["Success"] = "Library member updated.";
         return RedirectToAction(nameof(Details), new { id = dto.Id });
     }
 
-    [HttpPost, HasPermission(Permissions.Members.Delete), ValidateAntiForgeryToken]
+    [HttpPost, HasPermission(Permissions.LibraryMembers.Delete), ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(int id)
     {
         var result = await service.DeleteAsync(id);
@@ -72,7 +72,7 @@ public class MembersController(IMemberService service) : Controller
             TempData["Error"] = result.Error;
             return RedirectToAction(nameof(Details), new { id });
         }
-        TempData["Success"] = "Member deleted.";
+        TempData["Success"] = "Library member deleted.";
         return RedirectToAction(nameof(Index));
     }
 }

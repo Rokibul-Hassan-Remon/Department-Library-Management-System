@@ -3,7 +3,7 @@
 **Status: Proposed (M15, Session 16): not approved, not implemented.** This file owns the target
 schema for the library tables. The binding rules it builds on live in
 [PROJECT_DECISIONS.md](PROJECT_DECISIONS.md); the source spec is
-[archive spec v1.1 §4–§5](archive/1st%20discussion.md) (tables `Books`, `BookCopies`, `Members`,
+[archive spec v1.1 §4–§5](archive/1st%20discussion.md) (tables `Books`, `BookCopies`, `LibraryMembers`,
 `LendingTransactions`, supporting tables). Requirements: FR-M15-01..03 in
 [requirements.md](requirements.md). Tables are added in their phase migrations (catalog Phase 2,
 members Phase 2, lending Phase 3, notifications Phase 4), never in Phase 0.
@@ -33,7 +33,7 @@ notes. That page owns the column list; this file owns the reasoning.
 | Rule | Example |
 |---|---|
 | Primary key is always `Id` (`int` identity unless noted; HiLo is the D-29 candidate, decided separately) | `Books.Id`, `BookCopies.Id` |
-| Foreign key is the **singular entity name + `Id`** | `BookCopies.BookId`, `Books.CategoryId`, `Members.UserId` |
+| Foreign key is the **singular entity name + `Id`** | `BookCopies.BookId`, `Books.CategoryId`, `LibraryMembers.IdentityUserId` |
 | Two FKs to the same table get a role prefix | `LendingTransactions.IssuedByUserId`, `ReturnedByUserId` |
 | Every business table (`BaseEntity`) has `Status` + `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` | template names kept (option A); join tables only `CreatedAt`/`CreatedBy` |
 | Those five columns are **set automatically** by a `SaveChanges` interceptor (user from the current login, time from `TimeProvider`, UTC); services never set them | — |
@@ -67,7 +67,7 @@ public enum RecordStatus : byte { Active = 1, Inactive = 2, Deleted = 3 }   // 0
 - Applies to the template too (`BaseEntity.IsDeleted`, `ApplicationUser.IsActive`): implemented in
   Gate 2, step 0.8 (PHASE_0_PLAN).
 
-`Members` is shown as one table (open choice O3). Template tables (`AspNet*`, `Permissions`,
+`LibraryMembers` is shown as one table (open choice O3). Template tables (`AspNet*`, `Permissions`,
 `RolePermissions`, `GeneralConfigs`) keep their structure apart from D-50/D-51.
 
 ## 3. Available count: derived, not stored
@@ -112,7 +112,7 @@ This also matches the archive ("calculate from `BookCopies` rather than editable
 - **Insert** on issue. On return, the only update sets `TransactionStatus = Returned`,
   `ReturnDateUtc`, `ReturnedByUserId`, `ReturnCondition`. This happens once; `RowVersion` rejects a
   second return (D-35).
-- **No delete operation** in the repository or the UI. Foreign keys to `BookCopies`, `Members`
+- **No delete operation** in the repository or the UI. Foreign keys to `BookCopies`, `LibraryMembers`
   and `AspNetUsers` use `ON DELETE NO ACTION`. A copy or member with history cannot be deleted; it
   is set `Inactive` (`Status = 2`) or retired (`CopyStatus = Retired`) instead (BR-13).
 - **`CHECK` constraints** make a bad row impossible:
@@ -133,7 +133,7 @@ This also matches the archive ("calculate from `BookCopies` rather than editable
 |---|---|---|---|
 | O1 | Available count | Derived (§3) / counter column | **Derived** |
 | O2 | `Issued` inside `CopyStatus` | (a) keep `Issued` (archive), changed in the same transaction as the loan; (b) `CopyStatus` = physical state only, "issued" read from the open loan | **(a)**: one `RowVersion` on the copy serializes issue against lost/damaged changes, counts are one `GROUP BY`, and the filtered unique index still backs it up. (b) removes the duplicate but needs a lock or extra check to stop "mark lost" during a concurrent issue |
-| O3 | Member subtypes | (a) archive: `Members` + `Students` + `DepartmentFellows` (1:1); (b) one `Members` table with nullable type columns + `CHECK` per `MemberType` | **(b)**: only 3–4 columns differ, no joins, and D-48 locks a single member row. (a) is cleaner if the subtypes grow. Decide in Phase 2 |
+| O3 | Member subtypes | (a) archive: `LibraryMembers` + `Students` + `DepartmentFellows` (1:1); (b) one `LibraryMembers` table with nullable type columns + `CHECK` per `MemberType` | **(b)**: only 3–4 columns differ, no joins, and D-48 locks a single member row. (a) is cleaner if the subtypes grow. Decide in Phase 2 |
 | O4 | Member name in history | Live FK (history shows the current name) / snapshot name columns on the loan | **Live FK**; name changes are in `AuditLogs` |
 | O5 | `LendingTransactions.Id` type | `bigint` (archive) / `int` | **`bigint`**: costs 4 bytes per row and never runs out |
 

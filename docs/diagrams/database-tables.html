@@ -113,7 +113,7 @@ const T = [
   ["ShelfLocation","nvarchar(100) null",""],["AcquisitionDate","date null",""],["Notes","nvarchar(500) null",""],
   ["RowVersion","rowversion","","stops two issues of one copy"], ...STD],
   ix:"Index (BookId, CopyStatus): available count = copies with CopyStatus 1 and Status Active."},
- {n:"Members", g:"mem", col:2, s:"Phase 2", d:"Students and Department Fellows in one table (open choice O3). Status Inactive = cannot borrow.", c:[
+ {n:"LibraryMembers", g:"mem", col:2, s:"Phase 2", d:"Students and Department Fellows in one table (open choice O3). Status Inactive = cannot borrow.", c:[
   ["Id","int","PK"],["MemberCode","nvarchar(30)","UQ","student/staff ID"],["FullName","nvarchar(150)",""],
   ["MemberType","tinyint","","1 Student, 2 Fellow (= policy category)"],["Email","nvarchar(254)","","for reminders"],["Phone","nvarchar(30) null",""],
   ["UserId","nvarchar(450) null","UQ FK:AspNetUsers","portal login, at most one"],
@@ -121,12 +121,12 @@ const T = [
   ["Designation","nvarchar(100) null","","required for Fellow"],["InstitutionalId","nvarchar(50) null","UQ","unique when filled"],
   ["RowVersion","rowversion",""], ...STD]},
  {n:"LendingTransactions", g:"mem", col:3, s:"Phase 3", d:"One row per loan = the full borrowing history. Never deleted (Deleted status not used); return fills the return columns once.", c:[
-  ["Id","bigint","PK"],["BookCopyId","int","FK:BookCopies","which physical copy"],["MemberId","int","FK:Members","who borrowed"],
+  ["Id","bigint","PK"],["BookCopyId","int","FK:BookCopies","which physical copy"],["LibraryMemberId","int","FK:LibraryMembers","who borrowed"],
   ["IssueDateUtc","datetime2","","when issued"],["DueDate","date","","library-local date"],["ReturnDateUtc","datetime2 null","","when returned"],
   ["TransactionStatus","tinyint","","1 Issued (open), 2 Returned"],["IssuedByUserId","nvarchar(450)","FK:AspNetUsers","staff who issued"],
   ["ReturnedByUserId","nvarchar(450) null","FK:AspNetUsers","staff who received"],["ReturnCondition","tinyint null","","Good / Damaged"],
   ["RowVersion","rowversion","","stops double return"], ...STD],
-  ix:"UX_Lending_ActiveBookCopy: unique (BookCopyId) where TransactionStatus = Issued → one open loan per copy = current holder. Also (MemberId, IssueDateUtc), (BookCopyId, IssueDateUtc), (DueDate) where Issued. CHECK: Returned rows must have return date, staff and condition."},
+  ix:"UX_Lending_ActiveBookCopy: unique (BookCopyId) where TransactionStatus = Issued → one open loan per copy = current holder. Also (LibraryMemberId, IssueDateUtc), (BookCopyId, IssueDateUtc), (DueDate) where Issued. CHECK: Returned rows must have return date, staff and condition."},
  {n:"AspNetUsers", g:"sec", col:3, s:"Exists", d:"Login accounts for staff and members (ASP.NET Identity; other Identity columns not shown). IsActive → Status in Gate 2 (D-51): only Active can log in.", c:[
   ["Id","nvarchar(450)","PK"],["UserName","nvarchar(256)","UQ"],["Email","nvarchar(256)",""],["FullName","nvarchar(max) null",""],
   STATUS,["CreatedAt","datetime2",""],["UpdatedAt","datetime2 null",""]]},
@@ -149,16 +149,16 @@ const SAY = {
  "Books.CategoryId":"A category has zero or many books; a book may be uncategorized",
  "BookCopies.BookId":"A book title has zero or many physical copies; each copy belongs to exactly one title",
  "LendingTransactions.BookCopyId":"A copy has many loans over time, at most ONE open (Issued) at a time = its current holder",
- "LendingTransactions.MemberId":"A member has zero or many loans (current and past)",
+ "LendingTransactions.LibraryMemberId":"A member has zero or many loans (current and past)",
  "LendingTransactions.IssuedByUserId":"Every loan records the staff account that issued it",
  "LendingTransactions.ReturnedByUserId":"A returned loan records the staff account that received it",
- "Members.UserId":"A member has zero or one portal login; a login belongs to at most one member",
+ "LibraryMembers.IdentityUserId":"A member has zero or one portal login; a login belongs to at most one member",
  "EmailNotificationLogs.LendingTransactionId":"A loan has zero or many reminder / confirmation emails",
  "AspNetUserRoles.UserId":"An account has zero or many roles", "AspNetUserRoles.RoleId":"A role has zero or many accounts",
  "RolePermissions.RoleId":"A role has zero or many permissions", "RolePermissions.PermissionId":"A permission is granted to zero or many roles",
- "Members.MemberType":"Each member type has exactly one LibraryPolicies row (matched by value, no FK)"
+ "LibraryMembers.MemberType":"Each member type has exactly one LibraryPolicies row (matched by value, no FK)"
 };
-const LOGICAL = [{from:"Members", fc:"MemberType", to:"LibraryPolicies", tc:"MemberCategory"}];
+const LOGICAL = [{from:"LibraryMembers", fc:"MemberType", to:"LibraryPolicies", tc:"MemberCategory"}];
 
 const W = 300, HEAD = 34, ROW = 21, COLX = c => 40 + c * 390, GAPTOP = 40, VGAP = 46;
 const byName = {}, colY = {};

@@ -17,7 +17,7 @@ public class LendingTests(AppFactory app)
     private static string Unique(string prefix) => prefix + Guid.NewGuid().ToString("N")[..10];
 
     /// <summary>A member and <paramref name="copies"/> available copies of one new title.</summary>
-    private async Task<(string Member, int MemberId, string[] Copies)> Arrange(MemberType type, int copies, bool active = true)
+    private async Task<(string LibraryMember, int LibraryMemberId, string[] Copies)> Arrange(MemberType type, int copies, bool active = true)
     {
         var code = Unique("M");
         var accessions = Enumerable.Range(0, copies).Select(_ => Unique("ACC")).ToArray();
@@ -26,8 +26,8 @@ public class LendingTests(AppFactory app)
             var books = sp.GetRequiredService<IBookService>();
             var bookId = (await books.CreateAsync(new BookFormDto { Title = Unique("Lending ") })).Value;
             foreach (var a in accessions) Assert.True((await books.AddCopyAsync(new BookCopyDto { BookId = bookId, AccessionNumber = a })).Succeeded);
-            return (await sp.GetRequiredService<IMemberService>().CreateAsync(
-                new MemberDto { MemberCode = code, FullName = "Test Member", MemberType = type, IsActive = active })).Value;
+            return (await sp.GetRequiredService<ILibraryMemberService>().CreateAsync(
+                new LibraryMemberDto { MemberCode = code, FullName = "Test LibraryMember", MemberType = type, IsActive = active })).Value;
         });
         return (code, memberId, accessions);
     }
@@ -35,8 +35,8 @@ public class LendingTests(AppFactory app)
     private Task<Result> Issue(string member, string accession) =>
         app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().IssueAsync(new IssueDto { MemberCode = member, AccessionNumber = accession }));
 
-    private Task<MemberDetailsDto> Member(int id) =>
-        app.WithServiceAsync(async sp => (await sp.GetRequiredService<IMemberService>().GetDetailsAsync(id))!);
+    private Task<LibraryMemberDetailsDto> LibraryMember(int id) =>
+        app.WithServiceAsync(async sp => (await sp.GetRequiredService<ILibraryMemberService>().GetDetailsAsync(id))!);
 
     [Fact]
     public async Task Issue_and_return_keep_history_and_copy_status_in_step()
@@ -44,15 +44,15 @@ public class LendingTests(AppFactory app)
         var (member, memberId, copies) = await Arrange(MemberType.Student, 1);
         Assert.True((await Issue(member, copies[0])).Succeeded);
 
-        var loan = Assert.Single((await Member(memberId)).Loans);
+        var loan = Assert.Single((await LibraryMember(memberId)).Loans);
         Assert.Equal(DateOnly.FromDateTime(DateTime.Now).AddDays(14), loan.DueDate); // Student default
         var other = await Arrange(MemberType.Student, 0);
-        Assert.Equal(ErrorCodes.CopyUnavailable, (await Issue(other.Member, copies[0])).ErrorCode); // BR-04
+        Assert.Equal(ErrorCodes.CopyUnavailable, (await Issue(other.LibraryMember, copies[0])).ErrorCode); // BR-04
 
         Assert.True((await app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().ReturnAsync(loan.Id))).Succeeded);
-        var returned = Assert.Single((await Member(memberId)).Loans);
+        var returned = Assert.Single((await LibraryMember(memberId)).Loans);
         Assert.NotNull(returned.ReturnDateUtc); // history row kept, not deleted
-        Assert.True((await Issue(other.Member, copies[0])).Succeeded); // available again
+        Assert.True((await Issue(other.LibraryMember, copies[0])).Succeeded); // available again
     }
 
     [Fact]
@@ -63,13 +63,13 @@ public class LendingTests(AppFactory app)
         Assert.Equal(ErrorCodes.LimitReached, (await Issue(member, copies[3])).ErrorCode); // Student max 3
 
         var inactive = await Arrange(MemberType.Fellow, 1, active: false);
-        Assert.Equal(ErrorCodes.MemberInactive, (await Issue(inactive.Member, inactive.Copies[0])).ErrorCode); // BR-03
+        Assert.Equal(ErrorCodes.MemberInactive, (await Issue(inactive.LibraryMember, inactive.Copies[0])).ErrorCode); // BR-03
 
         var late = await Arrange(MemberType.Fellow, 2);
-        Assert.True((await Issue(late.Member, late.Copies[0])).Succeeded);
-        var loanId = Assert.Single((await Member(late.MemberId)).Loans).Id;
+        Assert.True((await Issue(late.LibraryMember, late.Copies[0])).Succeeded);
+        var loanId = Assert.Single((await LibraryMember(late.LibraryMemberId)).Loans).Id;
         await MakeOverdue(loanId);
-        Assert.Equal(ErrorCodes.HasOverdue, (await Issue(late.Member, late.Copies[1])).ErrorCode);
+        Assert.Equal(ErrorCodes.HasOverdue, (await Issue(late.LibraryMember, late.Copies[1])).ErrorCode);
         Assert.Equal(ErrorCodes.RenewNotAllowed,
             (await app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().RenewAsync(loanId))).ErrorCode);
     }
@@ -79,11 +79,11 @@ public class LendingTests(AppFactory app)
     {
         var (member, memberId, copies) = await Arrange(MemberType.Student, 1);
         Assert.True((await Issue(member, copies[0])).Succeeded);
-        var loanId = Assert.Single((await Member(memberId)).Loans).Id;
+        var loanId = Assert.Single((await LibraryMember(memberId)).Loans).Id;
         Assert.True((await app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().ReturnAsync(loanId, ReturnCondition.Damaged))).Succeeded);
 
         var other = await Arrange(MemberType.Student, 0);
-        Assert.Equal(ErrorCodes.CopyUnavailable, (await Issue(other.Member, copies[0])).ErrorCode); // Damaged, not Available
+        Assert.Equal(ErrorCodes.CopyUnavailable, (await Issue(other.LibraryMember, copies[0])).ErrorCode); // Damaged, not Available
         var loan = await app.WithServiceAsync(sp => sp.GetRequiredService<IUnitOfWork>().Loans.GetForUpdateAsync(loanId));
         Assert.Equal((LendingStatus.Returned, ReturnCondition.Damaged, TestCurrentUser.SeedAdminId, TestCurrentUser.SeedAdminId),
             (loan!.TransactionStatus, loan.ReturnCondition, loan.IssuedByUserId, loan.ReturnedByUserId));
@@ -94,11 +94,11 @@ public class LendingTests(AppFactory app)
     {
         var (member, memberId, copies) = await Arrange(MemberType.Fellow, 1);
         Assert.True((await Issue(member, copies[0])).Succeeded);
-        var loanId = Assert.Single((await Member(memberId)).Loans).Id;
+        var loanId = Assert.Single((await LibraryMember(memberId)).Loans).Id;
 
         var lending = (Func<Task<Result>>)(() => app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().RenewAsync(loanId)));
         Assert.True((await lending()).Succeeded);
-        Assert.Equal(1, Assert.Single((await Member(memberId)).Loans).RenewCount);
+        Assert.Equal(1, Assert.Single((await LibraryMember(memberId)).Loans).RenewCount);
         Assert.Equal(ErrorCodes.RenewNotAllowed, (await lending()).ErrorCode); // default MaxRenewals 1
     }
 
@@ -108,7 +108,7 @@ public class LendingTests(AppFactory app)
         var (_, _, copies) = await Arrange(MemberType.Fellow, 1);
         var members = await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => Arrange(MemberType.Fellow, 0)));
 
-        var results = await Task.WhenAll(members.Select(m => Issue(m.Member, copies[0])));
+        var results = await Task.WhenAll(members.Select(m => Issue(m.LibraryMember, copies[0])));
 
         Assert.Single(results, r => r.Succeeded);
         Assert.All(results.Where(r => !r.Succeeded), r => Assert.Equal(ErrorCodes.CopyUnavailable, r.ErrorCode));
@@ -126,7 +126,7 @@ public class LendingTests(AppFactory app)
 
         Assert.Equal(3, results.Count(r => r.Succeeded));
         Assert.All(results.Where(r => !r.Succeeded), r => Assert.Equal(ErrorCodes.LimitReached, r.ErrorCode));
-        Assert.Equal(3, (await Member(memberId)).ActiveLoans);
+        Assert.Equal(3, (await LibraryMember(memberId)).ActiveLoans);
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class LendingTests(AppFactory app)
         Assert.True((await Issue(member, copies[0])).Succeeded);
         await app.WithServiceAsync(async sp =>
         {
-            Assert.Equal(ErrorCodes.InUse, (await sp.GetRequiredService<IMemberService>().DeleteAsync(memberId)).ErrorCode);
+            Assert.Equal(ErrorCodes.InUse, (await sp.GetRequiredService<ILibraryMemberService>().DeleteAsync(memberId)).ErrorCode);
             var configs = sp.GetRequiredService<IGeneralConfigService>();
             foreach (var (key, value) in LendingConfigKeys.Defaults) Assert.Equal(value, (await configs.GetByKeyAsync(key))?.Value);
         });
