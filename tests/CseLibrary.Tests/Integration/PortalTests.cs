@@ -30,10 +30,10 @@ public class PortalTests(AppFactory app)
         return await sp.GetRequiredService<SignInManager<ApplicationUser>>().CanSignInAsync(user);
     });
 
-    private Task<MemberDetailsDto?> MemberOf(string email) => app.WithServiceAsync(async sp =>
+    private Task<LibraryMemberDetailsDto?> MemberOf(string email) => app.WithServiceAsync(async sp =>
     {
         var user = (await sp.GetRequiredService<UserManager<ApplicationUser>>().FindByEmailAsync(email))!;
-        return await sp.GetRequiredService<IMemberService>().GetForUserAsync(user.Id);
+        return await sp.GetRequiredService<ILibraryMemberService>().GetForUserAsync(user.Id);
     });
 
     [Fact]
@@ -64,7 +64,7 @@ public class PortalTests(AppFactory app)
         await app.WithServiceAsync(async sp =>
         {
             var registrations = sp.GetRequiredService<IRegistrationService>();
-            Assert.Contains(await registrations.GetPendingAsync(), p => p.MemberId == memberId);
+            Assert.Contains(await registrations.GetPendingAsync(), p => p.LibraryMemberId == memberId);
             Assert.True((await registrations.ApproveAsync(memberId)).Succeeded);
         });
         Assert.True(await CanSignIn(form.Email));
@@ -95,8 +95,8 @@ public class PortalTests(AppFactory app)
     public async Task Existing_member_is_linked_not_duplicated_and_cannot_register_twice()
     {
         var code = Unique("R");
-        var memberId = (await app.WithServiceAsync(sp => sp.GetRequiredService<IMemberService>()
-            .CreateAsync(new MemberDto { MemberCode = code, FullName = "Created by staff" }))).Value;
+        var memberId = (await app.WithServiceAsync(sp => sp.GetRequiredService<ILibraryMemberService>()
+            .CreateAsync(new LibraryMemberDto { MemberCode = code, FullName = "Created by staff" }))).Value;
 
         var form = Form(RegistrationType.Student, code);
         Assert.True((await Register(form)).Succeeded);
@@ -114,7 +114,7 @@ public class PortalTests(AppFactory app)
             var books = sp.GetRequiredService<IBookService>();
             var bookId = (await books.CreateAsync(new BookFormDto { Title = Unique("Reminder ") })).Value;
             foreach (var a in new[] { soon, later }) await books.AddCopyAsync(new BookCopyDto { BookId = bookId, AccessionNumber = a });
-            await sp.GetRequiredService<IMemberService>().CreateAsync(new MemberDto { MemberCode = code, FullName = "R", Email = code + "@test.local", MemberType = MemberType.Fellow });
+            await sp.GetRequiredService<ILibraryMemberService>().CreateAsync(new LibraryMemberDto { MemberCode = code, FullName = "R", Email = code + "@test.local", MemberType = MemberType.Fellow });
             var lending = sp.GetRequiredService<ILendingService>();
             Assert.True((await lending.IssueAsync(new IssueDto { MemberCode = code, AccessionNumber = soon })).Succeeded);
             Assert.True((await lending.IssueAsync(new IssueDto { MemberCode = code, AccessionNumber = later })).Succeeded);

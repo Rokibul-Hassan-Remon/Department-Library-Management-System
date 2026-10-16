@@ -4,7 +4,7 @@ using CseLibrary.Core.Entities;
 namespace CseLibrary.Core.DTOs;
 
 /// <summary>Create (Id = 0) and edit form; also the list row.</summary>
-public class MemberDto
+public class LibraryMemberDto
 {
     public int Id { get; set; }
     [Required, StringLength(30), Display(Name = "Member code")] public string MemberCode { get; set; } = string.Empty;
@@ -16,7 +16,7 @@ public class MemberDto
     public int ActiveLoans { get; set; }
 }
 
-public class MemberDetailsDto : MemberDto
+public class LibraryMemberDetailsDto : LibraryMemberDto
 {
     public IReadOnlyList<LoanDto> Loans { get; set; } = [];
 }
@@ -24,7 +24,7 @@ public class MemberDetailsDto : MemberDto
 public class LoanDto
 {
     public int Id { get; set; }
-    public int MemberId { get; set; }
+    public int LibraryMemberId { get; set; }
     public string MemberCode { get; set; } = string.Empty;
     public string MemberName { get; set; } = string.Empty;
     public int BookId { get; set; }
@@ -58,7 +58,7 @@ public class RegisterDto
 
 public class PendingRegistrationDto
 {
-    public int MemberId { get; set; }
+    public int LibraryMemberId { get; set; }
     public string MemberCode { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string? Email { get; set; }

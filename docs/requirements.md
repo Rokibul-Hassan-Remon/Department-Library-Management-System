@@ -1,5 +1,8 @@
 # Requirements
 
+> **Terminology (D-58):** "Member" in this file means a **Library Member** — the borrower record
+> (entity `LibraryMember`, table `LibraryMembers`), not a login account (`AspNetUsers`).
+
 Authoritative list of functional requirements (FR). Business rules live in
 `docs/business-rules.md`; design decisions in `docs/PROJECT_DECISIONS.md`; Phase 0 tests in
 `docs/PHASE_0_PLAN.md`. Each fact has one owning file; other files link here.

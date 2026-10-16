@@ -4,12 +4,12 @@
     var returnUrl = Context.Request.Path + Context.Request.QueryString;
 }
 <table class="table table-sm table-striped">
-    <thead><tr><th>Member</th><th>Book</th><th>Accession no.</th><th>Issued</th><th>Due</th><th>Returned</th><th></th></tr></thead>
+    <thead><tr><th>Library Member</th><th>Book</th><th>Accession no.</th><th>Issued</th><th>Due</th><th>Returned</th><th></th></tr></thead>
     <tbody>
         @foreach (var l in Model)
         {
             <tr class="@(l.IsOverdue(today) ? "table-danger" : "")">
-                <td><a asp-controller="Members" asp-action="Details" asp-route-id="@l.MemberId">@l.MemberCode</a> @l.MemberName</td>
+                <td><a asp-controller="LibraryMembers" asp-action="Details" asp-route-id="@l.LibraryMemberId">@l.MemberCode</a> @l.MemberName</td>
                 <td><a asp-controller="Books" asp-action="Details" asp-route-id="@l.BookId">@l.BookTitle</a></td>
                 <td>@l.AccessionNumber</td>
                 <td>@l.IssueDateUtc.ToLocalTime().ToString("yyyy-MM-dd")</td>

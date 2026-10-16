@@ -23,12 +23,12 @@ public class LendingService(IUnitOfWork uow, ICurrentUser currentUser, TimeProvi
         if (currentUser.UserId is not { } staffId) return Task.FromResult(SignInRequired());
         return uow.ExecuteInTransactionAsync(async attemptCt =>
         {
-            var memberId = await uow.Members.FindIdByCodeAsync(dto.MemberCode.Trim(), attemptCt);
-            if (memberId == null) return Result.Failure(ErrorCodes.NotFound, "Member not found.");
+            var memberId = await uow.LibraryMembers.FindIdByCodeAsync(dto.MemberCode.Trim(), attemptCt);
+            if (memberId == null) return Result.Failure(ErrorCodes.NotFound, "Library member not found.");
             // One member's issues run one at a time, so the limit check and the insert cannot interleave (D-48 P12).
-            await uow.AcquireLockAsync($"CseLibrary.Member.{memberId}", attemptCt);
+            await uow.AcquireLockAsync($"CseLibrary.LibraryMember.{memberId}", attemptCt);
 
-            var member = (await uow.Members.GetForUpdateAsync(memberId.Value, attemptCt))!;
+            var member = (await uow.LibraryMembers.GetForUpdateAsync(memberId.Value, attemptCt))!;
             if (member.Status != RecordStatus.Active) return Result.Failure(ErrorCodes.MemberInactive, "The member is not active.");
             if (await uow.Loans.HasOverdueAsync(member.Id, Today, attemptCt))
                 return Result.Failure(ErrorCodes.HasOverdue, "The member has an overdue book; return it first.");
@@ -44,7 +44,7 @@ public class LendingService(IUnitOfWork uow, ICurrentUser currentUser, TimeProvi
             copy.CopyStatus = CopyStatus.Issued; // RowVersion: a concurrent change to this copy fails this save
             await uow.Loans.AddAsync(new Loan
             {
-                MemberId = member.Id, BookCopyId = copy.Id, IssueDateUtc = time.GetUtcNow().UtcDateTime,
+                LibraryMemberId = member.Id, BookCopyId = copy.Id, IssueDateUtc = time.GetUtcNow().UtcDateTime,
                 DueDate = Today.AddDays(policy.LoanDays), IssuedByUserId = staffId
             }, attemptCt);
             return Result.Success();
@@ -74,7 +74,7 @@ public class LendingService(IUnitOfWork uow, ICurrentUser currentUser, TimeProvi
             var loan = await uow.Loans.GetActiveForUpdateAsync(loanId, attemptCt);
             if (loan == null) return Result.Failure(ErrorCodes.NotFound, "Active loan not found.");
             if (loan.DueDate < Today) return Result.Failure(ErrorCodes.RenewNotAllowed, "An overdue book must be returned, not renewed.");
-            if (await uow.LibraryPolicies.GetForTypeAsync(loan.Member.MemberType, attemptCt) is not { } policy) return NoPolicy(loan.Member.MemberType);
+            if (await uow.LibraryPolicies.GetForTypeAsync(loan.LibraryMember.MemberType, attemptCt) is not { } policy) return NoPolicy(loan.LibraryMember.MemberType);
             if (loan.RenewCount >= policy.MaxRenewals)
                 return Result.Failure(ErrorCodes.RenewNotAllowed, $"This loan was already renewed {loan.RenewCount} time(s); the limit is {policy.MaxRenewals}.");
 

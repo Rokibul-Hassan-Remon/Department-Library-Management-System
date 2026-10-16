@@ -1,35 +1,73 @@
 # Session Handoff
 
-## ▶ Session 23 (2026-10-15) — read first; overrides the Session 22 block where they differ
-- Read-only check passed (build 0/0, 105/105). Session 22 close-out committed `efb8a68`.
-- **0.12 smoke done (DECISION_LOG §75):** all items passed on disposable LocalDB
-  `CseLibrary_Test_1cad9ca5…` (env vars only, Production, https); database dropped, LocalDB
-  has only `Practice`, `.\SQLEXPRESS` untouched. New findings without a decision: scoped CSS
-  404 under `dotnet run` as Production; status pages have no Reference ID (500 page only);
-  locked-out message identical to a wrong password.
-- **Gate 3 approved by the user without the pre-gate reviews (§76)**; merged into `develop`.
-  The reviews on the Gate 3 diff are still owed — run them when budget allows.
-- Phase 1 first slice: book titles + physical copies CRUD on `feature/phase-1-catalog` (§77):
-  `Books`/`BookCopies` (HiLo, audited, migration `AddCatalog`), `Books.*` permissions, search
-  (title/author/ISBN/accession) + paging, copy counts, Issued status reserved for lending,
-  title delete refused while copies exist. Committed `b2e793b`, merged into `develop` `0ef6674`.
-- **Lending slice (§78)** on `feature/phase-1-lending`: Members (Student/Fellow, active flag),
-  issue/return/renew, loan history, overdue list, copy holder on the book page. Policy in
-  GeneralConfig (user-chosen defaults: Student 3 books/14 days, Fellow 5/30, 1 renewal, overdue
-  blocks new issues). Build 0/0, tests **114/114**.
-  Committed `1e51202` (not merged).
-- **Portal + reminders (§79)** on `feature/phase-1-portal` (branched from the lending branch):
-  self-registration (D-54: Student active at once, Dept. Fellow Pending → `Registrations.Review`
-  approves/rejects), "My books" page, daily due/overdue reminders written to the log
-  (`LogEmailSender`; swap for SMTP later). Build 0/0, tests **120/120**.
-- **Schema aligned with the M15 database model (§80)** on `feature/phase-1-db-alignment`:
-  Authors/BookAuthors/Categories, LendingTransactions, LibraryPolicies, EmailNotificationLogs;
-  three unapplied migrations replaced by `AddLibraryCore`. Tests **122/122**. Lending and portal
-  are merged into `develop` (`f01b4aa`).
-- Emails (log only) also go to their own file `Logs/emails-YYYYMMDD.txt`, kept indefinitely (§80 follow-up).
-- **Not built yet:** real SMTP email, reports, D-54 per-type default roles (Q-S21-1), rejected
-  applicant re-applying with the same email (Q-S19-7). Owed: Gate 3 reviews; merges of the
-  lending and portal branches into `develop`.
+## ▶ Session 23 (2026-10-15 → 2026-10-16) — read first; overrides the Session 22 block where they differ
+Session 23 closed at the user's request (conversation too long) — **Session 24 starts here.**
+
+### State (verified 2026-10-16)
+- `develop` @ **`47488bd`** (Phase 0 Gate 3 + Phase 1 catalog, lending, portal, schema alignment,
+  email log file, D-58 naming docs — all merged with `--no-ff`).
+- Branch **`feature/d58-library-member-rename`** (from `develop` @ `47488bd`), 2 commits,
+  **not merged**: `757b00d` plan (docs) · **`eab0522` Member → LibraryMember rename**.
+- Merged feature branches this session: `feature/phase-0-gate-3`, `feature/phase-1-catalog`,
+  `feature/phase-1-lending` + `feature/phase-1-portal` (stacked, one merge), `feature/phase-1-db-alignment`,
+  `feature/phase-1-email-log`, `docs/borrower-naming`.
+- Evidence at `eab0522`: build 0 errors / 0 warnings; tests **122/122**;
+  `has-pending-model-changes` none; mutation checks for the member lock, Fellow pending,
+  reminder idempotency (DECISION_LOG §78–§80).
+- **Migrations:** `InitialCreate`, `AddAuditLog`, **`AddLibraryCore`** (regenerated twice this
+  session with the user's approval; never applied outside `CseLibrary_Test_*`). `.\SQLEXPRESS`
+  has no user database; LocalDB only `Practice`. No smoke app is running.
+- No Phase 1 plan document exists yet: Phase 1 slices were built directly on the user's request
+  (catalog, lending, portal) and recorded in DECISION_LOG §77–§82.
+
+### Done this session (details: DECISION_LOG §75–§83)
+- **0.12 smoke** passed on a disposable DB (§75); **Gate 3 approved without the pre-gate
+  reviews** (§76, owed); merged into `develop`.
+- **Phase 1 built:** Books + copies (search, paging, category filter, copy holder), Authors /
+  BookAuthors / Categories; Library Members (Student/Fellow); issue / return (Good/Damaged) /
+  renew with full history in `LendingTransactions`; `LibraryPolicies` page; self-registration
+  (Student active, Dept. Fellow pending → `Registrations.Review`); "My books"; daily due /
+  overdue reminders, log-only, once per idempotency key (`EmailNotificationLogs`), also written
+  to `Logs/emails-YYYYMMDD.txt`.
+- **Schema follows the M15 database model** (`docs/diagrams/database-model.html`) (§80).
+- **D-58:** `Member` → `LibraryMember` (plan `docs/plans/D-58-library-member-rename.md`) (§81–§82).
+
+### Decisions this session (recorded in PROJECT_DECISIONS)
+D-48 v1 values (Student 3/14, Fellow 5/30, 1 renewal, overdue blocks issue) · D-54 implemented
+(Members row = application record) · D-35 implemented · **D-59** M15 database model is the
+implementation target · **D-60** log-only email until a mail server exists · **D-58**
+"Library Member" (Borrower rejected), plan Q1–Q6 approved · Gate 3 closed without reviews (§76).
+
+### Open findings without a decision
+- Owed: `/code-review` + `/ponytail-review` on the Gate 3 diff and on all Phase 1 code.
+- Books/Members pages show Create/Edit/Delete buttons without the permission (server refuses).
+- D-54 per-type default roles (Q-S21-1) not built — self-registered users get no role; email
+  confirmation (Q-S19-3) and re-application after rejection (Q-S19-7) not built.
+- Student "request a book online" would contradict M10 (no request workflow) — needs a decision.
+- Smoke findings §75: scoped CSS 404 under `dotnet run` as Production; status pages show no
+  Reference ID; locked-out message equals wrong-password message.
+- Not built: reports, SMTP sender, `OutboxMessages`, member subtype tables, cover images.
+- Still open from earlier: physical role delete (§63), role names visible to non-Admins, D-49
+  O1–O5, EF Tools package, UI brand text "DefaultTemplate".
+
+### Learned in Session 23
+- Check the approved ER diagram before designing tables; the user expects the code to follow
+  `docs/diagrams/database-model.*` (free-text authors/category was a miss, §80).
+- With a low token budget the user wants features built quickly with fewer questions, but still
+  separate approvals for each commit and merge; one "ok" still approves only the first item.
+- The user's "everything works" after a manual smoke did not match DB/log evidence — verify
+  smoke items from audit rows and logs before recording them as passed (§75).
+- A running `dotnet run` app locks build outputs; stop it (and drop its test DB) before building.
+- Never-deployed migrations can be regenerated cleanly (`migrations remove --force` → `add`),
+  but only with the user's explicit approval (CLAUDE.md).
+
+### ⛔ Next action (Session 24), in order
+1. Verify read-only: `git branch --show-current`, `git log --oneline -5`, `git status`,
+   `dotnet build` + `dotnet test` (**122/122**).
+2. Ask the user to approve the merge `feature/d58-library-member-rename` → `develop` (`--no-ff`).
+3. Then ask what to build next — candidates: reports; D-54 default roles + permission-aware
+   buttons; the owed reviews; a Phase 1 plan document (`docs/PHASE_1_PLAN.md`) to record the
+   built slices and remaining work.
 
 ## Session 22 (2026-10-14 → 2026-10-15) — superseded by the Session 23 block above where they differ
 Session 22 closed at the user's request (conversation too long) — Session 23 started here.

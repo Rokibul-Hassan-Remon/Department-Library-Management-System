@@ -8,11 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CseLibrary.Data.Repositories;
 
-public class MemberRepository(ApplicationDbContext db) : Repository<Member>(db), IMemberRepository
+public class LibraryMemberRepository(ApplicationDbContext db) : Repository<LibraryMember>(db), ILibraryMemberRepository
 {
-    public async Task<PagedResult<MemberDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default)
+    public async Task<PagedResult<LibraryMemberDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default)
     {
-        var members = Db.Members.AsQueryable();
+        var members = Db.LibraryMembers.AsQueryable();
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim();
@@ -21,17 +21,17 @@ public class MemberRepository(ApplicationDbContext db) : Repository<Member>(db),
         var total = await members.CountAsync(ct);
         page = page.ClampTo(total);
         var items = await members.OrderBy(m => m.FullName).ThenBy(m => m.Id).Skip(page.Skip).Take(page.PageSize)
-            .Select(m => new MemberDto
+            .Select(m => new LibraryMemberDto
             {
                 Id = m.Id, MemberCode = m.MemberCode, FullName = m.FullName, MemberType = m.MemberType, Email = m.Email,
                 Phone = m.Phone, IsActive = m.Status == RecordStatus.Active,
                 ActiveLoans = m.Loans.Count(l => l.TransactionStatus == LendingStatus.Issued)
             }).ToListAsync(ct);
-        return new PagedResult<MemberDto>(items, total, page.Page, page.PageSize);
+        return new PagedResult<LibraryMemberDto>(items, total, page.Page, page.PageSize);
     }
 
-    public Task<MemberDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default) =>
-        Db.Members.Where(m => m.Id == id).Select(m => new MemberDetailsDto
+    public Task<LibraryMemberDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default) =>
+        Db.LibraryMembers.Where(m => m.Id == id).Select(m => new LibraryMemberDetailsDto
         {
             Id = m.Id, MemberCode = m.MemberCode, FullName = m.FullName, MemberType = m.MemberType, Email = m.Email,
             Phone = m.Phone, IsActive = m.Status == RecordStatus.Active,
@@ -40,17 +40,17 @@ public class MemberRepository(ApplicationDbContext db) : Repository<Member>(db),
         }).FirstOrDefaultAsync(ct);
 
     public Task<int?> FindIdByCodeAsync(string memberCode, CancellationToken ct = default) =>
-        Db.Members.Where(m => m.MemberCode == memberCode).Select(m => (int?)m.Id).FirstOrDefaultAsync(ct);
+        Db.LibraryMembers.Where(m => m.MemberCode == memberCode).Select(m => (int?)m.Id).FirstOrDefaultAsync(ct);
 
     public Task<bool> CodeExistsAsync(string memberCode, int? excludeId, CancellationToken ct = default) =>
-        Db.Members.AnyAsync(m => m.MemberCode == memberCode && m.Id != excludeId, ct);
+        Db.LibraryMembers.AnyAsync(m => m.MemberCode == memberCode && m.Id != excludeId, ct);
 
     public Task<int?> FindIdByUserIdAsync(string userId, CancellationToken ct = default) =>
-        Db.Members.Where(m => m.IdentityUserId == userId).Select(m => (int?)m.Id).FirstOrDefaultAsync(ct);
+        Db.LibraryMembers.Where(m => m.IdentityUserId == userId).Select(m => (int?)m.Id).FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<PendingRegistrationDto>> GetPendingAsync(CancellationToken ct = default) =>
-        await Db.Members.Where(m => m.Approval == ApprovalStatus.Pending).OrderBy(m => m.CreatedAt)
-            .Select(m => new PendingRegistrationDto { MemberId = m.Id, MemberCode = m.MemberCode, FullName = m.FullName, Email = m.Email, CreatedAt = m.CreatedAt })
+        await Db.LibraryMembers.Where(m => m.Approval == ApprovalStatus.Pending).OrderBy(m => m.CreatedAt)
+            .Select(m => new PendingRegistrationDto { LibraryMemberId = m.Id, MemberCode = m.MemberCode, FullName = m.FullName, Email = m.Email, CreatedAt = m.CreatedAt })
             .ToListAsync(ct);
 }
 
@@ -58,7 +58,7 @@ public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILo
 {
     internal static readonly Expression<Func<Loan, LoanDto>> ToDto = l => new LoanDto
     {
-        Id = l.Id, MemberId = l.MemberId, MemberCode = l.Member.MemberCode, MemberName = l.Member.FullName,
+        Id = l.Id, LibraryMemberId = l.LibraryMemberId, MemberCode = l.LibraryMember.MemberCode, MemberName = l.LibraryMember.FullName,
         BookId = l.BookCopy.BookId, BookTitle = l.BookCopy.Book.Title, AccessionNumber = l.BookCopy.AccessionNumber,
         IssueDateUtc = l.IssueDateUtc, DueDate = l.DueDate, ReturnDateUtc = l.ReturnDateUtc, RenewCount = l.RenewCount
     };
@@ -74,7 +74,7 @@ public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILo
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim();
-            loans = loans.Where(l => l.Member.MemberCode == s || l.Member.FullName.Contains(s)
+            loans = loans.Where(l => l.LibraryMember.MemberCode == s || l.LibraryMember.FullName.Contains(s)
                                      || l.BookCopy.AccessionNumber == s || l.BookCopy.Book.Title.Contains(s));
         }
         var total = await loans.CountAsync(ct);
@@ -85,20 +85,20 @@ public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILo
     }
 
     public Task<int> CountActiveAsync(int memberId, CancellationToken ct = default) =>
-        Db.Loans.CountAsync(l => l.MemberId == memberId && l.TransactionStatus == LendingStatus.Issued, ct);
+        Db.Loans.CountAsync(l => l.LibraryMemberId == memberId && l.TransactionStatus == LendingStatus.Issued, ct);
 
     public Task<bool> HasOverdueAsync(int memberId, DateOnly today, CancellationToken ct = default) =>
-        Db.Loans.AnyAsync(l => l.MemberId == memberId && l.TransactionStatus == LendingStatus.Issued && l.DueDate < today, ct);
+        Db.Loans.AnyAsync(l => l.LibraryMemberId == memberId && l.TransactionStatus == LendingStatus.Issued && l.DueDate < today, ct);
 
     public Task<bool> HasActiveAsync(int memberId, CancellationToken ct = default) =>
-        Db.Loans.AnyAsync(l => l.MemberId == memberId && l.TransactionStatus == LendingStatus.Issued, ct);
+        Db.Loans.AnyAsync(l => l.LibraryMemberId == memberId && l.TransactionStatus == LendingStatus.Issued, ct);
 
     public async Task<IReadOnlyList<ReminderTarget>> GetReminderTargetsAsync(DateOnly dueOn, DateOnly today, CancellationToken ct = default) =>
-        await Db.Loans.Where(l => l.TransactionStatus == LendingStatus.Issued && (l.DueDate == dueOn || l.DueDate < today) && l.Member.Email != null)
+        await Db.Loans.Where(l => l.TransactionStatus == LendingStatus.Issued && (l.DueDate == dueOn || l.DueDate < today) && l.LibraryMember.Email != null)
             .OrderBy(l => l.Id)
-            .Select(l => new ReminderTarget(l.Id, l.Member.Email!, l.Member.FullName, l.BookCopy.Book.Title, l.BookCopy.AccessionNumber, l.DueDate))
+            .Select(l => new ReminderTarget(l.Id, l.LibraryMember.Email!, l.LibraryMember.FullName, l.BookCopy.Book.Title, l.BookCopy.AccessionNumber, l.DueDate))
             .ToListAsync(ct);
 
     public Task<Loan?> GetActiveForUpdateAsync(int id, CancellationToken ct = default) =>
-        Db.Loans.Include(l => l.BookCopy).Include(l => l.Member).FirstOrDefaultAsync(l => l.Id == id && l.TransactionStatus == LendingStatus.Issued, ct);
+        Db.Loans.Include(l => l.BookCopy).Include(l => l.LibraryMember).FirstOrDefaultAsync(l => l.Id == id && l.TransactionStatus == LendingStatus.Issued, ct);
 }

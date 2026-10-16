@@ -3,7 +3,7 @@ using CseLibrary.Core.Interfaces;
 namespace CseLibrary.Core.Entities;
 
 /// <summary>A borrower. Status Inactive (BaseEntity) blocks new loans (BR-03).</summary>
-public class Member : BaseEntity, IAuditable
+public class LibraryMember : BaseEntity, IAuditable
 {
     public string MemberCode { get; set; } = string.Empty; // student ID or staff ID
     public string FullName { get; set; } = string.Empty;
@@ -42,8 +42,8 @@ public enum MemberType : byte
 /// </summary>
 public class Loan : BaseEntity, IAuditable
 {
-    public int MemberId { get; set; }
-    public Member Member { get; set; } = null!;
+    public int LibraryMemberId { get; set; }
+    public LibraryMember LibraryMember { get; set; } = null!;
     public int BookCopyId { get; set; }
     public BookCopy BookCopy { get; set; } = null!;
     public DateTime IssueDateUtc { get; set; }

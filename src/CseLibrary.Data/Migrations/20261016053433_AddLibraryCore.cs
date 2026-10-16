@@ -36,11 +36,11 @@ namespace CseLibrary.Data.Migrations
                 incrementBy: 10);
 
             migrationBuilder.CreateSequence(
-                name: "LibraryPolicies_HiLo",
+                name: "LibraryMembers_HiLo",
                 incrementBy: 10);
 
             migrationBuilder.CreateSequence(
-                name: "Members_HiLo",
+                name: "LibraryPolicies_HiLo",
                 incrementBy: 10);
 
             migrationBuilder.CreateTable(
@@ -80,6 +80,38 @@ namespace CseLibrary.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "LibraryMembers",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false),
+                    MemberCode = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    MemberType = table.Column<byte>(type: "tinyint", nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(254)", maxLength: 254, nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
+                    IdentityUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    Approval = table.Column<byte>(type: "tinyint", nullable: false),
+                    Status = table.Column<byte>(type: "tinyint", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LibraryMembers", x => x.Id);
+                    table.CheckConstraint("CK_LibraryMembers_Approval", "[Approval] IN (1, 2, 3)");
+                    table.CheckConstraint("CK_LibraryMembers_MemberType", "[MemberType] IN (1, 2)");
+                    table.CheckConstraint("CK_LibraryMembers_Status", "[Status] IN (1, 2, 3)");
+                    table.ForeignKey(
+                        name: "FK_LibraryMembers_AspNetUsers_IdentityUserId",
+                        column: x => x.IdentityUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "LibraryPolicies",
                 columns: table => new
                 {
@@ -99,38 +131,6 @@ namespace CseLibrary.Data.Migrations
                     table.PrimaryKey("PK_LibraryPolicies", x => x.Id);
                     table.CheckConstraint("CK_LibraryPolicies_Status", "[Status] IN (1, 2, 3)");
                     table.CheckConstraint("CK_LibraryPolicies_Values", "[MaxActiveLoans] >= 0 AND [LoanDays] >= 1 AND [MaxRenewals] >= 0");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Members",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false),
-                    MemberCode = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
-                    FullName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    MemberType = table.Column<byte>(type: "tinyint", nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(254)", maxLength: 254, nullable: true),
-                    Phone = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: true),
-                    IdentityUserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
-                    Approval = table.Column<byte>(type: "tinyint", nullable: false),
-                    Status = table.Column<byte>(type: "tinyint", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Members", x => x.Id);
-                    table.CheckConstraint("CK_Members_Approval", "[Approval] IN (1, 2, 3)");
-                    table.CheckConstraint("CK_Members_MemberType", "[MemberType] IN (1, 2)");
-                    table.CheckConstraint("CK_Members_Status", "[Status] IN (1, 2, 3)");
-                    table.ForeignKey(
-                        name: "FK_Members_AspNetUsers_IdentityUserId",
-                        column: x => x.IdentityUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -225,7 +225,7 @@ namespace CseLibrary.Data.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false),
-                    MemberId = table.Column<int>(type: "int", nullable: false),
+                    LibraryMemberId = table.Column<int>(type: "int", nullable: false),
                     BookCopyId = table.Column<int>(type: "int", nullable: false),
                     IssueDateUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     DueDate = table.Column<DateOnly>(type: "date", nullable: false),
@@ -265,9 +265,9 @@ namespace CseLibrary.Data.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_LendingTransactions_Members_MemberId",
-                        column: x => x.MemberId,
-                        principalTable: "Members",
+                        name: "FK_LendingTransactions_LibraryMembers_LibraryMemberId",
+                        column: x => x.LibraryMemberId,
+                        principalTable: "LibraryMembers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -375,9 +375,9 @@ namespace CseLibrary.Data.Migrations
                 column: "IssuedByUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_LendingTransactions_MemberId_TransactionStatus",
+                name: "IX_LendingTransactions_LibraryMemberId_TransactionStatus",
                 table: "LendingTransactions",
-                columns: new[] { "MemberId", "TransactionStatus" });
+                columns: new[] { "LibraryMemberId", "TransactionStatus" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_LendingTransactions_ReturnedByUserId",
@@ -392,28 +392,28 @@ namespace CseLibrary.Data.Migrations
                 filter: "[TransactionStatus] = 1");
 
             migrationBuilder.CreateIndex(
-                name: "IX_LibraryPolicies_MemberCategory",
-                table: "LibraryPolicies",
-                column: "MemberCategory",
-                unique: true,
-                filter: "[Status] <> 3");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Members_FullName",
-                table: "Members",
+                name: "IX_LibraryMembers_FullName",
+                table: "LibraryMembers",
                 column: "FullName");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Members_IdentityUserId",
-                table: "Members",
+                name: "IX_LibraryMembers_IdentityUserId",
+                table: "LibraryMembers",
                 column: "IdentityUserId",
                 unique: true,
                 filter: "[IdentityUserId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Members_MemberCode",
-                table: "Members",
+                name: "IX_LibraryMembers_MemberCode",
+                table: "LibraryMembers",
                 column: "MemberCode",
+                unique: true,
+                filter: "[Status] <> 3");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LibraryPolicies_MemberCategory",
+                table: "LibraryPolicies",
+                column: "MemberCategory",
                 unique: true,
                 filter: "[Status] <> 3");
         }
@@ -440,7 +440,7 @@ namespace CseLibrary.Data.Migrations
                 name: "BookCopies");
 
             migrationBuilder.DropTable(
-                name: "Members");
+                name: "LibraryMembers");
 
             migrationBuilder.DropTable(
                 name: "Books");
@@ -467,10 +467,10 @@ namespace CseLibrary.Data.Migrations
                 name: "LendingTransactions_HiLo");
 
             migrationBuilder.DropSequence(
-                name: "LibraryPolicies_HiLo");
+                name: "LibraryMembers_HiLo");
 
             migrationBuilder.DropSequence(
-                name: "Members_HiLo");
+                name: "LibraryPolicies_HiLo");
         }
     }
 }

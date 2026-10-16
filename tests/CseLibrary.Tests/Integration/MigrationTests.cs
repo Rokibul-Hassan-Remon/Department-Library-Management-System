@@ -25,7 +25,7 @@ public class MigrationTests
             Assert.EndsWith("_InitialCreate", db.Database.GetMigrations().First());
 
             await db.Database.MigrateAsync();
-            Assert.Equal(["Authors_HiLo:10", "BookCopies_HiLo:10", "Books_HiLo:10", "Categories_HiLo:10", "EmailNotificationLogs_HiLo:10", "GeneralConfigs_HiLo:10", "LendingTransactions_HiLo:10", "LibraryPolicies_HiLo:10", "Members_HiLo:10", "Permissions_HiLo:10"],
+            Assert.Equal(["Authors_HiLo:10", "BookCopies_HiLo:10", "Books_HiLo:10", "Categories_HiLo:10", "EmailNotificationLogs_HiLo:10", "GeneralConfigs_HiLo:10", "LendingTransactions_HiLo:10", "LibraryMembers_HiLo:10", "LibraryPolicies_HiLo:10", "Permissions_HiLo:10"],
                 await Values(db, "SELECT name + ':' + CAST(increment AS varchar) AS [Value] FROM sys.sequences"));
 
             await Assert.ThrowsAnyAsync<Exception>(() => // CHECK rejects an undefined status

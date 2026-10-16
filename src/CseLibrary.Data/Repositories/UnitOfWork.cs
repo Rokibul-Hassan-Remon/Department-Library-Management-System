@@ -18,7 +18,7 @@ public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
     private AuditLogRepository? _auditLogs;
     private BookRepository? _books;
     private BookCopyRepository? _bookCopies;
-    private MemberRepository? _members;
+    private LibraryMemberRepository? _members;
     private LoanRepository? _loans;
     private CategoryRepository? _categories;
     private AuthorRepository? _authors;
@@ -33,7 +33,7 @@ public class UnitOfWork(ApplicationDbContext db) : IUnitOfWork
     public IAuditLogRepository AuditLogs => _auditLogs ??= new(db);
     public IBookRepository Books => _books ??= new(db);
     public IBookCopyRepository BookCopies => _bookCopies ??= new(db);
-    public IMemberRepository Members => _members ??= new(db);
+    public ILibraryMemberRepository LibraryMembers => _members ??= new(db);
     public ILoanRepository Loans => _loans ??= new(db);
     public ICategoryRepository Categories => _categories ??= new(db);
     public IAuthorRepository Authors => _authors ??= new(db);

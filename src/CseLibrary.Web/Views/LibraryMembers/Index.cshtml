@@ -1,9 +1,9 @@
-@model CseLibrary.Core.Paging.PagedResult<MemberDto>
-@{ ViewData["Title"] = "Members"; var search = ViewData["Search"] as string; }
+@model CseLibrary.Core.Paging.PagedResult<LibraryMemberDto>
+@{ ViewData["Title"] = "Library Members"; var search = ViewData["Search"] as string; }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Members</h2>
-    <a class="btn btn-primary" asp-action="Create">+ New Member</a>
+    <h2>Library Members</h2>
+    <a class="btn btn-primary" asp-action="Create">+ New Library Member</a>
 </div>
 
 <form method="get" class="row g-2 mb-3">
@@ -31,8 +31,8 @@
 
 @if (Model.TotalPages > 1)
 {
-    <nav aria-label="Member pages" class="d-flex justify-content-between align-items-center">
-        <span>Page @Model.Page of @Model.TotalPages (@Model.TotalCount members)</span>
+    <nav aria-label="Library member pages" class="d-flex justify-content-between align-items-center">
+        <span>Page @Model.Page of @Model.TotalPages (@Model.TotalCount library members)</span>
         <ul class="pagination mb-0">
             <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
                 <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-search="@search">Previous</a>

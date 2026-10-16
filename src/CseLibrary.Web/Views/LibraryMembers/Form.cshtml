@@ -1,5 +1,5 @@
-@model MemberDto
-@{ var isNew = Model.Id == 0; ViewData["Title"] = isNew ? "New Member" : "Edit Member"; }
+@model LibraryMemberDto
+@{ var isNew = Model.Id == 0; ViewData["Title"] = isNew ? "New LibraryMember" : "Edit LibraryMember"; }
 
 <h2>@ViewData["Title"]</h2>
 <form asp-action="@(isNew ? "Create" : "Edit")" method="post" class="col-md-6">

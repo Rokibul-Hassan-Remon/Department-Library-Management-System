@@ -47,7 +47,7 @@ public class BookRepository(ApplicationDbContext db) : Repository<Book>(db), IBo
                     Id = c.Id, BookId = c.BookId, AccessionNumber = c.AccessionNumber, ShelfLocation = c.ShelfLocation,
                     AcquisitionDate = c.AcquisitionDate, CopyStatus = c.CopyStatus, Notes = c.Notes,
                     HeldBy = Db.Loans.Where(l => l.BookCopyId == c.Id && l.TransactionStatus == LendingStatus.Issued)
-                        .Select(l => l.Member.MemberCode + " " + l.Member.FullName).FirstOrDefault()
+                        .Select(l => l.LibraryMember.MemberCode + " " + l.LibraryMember.FullName).FirstOrDefault()
                 }).ToList()
             },
             Authors = b.BookAuthors.OrderBy(ba => ba.Order).Select(ba => ba.Author.Name).ToList()
