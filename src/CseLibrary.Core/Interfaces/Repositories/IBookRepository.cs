@@ -46,6 +46,6 @@ public interface ILibraryPolicyRepository : IRepository<LibraryPolicy>
 
 public interface IEmailNotificationLogRepository : IRepository<EmailNotificationLog>
 {
-    Task<EmailNotificationLog?> FindByKeyForUpdateAsync(string idempotencyKey, CancellationToken ct = default);
+    Task<IReadOnlyList<EmailNotificationLog>> FindByKeysForUpdateAsync(IReadOnlyCollection<string> idempotencyKeys, CancellationToken ct = default);
     Task<PagedResult<EmailLogDto>> GetPageAsync(PageRequest page, DeliveryStatus? status, CancellationToken ct = default);
 }

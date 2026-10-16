@@ -28,6 +28,9 @@ public interface ILoanRepository : IRepository<Loan>
     Task<bool> HasActiveAsync(int memberId, CancellationToken ct = default);
     /// <summary>Tracked, with its copy and member, for return and renew.</summary>
     Task<Loan?> GetActiveForUpdateAsync(int id, CancellationToken ct = default);
-    /// <summary>Active loans due on <paramref name="dueOn"/> or before <paramref name="today"/>, for members with an email.</summary>
-    Task<IReadOnlyList<ReminderTarget>> GetReminderTargetsAsync(DateOnly dueOn, DateOnly today, CancellationToken ct = default);
+    /// <summary>
+    /// Active loans due on or before <paramref name="dueOn"/> (overdue ones included), for members with an email. A range,
+    /// not one day, so a day without a run skips no reminder; the idempotency key stops repeats.
+    /// </summary>
+    Task<IReadOnlyList<ReminderTarget>> GetReminderTargetsAsync(DateOnly dueOn, CancellationToken ct = default);
 }

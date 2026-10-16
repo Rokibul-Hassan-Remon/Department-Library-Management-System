@@ -36,6 +36,7 @@ public class ReportTests(AppFactory app)
             Assert.Contains((await reports.GetLoansAsync(all, LoanFilter.All, code, today, today)).Items, l => l.AccessionNumber == issued);
             Assert.Empty((await reports.GetLoansAsync(all, LoanFilter.All, code, today.AddDays(-10), today.AddDays(-1))).Items);
             Assert.Contains((await reports.GetLoansAsync(all, LoanFilter.All, code, null, today)).Items, l => l.AccessionNumber == issued); // open start
+            Assert.Contains((await reports.GetLoansAsync(all, LoanFilter.All, code, DateOnly.MinValue, DateOnly.MaxValue)).Items, l => l.AccessionNumber == issued); // no overflow
 
             var lostCopies = await reports.GetCopiesAsync(all, CopyStatus.Lost);
             Assert.Contains(lostCopies.Items, c => c.AccessionNumber == lost);

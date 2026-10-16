@@ -4,8 +4,5 @@ namespace CseLibrary.Core.Constants;
 public static class LendingConfigKeys
 {
     public const string ReminderDaysBefore = "Lending.ReminderDaysBefore";
-
-    public static readonly IReadOnlyList<(string Key, string Value)> Defaults = [(ReminderDaysBefore, "2")];
-
-    public static int DefaultFor(string key) => int.Parse(Defaults.First(d => d.Key == key).Value);
+    public const int DefaultReminderDaysBefore = 2;
 }

@@ -19,8 +19,9 @@ public class ReportService(IUnitOfWork uow, TimeProvider time) : IReportService
         var today = DateOnly.FromDateTime(time.GetLocalNow().DateTime);
         // Local calendar days -> UTC instants; "to" is inclusive, so the range ends at the start of the next day.
         var ranged = from != null || to != null;
-        var fromUtc = from is { } f ? ToUtc(f) : DateTime.MinValue;
-        var toUtc = to is { } t ? ToUtc(t.AddDays(1)) : DateTime.MaxValue;
+        // The calendar edges stay open, so 0001-01-01 or 9999-12-31 in the query string cannot overflow.
+        var fromUtc = from is { } f && f > DateOnly.MinValue ? ToUtc(f) : DateTime.MinValue;
+        var toUtc = to is { } t && t < DateOnly.MaxValue.AddDays(-1) ? ToUtc(t.AddDays(1)) : DateTime.MaxValue;
         return uow.Loans.GetPageAsync(page, filter, search, today, ranged ? fromUtc : null, ranged ? toUtc : null, ct);
     }
 

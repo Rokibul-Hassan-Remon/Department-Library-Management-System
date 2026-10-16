@@ -8,8 +8,15 @@
   `Registration.StudentDefaultRole` / `Registration.FellowDefaultRole`. Committed `805cb7a`, merged into
   `develop` **`58c027c`** (123/123).
 - **Reports (FR-12)** on `feature/phase-1-reports` (DECISION_LOG §85): `Reports.View`, `/Reports` with the
-  ten reports as filtered, paged, printable views. Build 0/0, tests **129/129**. Not committed yet;
+  ten reports as filtered, paged, printable views. Committed `184752d`, merged into `develop` **`f752d91`**;
   CSV export not built.
+- **Owed reviews done** (DECISION_LOG §86) on Gate 3 + Phase 1; fixes on `feature/phase-1-review-fixes`,
+  build 0/0, tests **131/131**, not committed yet. **Still open from the review:** #1 registration can claim
+  another person's existing member ID (security, needs a design choice — recommended: email must match the
+  staff record, else Librarian approval); #6 soft-deleting a copy or member hides its loan history; delete
+  `tests/Spikes/HiLoSpikeTests.cs` (needs approval).
+- `.\SQLEXPRESS` still has no `CseLibrary` database; the user asked how to view tables — creating it
+  (`dotnet ef database update`) awaits the user's approval.
 - Resolved from the Session 23 open findings: buttons without the permission; D-54 per-type
   default roles. Everything else in that list is still open.
 

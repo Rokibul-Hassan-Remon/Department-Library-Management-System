@@ -58,7 +58,8 @@ public class LibraryMemberService(IUnitOfWork uow) : ILibraryMemberService
         member.MemberType = dto.MemberType;
         member.Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim();
         member.Phone = string.IsNullOrWhiteSpace(dto.Phone) ? null : dto.Phone.Trim();
-        member.Status = dto.IsActive ? RecordStatus.Active : RecordStatus.Inactive;
+        // A Pending or Rejected registration becomes Active only through review (D-54), never through this edit.
+        member.Status = dto.IsActive && member.Approval == ApprovalStatus.Approved ? RecordStatus.Active : RecordStatus.Inactive;
     }
 
     private const string CodeExists = "A member with this code already exists.";

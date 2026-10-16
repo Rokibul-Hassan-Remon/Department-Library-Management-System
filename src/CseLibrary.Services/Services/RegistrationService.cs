@@ -49,6 +49,7 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, ILook
             if (!create.Succeeded) return create;
             var role = active ? await AssignDefaultRoleAsync(user, type, attemptCt) : null;
 
+            var isNew = member == null;
             if (member == null)
             {
                 member = new LibraryMember { MemberCode = code };
@@ -59,7 +60,7 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, ILook
             member.MemberType = type;
             member.IdentityUserId = user.Id;
             member.Approval = approval;
-            member.Status = active ? RecordStatus.Active : RecordStatus.Inactive;
+            if (isNew || !active) member.Status = active ? RecordStatus.Active : RecordStatus.Inactive; // keeps a staff deactivation (BR-03)
             await uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, user.Id, "UserRegistered", new { Type = type.ToString(), Approval = approval.ToString(), Role = role }), attemptCt);
             return Result.Success();
         }, verifySucceeded: async c => await uow.Users.GetDetailsAsync(userId!, c) != null, ct: ct)

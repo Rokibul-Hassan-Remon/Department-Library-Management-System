@@ -68,20 +68,27 @@ public class LendingService(IUnitOfWork uow, ICurrentUser currentUser, TimeProvi
         }, ct: ct).OnConflict(Result.Failure(ErrorCodes.InvalidState, "This loan or copy was just changed. Reload and try again."));
     }
 
-    public Task<Result> RenewAsync(int loanId, CancellationToken ct = default) =>
-        uow.ExecuteInTransactionAsync(async attemptCt =>
+    public Task<Result> RenewAsync(int loanId, CancellationToken ct = default)
+    {
+        if (currentUser.UserId == null) return Task.FromResult(SignInRequired());
+        return uow.ExecuteInTransactionAsync(async attemptCt =>
         {
             var loan = await uow.Loans.GetActiveForUpdateAsync(loanId, attemptCt);
             if (loan == null) return Result.Failure(ErrorCodes.NotFound, "Active loan not found.");
             if (loan.DueDate < Today) return Result.Failure(ErrorCodes.RenewNotAllowed, "An overdue book must be returned, not renewed.");
+            // Same member blocks as issuing (BR-03, D-48): renewing keeps the book longer.
+            if (loan.LibraryMember.Status != RecordStatus.Active) return Result.Failure(ErrorCodes.MemberInactive, "The member is not active.");
+            if (await uow.Loans.HasOverdueAsync(loan.LibraryMemberId, Today, attemptCt))
+                return Result.Failure(ErrorCodes.HasOverdue, "The member has an overdue book; return it first.");
             if (await uow.LibraryPolicies.GetForTypeAsync(loan.LibraryMember.MemberType, attemptCt) is not { } policy) return NoPolicy(loan.LibraryMember.MemberType);
             if (loan.RenewCount >= policy.MaxRenewals)
                 return Result.Failure(ErrorCodes.RenewNotAllowed, $"This loan was already renewed {loan.RenewCount} time(s); the limit is {policy.MaxRenewals}.");
 
             loan.RenewCount++;
-            loan.DueDate = Today.AddDays(policy.LoanDays);
+            loan.DueDate = loan.DueDate.AddDays(policy.LoanDays); // from the current due date: renewing early loses nothing
             return Result.Success();
         }, ct: ct);
+    }
 
     public Task<IReadOnlyList<LibraryPolicyDto>> GetPoliciesAsync(CancellationToken ct = default) => uow.LibraryPolicies.GetListAsync(ct);
 
@@ -96,6 +103,6 @@ public class LendingService(IUnitOfWork uow, ICurrentUser currentUser, TimeProvi
     }
 
     private static Result CopyTaken() => Result.Failure(ErrorCodes.CopyUnavailable, "This copy was just issued to someone else.");
-    private static Result SignInRequired() => Result.Failure(ErrorCodes.Forbidden, "Sign in as library staff to issue or return books.");
+    private static Result SignInRequired() => Result.Failure(ErrorCodes.Forbidden, "Sign in as library staff to issue, return or renew books.");
     private static Result NoPolicy(MemberType type) => Result.Failure(ErrorCodes.InvalidState, $"No lending policy is set for {type} members.");
 }
