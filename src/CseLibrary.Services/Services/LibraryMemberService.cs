@@ -40,12 +40,12 @@ public class LibraryMemberService(IUnitOfWork uow) : ILibraryMemberService
         return await uow.SaveAsync(ct).OnDuplicate(Result.Failure(ErrorCodes.Duplicate, CodeExists));
     }
 
-    /// <summary>Soft delete; refused while the member holds books. Loan history keeps the row.</summary>
+    /// <summary>Soft delete only for a member who never borrowed; otherwise set Inactive, so loan history stays visible.</summary>
     public async Task<Result> DeleteAsync(int id, CancellationToken ct = default)
     {
         var member = await uow.LibraryMembers.GetForUpdateAsync(id, ct);
         if (member == null) return NotFound();
-        if (await uow.Loans.HasActiveAsync(id, ct)) return Result.Failure(ErrorCodes.InUse, "The member still has books to return.");
+        if (await uow.Loans.AnyForMemberAsync(id, ct)) return Result.Failure(ErrorCodes.InUse, "This member has loan history; set them Inactive instead.");
 
         uow.LibraryMembers.Remove(member);
         return await uow.SaveAsync(ct);

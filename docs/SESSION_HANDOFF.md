@@ -11,10 +11,10 @@
   ten reports as filtered, paged, printable views. Committed `184752d`, merged into `develop` **`f752d91`**;
   CSV export not built.
 - **Owed reviews done** (DECISION_LOG §86) on Gate 3 + Phase 1; fixes on `feature/phase-1-review-fixes`,
-  build 0/0, tests **131/131**, not committed yet. **Still open from the review:** #1 registration can claim
-  another person's existing member ID (security, needs a design choice — recommended: email must match the
-  staff record, else Librarian approval); #6 soft-deleting a copy or member hides its loan history; delete
-  `tests/Spikes/HiLoSpikeTests.cs` (needs approval).
+  committed `4e12bf5`, merged into `develop` **`f69a3c4`** (131/131).
+- **Review #1, #6, spike** on `feature/phase-1-registration-claim` (DECISION_LOG §87): registration on an
+  existing ID needs a matching email or review; copies/members with loans are not deleted; spike test removed.
+  Build 0/0, tests **128/128**, not committed yet. All review findings are now closed.
 - `.\SQLEXPRESS` still has no `CseLibrary` database; the user asked how to view tables — creating it
   (`dotnet ef database update`) awaits the user's approval.
 - Resolved from the Session 23 open findings: buttons without the permission; D-54 per-type

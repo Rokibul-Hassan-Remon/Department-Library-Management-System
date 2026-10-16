@@ -1699,6 +1699,10 @@ require account `Active` **and** approval not `Pending`/`Rejected`.
   the other security checks.
 - **Q-S19-5 Member link:** if a `Member` record already exists, validate it and link it; **no
   duplicate member record is created automatically**.
+  **Session 24 (DECISION_LOG §87, user-approved):** linked at once only when the registration email matches the
+  record's email (case-insensitive). Otherwise the registration is Pending for `Registrations.Review` and the
+  record (name, type, status) is left unchanged; approval links the login and keeps the staff status; rejection
+  unlinks it so the real owner can still register.
 - **Q-S19-6 Approvers:** a dedicated **`Registrations.Review`** permission.
 - **Q-S19-7 Resubmission:** a rejected applicant **may apply again**, but never as a duplicate
   account or duplicate application.
@@ -1895,6 +1899,8 @@ the user preferred **"Library Member"**. "Member" and "User" are easy to confuse
    `LibraryPolicies.MaxRenewals`. Not built yet: `OutboxMessages` (Phase 4), member subtype
    tables, `CoverImagePath`.
 3. A deviation from the diagram must be raised with the user before it is built.
+   **Session 24 (§87, user-approved, review #6):** a book copy or library member that has any loan is never
+   soft-deleted (the query filter would hide its history); retire the copy or set the member Inactive instead.
 4. **Migrations:** a migration never applied outside `CseLibrary_Test_*` may be removed and
    regenerated (`dotnet ef migrations remove --force`, then `add`) **only with the user's
    explicit approval**; once any real database has it, changes go in a new migration.

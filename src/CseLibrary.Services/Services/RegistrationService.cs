@@ -38,7 +38,12 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, ILook
             if (member?.IdentityUserId != null)
                 return Result.Failure(ErrorCodes.AlreadyRegistered, "This ID is already registered. Sign in instead.");
 
-            var active = approval == ApprovalStatus.Approved;
+            // Review #1: an existing ID is linked at once only when the email matches the staff record. Otherwise a
+            // reviewer decides, and the record (name, type, status) stays as staff left it.
+            var isNew = member == null;
+            var claim = !isNew && !string.Equals(member!.Email, dto.Email.Trim(), StringComparison.OrdinalIgnoreCase);
+            var decided = claim ? ApprovalStatus.Pending : approval;
+            var active = decided == ApprovalStatus.Approved;
             var user = new ApplicationUser
             {
                 UserName = dto.Email.Trim(), Email = dto.Email.Trim(), FullName = dto.FullName.Trim(), EmailConfirmed = true,
@@ -49,19 +54,21 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, ILook
             if (!create.Succeeded) return create;
             var role = active ? await AssignDefaultRoleAsync(user, type, attemptCt) : null;
 
-            var isNew = member == null;
             if (member == null)
             {
                 member = new LibraryMember { MemberCode = code };
                 await uow.LibraryMembers.AddAsync(member, attemptCt);
             }
-            member.FullName = dto.FullName.Trim();
-            member.Email = dto.Email.Trim();
-            member.MemberType = type;
+            if (!claim)
+            {
+                member.FullName = dto.FullName.Trim();
+                member.Email = dto.Email.Trim();
+                member.MemberType = type;
+                if (isNew || !active) member.Status = active ? RecordStatus.Active : RecordStatus.Inactive; // keeps a staff deactivation (BR-03)
+            }
             member.IdentityUserId = user.Id;
-            member.Approval = approval;
-            if (isNew || !active) member.Status = active ? RecordStatus.Active : RecordStatus.Inactive; // keeps a staff deactivation (BR-03)
-            await uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, user.Id, "UserRegistered", new { Type = type.ToString(), Approval = approval.ToString(), Role = role }), attemptCt);
+            member.Approval = decided;
+            await uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, user.Id, "UserRegistered", new { Type = type.ToString(), Approval = decided.ToString(), Role = role, Claim = claim }), attemptCt);
             return Result.Success();
         }, verifySucceeded: async c => await uow.Users.GetDetailsAsync(userId!, c) != null, ct: ct)
         .OnDuplicate(Result.Failure(ErrorCodes.Duplicate, "This email or ID is already registered."));
@@ -96,10 +103,16 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, ILook
             if (user == null || user.Status == RecordStatus.Deleted) return Result.Failure(ErrorCodes.NotFound, "The applicant's account no longer exists.");
 
             string? role = null;
+            var claim = !string.Equals(member.Email, user.Email, StringComparison.OrdinalIgnoreCase); // see CreateAsync
             member.Approval = decision;
+            if (decision == ApprovalStatus.Rejected && claim)
+            {
+                member.IdentityUserId = null; // unlinked, so the real owner of the ID can still register
+                member.Approval = ApprovalStatus.Approved;
+            }
             if (decision == ApprovalStatus.Approved)
             {
-                member.Status = RecordStatus.Active;
+                if (!claim) member.Status = RecordStatus.Active; // a claimed record keeps the status staff set
                 user.Status = RecordStatus.Active;
                 if ((await userManager.UpdateAsync(user)).ToResult() is { Succeeded: false } failed) return failed;
                 role = await AssignDefaultRoleAsync(user, member.MemberType, attemptCt);

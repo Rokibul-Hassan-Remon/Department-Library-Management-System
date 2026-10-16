@@ -95,7 +95,8 @@ public class BookService(IUnitOfWork uow) : IBookService
     {
         var copy = await uow.BookCopies.GetForUpdateAsync(id, ct);
         if (copy == null) return CopyNotFound();
-        if (copy.CopyStatus == CopyStatus.Issued) return Result.Failure(ErrorCodes.InUse, "An issued copy cannot be deleted.");
+        // A copy that was ever lent is history (soft delete would hide its loans): retire it instead.
+        if (await uow.Loans.AnyForCopyAsync(id, ct)) return Result.Failure(ErrorCodes.InUse, "This copy has loan history; set its status to Retired instead.");
 
         uow.BookCopies.Remove(copy);
         return await uow.SaveAsync(ct).OnConflict(Result.Failure(ErrorCodes.InvalidState, "This copy was just changed. Reload and try again."));
