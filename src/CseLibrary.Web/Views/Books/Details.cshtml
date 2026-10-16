@@ -1,6 +1,8 @@
 @model BookDetailsDto
 @{
     ViewData["Title"] = Model.Title;
+    var canEdit = await Authorization.CanAsync(User, Permissions.Books.Edit);
+    var canDelete = await Authorization.CanAsync(User, Permissions.Books.Delete);
     var statuses = Enum.GetValues<CopyStatus>().Where(s => s != CopyStatus.Issued)
         .Select(s => new SelectListItem(s.ToString(), s.ToString()));
 }
@@ -11,10 +13,13 @@
         <div class="text-muted">@Model.Authors</div>
     </div>
     <div>
-        <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
-        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this book?');">
-            <button class="btn btn-outline-danger">Delete</button>
-        </form>
+        @if (canEdit) { <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a> }
+        @if (canDelete)
+        {
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this book?');">
+                <button class="btn btn-outline-danger">Delete</button>
+            </form>
+        }
     </div>
 </div>
 
@@ -46,24 +51,30 @@
                 <td>@c.CopyStatus @(c.HeldBy != null ? $"({c.HeldBy})" : "")</td>
                 <td>@c.Notes</td>
                 <td class="text-end">
-                    <a class="btn btn-sm btn-outline-secondary" asp-action="EditCopy" asp-route-id="@c.Id">Edit</a>
-                    <form asp-action="DeleteCopy" asp-route-id="@c.Id" asp-route-bookId="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this copy?');">
-                        <button class="btn btn-sm btn-outline-danger">Delete</button>
-                    </form>
+                    @if (canEdit) { <a class="btn btn-sm btn-outline-secondary" asp-action="EditCopy" asp-route-id="@c.Id">Edit</a> }
+                    @if (canDelete)
+                    {
+                        <form asp-action="DeleteCopy" asp-route-id="@c.Id" asp-route-bookId="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this copy?');">
+                            <button class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    }
                 </td>
             </tr>
         }
     </tbody>
 </table>
 
-<h5>Add a copy</h5>
-<form asp-action="AddCopy" method="post" class="row g-2 align-items-end">
-    <input type="hidden" name="BookId" value="@Model.Id" />
-    <div class="col-md-3"><label class="form-label">Accession no.</label><input name="AccessionNumber" class="form-control" required maxlength="50" /></div>
-    <div class="col-md-2"><label class="form-label">Shelf</label><input name="ShelfLocation" class="form-control" maxlength="100" /></div>
-    <div class="col-md-2"><label class="form-label">Acquired</label><input name="AcquisitionDate" type="date" class="form-control" /></div>
-    <div class="col-md-2"><label class="form-label">Status</label><select name="CopyStatus" class="form-select" asp-items="statuses"></select></div>
-    <div class="col-md-2"><button class="btn btn-primary">Add copy</button></div>
-</form>
+@if (canEdit)
+{
+    <h5>Add a copy</h5>
+    <form asp-action="AddCopy" method="post" class="row g-2 align-items-end">
+        <input type="hidden" name="BookId" value="@Model.Id" />
+        <div class="col-md-3"><label class="form-label">Accession no.</label><input name="AccessionNumber" class="form-control" required maxlength="50" /></div>
+        <div class="col-md-2"><label class="form-label">Shelf</label><input name="ShelfLocation" class="form-control" maxlength="100" /></div>
+        <div class="col-md-2"><label class="form-label">Acquired</label><input name="AcquisitionDate" type="date" class="form-control" /></div>
+        <div class="col-md-2"><label class="form-label">Status</label><select name="CopyStatus" class="form-select" asp-items="statuses"></select></div>
+        <div class="col-md-2"><button class="btn btn-primary">Add copy</button></div>
+    </form>
+}
 
 <p class="mt-4"><a asp-action="Index">Back to books</a></p>

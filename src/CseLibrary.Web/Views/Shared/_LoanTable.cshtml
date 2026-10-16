@@ -2,6 +2,8 @@
 @{
     var today = DateOnly.FromDateTime(DateTime.Now);
     var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    var canRenew = await Authorization.CanAsync(User, Permissions.Lending.Issue);
+    var canReturn = await Authorization.CanAsync(User, Permissions.Lending.Return);
 }
 <table class="table table-sm table-striped">
     <thead><tr><th>Library Member</th><th>Book</th><th>Accession no.</th><th>Issued</th><th>Due</th><th>Returned</th><th></th></tr></thead>
@@ -18,13 +20,19 @@
                 <td class="text-end text-nowrap">
                     @if (l.ReturnDateUtc == null)
                     {
-                        <form asp-controller="Loans" asp-action="Renew" asp-route-id="@l.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
-                            <button class="btn btn-sm btn-outline-secondary">Renew</button>
-                        </form>
-                        <form asp-controller="Loans" asp-action="Return" asp-route-id="@l.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline-flex gap-1">
-                            <select name="condition" class="form-select form-select-sm w-auto"><option value="Good">Good</option><option value="Damaged">Damaged</option></select>
-                            <button class="btn btn-sm btn-success">Return</button>
-                        </form>
+                        if (canRenew)
+                        {
+                            <form asp-controller="Loans" asp-action="Renew" asp-route-id="@l.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline">
+                                <button class="btn btn-sm btn-outline-secondary">Renew</button>
+                            </form>
+                        }
+                        if (canReturn)
+                        {
+                            <form asp-controller="Loans" asp-action="Return" asp-route-id="@l.Id" asp-route-returnUrl="@returnUrl" method="post" class="d-inline-flex gap-1">
+                                <select name="condition" class="form-select form-select-sm w-auto"><option value="Good">Good</option><option value="Damaged">Damaged</option></select>
+                                <button class="btn btn-sm btn-success">Return</button>
+                            </form>
+                        }
                     }
                 </td>
             </tr>

@@ -1,3 +1,4 @@
+using CseLibrary.Core.Constants;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces;
@@ -8,10 +9,11 @@ using Microsoft.AspNetCore.Identity;
 namespace CseLibrary.Services.Services;
 
 /// <summary>
-/// D-54: the form never carries a role; registration grants no role or permission (D-37), the portal needs only
-/// sign-in. A Pending or Rejected applicant's account is Inactive, so sign-in refuses it (D-32).
+/// D-54: the form never carries a role. The only role a member gets is the configured non-privileged default for
+/// their type (D-56 Q-S21-1): a Student at registration, a Fellow on approval. The portal itself needs only sign-in.
+/// A Pending or Rejected applicant's account is Inactive, so sign-in refuses it (D-32).
 /// </summary>
-public class RegistrationService(UserManager<ApplicationUser> userManager, IUnitOfWork uow) : IRegistrationService
+public class RegistrationService(UserManager<ApplicationUser> userManager, ILookupNormalizer normalizer, IUnitOfWork uow) : IRegistrationService
 {
     public Task<Result> RegisterAsync(RegisterDto dto, CancellationToken ct = default) =>
         Enum.IsDefined(dto.RegistrationType) // model binding accepts undefined numbers (D-54 Session 21 item 4)
@@ -45,6 +47,7 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, IUnit
             userId = user.Id;
             var create = (await userManager.CreateAsync(user, dto.Password)).ToResult();
             if (!create.Succeeded) return create;
+            var role = active ? await AssignDefaultRoleAsync(user, type, attemptCt) : null;
 
             if (member == null)
             {
@@ -57,10 +60,23 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, IUnit
             member.IdentityUserId = user.Id;
             member.Approval = approval;
             member.Status = active ? RecordStatus.Active : RecordStatus.Inactive;
-            await uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, user.Id, "UserRegistered", new { Type = type.ToString(), Approval = approval.ToString() }), attemptCt);
+            await uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, user.Id, "UserRegistered", new { Type = type.ToString(), Approval = approval.ToString(), Role = role }), attemptCt);
             return Result.Success();
         }, verifySucceeded: async c => await uow.Users.GetDetailsAsync(userId!, c) != null, ct: ct)
         .OnDuplicate(Result.Failure(ErrorCodes.Duplicate, "This email or ID is already registered."));
+    }
+
+    /// <summary>
+    /// Adds the configured default role when it still exists and is still non-privileged (rechecked here: its
+    /// permissions may have changed since it was configured). Otherwise the member gets no role.
+    /// </summary>
+    private async Task<string?> AssignDefaultRoleAsync(ApplicationUser user, MemberType type, CancellationToken ct)
+    {
+        var config = await uow.GeneralConfigs.GetByKeyAsync(RegistrationConfigKeys.DefaultRoleFor(type), ct);
+        var role = await DefaultRole.ResolveAsync(uow, normalizer, config?.Value, ct);
+        if (role != null && !(await userManager.AddToRoleAsync(user, role)).Succeeded)
+            throw new InvalidOperationException($"Could not add the default role {role}."); // rolls the registration back
+        return role;
     }
 
     public Task<IReadOnlyList<PendingRegistrationDto>> GetPendingAsync(CancellationToken ct = default) => uow.LibraryMembers.GetPendingAsync(ct);
@@ -78,14 +94,16 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, IUnit
             var user = await userManager.FindByIdAsync(member.IdentityUserId);
             if (user == null || user.Status == RecordStatus.Deleted) return Result.Failure(ErrorCodes.NotFound, "The applicant's account no longer exists.");
 
+            string? role = null;
             member.Approval = decision;
             if (decision == ApprovalStatus.Approved)
             {
                 member.Status = RecordStatus.Active;
                 user.Status = RecordStatus.Active;
                 if ((await userManager.UpdateAsync(user)).ToResult() is { Succeeded: false } failed) return failed;
+                role = await AssignDefaultRoleAsync(user, member.MemberType, attemptCt);
             }
-            await uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, user.Id, $"Registration{decision}", null), attemptCt);
+            await uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, user.Id, $"Registration{decision}", role == null ? null : new { Role = role }), attemptCt);
             return Result.Success();
         }, ct: ct);
 }

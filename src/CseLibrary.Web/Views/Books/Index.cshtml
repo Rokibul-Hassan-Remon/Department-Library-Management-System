@@ -4,11 +4,12 @@
     var search = ViewData["Search"] as string;
     var categoryId = ViewData["CategoryId"] as int?;
     var categories = (IReadOnlyList<CategoryDto>)ViewData["Categories"]!;
+    var canCreate = await Authorization.CanAsync(User, Permissions.Books.Create);
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Books</h2>
-    <a class="btn btn-primary" asp-action="Create">+ New Book</a>
+    @if (canCreate) { <a class="btn btn-primary" asp-action="Create">+ New Book</a> }
 </div>
 
 <form method="get" class="row g-2 mb-3">

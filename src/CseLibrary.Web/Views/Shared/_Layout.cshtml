@@ -3,12 +3,8 @@
 @using CseLibrary.Core.Constants
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
-@using Microsoft.AspNetCore.Authorization
-@inject IAuthorizationService Authorization
 @functions {
-    // Same database check as [HasPermission] (D-37); cookie permission claims are ignored. One query per request (handler cache).
-    private async Task<bool> Can(string permission) =>
-        (await Authorization.AuthorizeAsync(User, $"{Permissions.ClaimType}:{permission}")).Succeeded;
+    private Task<bool> Can(string permission) => Authorization.CanAsync(User, permission);
 }
 <!DOCTYPE html>
 <html lang="en">

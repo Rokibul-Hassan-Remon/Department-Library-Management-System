@@ -1,9 +1,13 @@
 @model CseLibrary.Core.Paging.PagedResult<UserDto>
-@{ ViewData["Title"] = "Users"; }
+@{ ViewData["Title"] = "Users";
+   var canCreate = await Authorization.CanAsync(User, Permissions.Users.Create);
+   var canEdit = await Authorization.CanAsync(User, Permissions.Users.Edit);
+   var canDelete = await Authorization.CanAsync(User, Permissions.Users.Delete);
+}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Users</h2>
-    <a class="btn btn-primary" asp-action="Create">+ New User</a>
+    @if (canCreate) { <a class="btn btn-primary" asp-action="Create">+ New User</a> }
 </div>
 
 <table class="table table-striped">
@@ -27,9 +31,9 @@
                 <td>@string.Join(", ", u.Roles)</td>
                 <td>@(u.IsActive ? "Yes" : "No")</td>
                 <td class="text-end">
-                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@u.Id">Edit</a>
-                    <a class="btn btn-sm btn-outline-warning" asp-action="ResetPassword" asp-route-id="@u.Id">Reset PW</a>
-                    <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@u.Id">Delete</a>
+                    @if (canEdit) { <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@u.Id">Edit</a> }
+                    @if (canEdit) { <a class="btn btn-sm btn-outline-warning" asp-action="ResetPassword" asp-route-id="@u.Id">Reset PW</a> }
+                    @if (canDelete) { <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@u.Id">Delete</a> }
                 </td>
             </tr>
         }

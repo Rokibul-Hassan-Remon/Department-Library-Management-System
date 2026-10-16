@@ -1,9 +1,13 @@
 @model IEnumerable<GeneralConfigDto>
-@{ ViewData["Title"] = "General Configs"; }
+@{ ViewData["Title"] = "General Configs";
+   var canCreate = await Authorization.CanAsync(User, Permissions.GeneralConfig.Create);
+   var canEdit = await Authorization.CanAsync(User, Permissions.GeneralConfig.Edit);
+   var canDelete = await Authorization.CanAsync(User, Permissions.GeneralConfig.Delete);
+}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>General Configs</h2>
-    <a class="btn btn-primary" asp-action="Create">+ New Config</a>
+    @if (canCreate) { <a class="btn btn-primary" asp-action="Create">+ New Config</a> }
 </div>
 
 <table class="table table-striped">
@@ -17,8 +21,8 @@
                 <td>@c.Value</td>
                 <td>@c.Description</td>
                 <td class="text-end">
-                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@c.Id">Edit</a>
-                    <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@c.Id">Delete</a>
+                    @if (canEdit) { <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@c.Id">Edit</a> }
+                    @if (canDelete) { <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@c.Id">Delete</a> }
                 </td>
             </tr>
         }

@@ -1,9 +1,11 @@
 @model CseLibrary.Core.Paging.PagedResult<LibraryMemberDto>
-@{ ViewData["Title"] = "Library Members"; var search = ViewData["Search"] as string; }
+@{ ViewData["Title"] = "Library Members"; var search = ViewData["Search"] as string;
+   var canCreate = await Authorization.CanAsync(User, Permissions.LibraryMembers.Create);
+}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Library Members</h2>
-    <a class="btn btn-primary" asp-action="Create">+ New Library Member</a>
+    @if (canCreate) { <a class="btn btn-primary" asp-action="Create">+ New Library Member</a> }
 </div>
 
 <form method="get" class="row g-2 mb-3">

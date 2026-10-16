@@ -1,5 +1,15 @@
 # Session Handoff
 
+## ▶ Session 24 (2026-10-16) — read first; overrides the Session 23 block where they differ
+- Session 23 close-out committed `7d44415`; `feature/d58-library-member-rename` merged into
+  `develop` **`00a21fc`** (build 0/0, 122/122).
+- **D-56 Q-S21-1 default roles + permission-aware buttons** on `feature/phase-1-default-roles`
+  (DECISION_LOG §84): allowlist = `Books.View`; GeneralConfig keys
+  `Registration.StudentDefaultRole` / `Registration.FellowDefaultRole`. Build 0/0, tests **123/123**.
+  Not committed yet.
+- Resolved from the Session 23 open findings: buttons without the permission; D-54 per-type
+  default roles. Everything else in that list is still open.
+
 ## ▶ Session 23 (2026-10-15 → 2026-10-16) — read first; overrides the Session 22 block where they differ
 Session 23 closed at the user's request (conversation too long) — **Session 24 starts here.**
 

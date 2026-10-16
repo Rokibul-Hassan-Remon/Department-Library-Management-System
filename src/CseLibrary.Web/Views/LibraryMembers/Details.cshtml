@@ -1,5 +1,8 @@
 @model LibraryMemberDetailsDto
-@{ ViewData["Title"] = Model.FullName; }
+@{ ViewData["Title"] = Model.FullName;
+   var canEdit = await Authorization.CanAsync(User, Permissions.LibraryMembers.Edit);
+   var canDelete = await Authorization.CanAsync(User, Permissions.LibraryMembers.Delete);
+}
 
 <div class="d-flex justify-content-between align-items-start mb-3">
     <div>
@@ -7,20 +10,23 @@
         <div>@Model.MemberType · @(Model.IsActive ? "Active" : "Inactive") · @Model.Email @Model.Phone</div>
     </div>
     <div>
-        <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
-        <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this member?');">
-            <button class="btn btn-outline-danger">Delete</button>
-        </form>
+        @if (canEdit) { <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id">Edit</a> }
+        @if (canDelete)
+        {
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this member?');">
+                <button class="btn btn-outline-danger">Delete</button>
+            </form>
+        }
     </div>
 </div>
 
-@if (Model.IsActive)
+@if (Model.IsActive && await Authorization.CanAsync(User, Permissions.Lending.Issue))
 {
     <form asp-controller="Loans" asp-action="Issue" asp-route-returnUrl="@Url.Action("Details", new { id = Model.Id })" method="post" class="row g-2 align-items-end mb-4">
-        <input type="hidden" name="MemberCode" value="@Model.MemberCode" />
-        <div class="col-md-4"><label class="form-label">Issue a copy (accession no.)</label><input name="AccessionNumber" class="form-control" required maxlength="50" /></div>
-        <div class="col-md-2"><button class="btn btn-primary">Issue</button></div>
-    </form>
+            <input type="hidden" name="MemberCode" value="@Model.MemberCode" />
+            <div class="col-md-4"><label class="form-label">Issue a copy (accession no.)</label><input name="AccessionNumber" class="form-control" required maxlength="50" /></div>
+            <div class="col-md-2"><button class="btn btn-primary">Issue</button></div>
+        </form>
 }
 
 <h4>Loans <small class="text-muted">(@Model.ActiveLoans held; latest 100 shown)</small></h4>

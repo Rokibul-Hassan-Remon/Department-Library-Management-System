@@ -15,7 +15,7 @@ namespace CseLibrary.Services.Services;
 public class RoleService(RoleManager<ApplicationRole> roleManager, IUnitOfWork uow, ICurrentUser currentUser) : IRoleService
 {
     private const string NameTaken = "Role name is already taken.";
-    private const string AdminOnly = "Only an Admin can create, change or delete a role that has permissions.";
+    private const string AdminOnly = "Only an Admin can create, change or delete a role that has staff permissions.";
 
     public Task<IReadOnlyList<RoleDto>> GetAllAsync(CancellationToken ct = default) => uow.Roles.GetListAsync(ct);
 

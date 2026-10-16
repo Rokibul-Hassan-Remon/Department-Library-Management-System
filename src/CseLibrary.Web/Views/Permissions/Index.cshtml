@@ -1,9 +1,13 @@
 @model IEnumerable<PermissionDto>
-@{ ViewData["Title"] = "Permissions"; }
+@{ ViewData["Title"] = "Permissions";
+   var canCreate = await Authorization.CanAsync(User, Permissions.PermissionsModule.Create);
+   var canEdit = await Authorization.CanAsync(User, Permissions.PermissionsModule.Edit);
+   var canDelete = await Authorization.CanAsync(User, Permissions.PermissionsModule.Delete);
+}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>Permissions</h2>
-    <a class="btn btn-primary" asp-action="Create">+ New Permission</a>
+    @if (canCreate) { <a class="btn btn-primary" asp-action="Create">+ New Permission</a> }
 </div>
 
 <table class="table table-striped">
@@ -17,8 +21,8 @@
                 <td>@p.DisplayName</td>
                 <td>@p.Description</td>
                 <td class="text-end">
-                    <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@p.Id">Edit</a>
-                    <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@p.Id">Delete</a>
+                    @if (canEdit) { <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@p.Id">Edit</a> }
+                    @if (canDelete) { <a class="btn btn-sm btn-outline-danger" asp-action="Delete" asp-route-id="@p.Id">Delete</a> }
                 </td>
             </tr>
         }
