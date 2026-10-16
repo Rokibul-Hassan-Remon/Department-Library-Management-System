@@ -18,7 +18,7 @@
     <div class="mb-3"><label asp-for="AcquisitionDate" class="form-label">Acquired</label><input asp-for="AcquisitionDate" type="date" class="form-control" /></div>
     <div class="mb-3"><label asp-for="CopyStatus" class="form-label">Status</label><select asp-for="CopyStatus" class="form-select" asp-items="statuses"></select></div>
     <div class="mb-3"><label asp-for="Notes" class="form-label"></label><textarea asp-for="Notes" class="form-control" rows="2"></textarea></div>
-    <button type="submit" class="btn btn-primary">Save</button>
-    <a class="btn btn-secondary" asp-action="Details" asp-route-id="@Model.BookId">Cancel</a>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg" aria-hidden="true"></i> Save</button>
+    <a class="btn btn-secondary" asp-action="Details" asp-route-id="@Model.BookId"><i class="bi bi-x-lg" aria-hidden="true"></i> Cancel</a>
 </form>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }
