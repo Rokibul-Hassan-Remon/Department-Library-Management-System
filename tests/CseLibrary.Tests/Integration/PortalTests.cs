@@ -74,6 +74,24 @@ public class PortalTests(AppFactory app)
             (await app.WithServiceAsync(sp => sp.GetRequiredService<IRegistrationService>().RejectAsync(memberId))).ErrorCode);
     }
 
+    [Fact] // BR-03 and D-54: registering or a staff edit never activates a member behind staff or review
+    public async Task Registration_keeps_a_staff_deactivation_and_an_edit_cannot_activate_a_pending_fellow()
+    {
+        var code = Unique("R");
+        await app.WithServiceAsync(sp => sp.GetRequiredService<ILibraryMemberService>().CreateAsync(
+            new LibraryMemberDto { MemberCode = code, FullName = "Blocked", MemberType = MemberType.Student, IsActive = false }));
+        var student = Form(RegistrationType.Student, code);
+        Assert.True((await Register(student)).Succeeded);
+        Assert.False((await MemberOf(student.Email))!.IsActive);
+
+        var fellow = Form(RegistrationType.DepartmentFellow);
+        Assert.True((await Register(fellow)).Succeeded);
+        var pending = (await MemberOf(fellow.Email))!;
+        pending.IsActive = true;
+        Assert.True((await app.WithServiceAsync(sp => sp.GetRequiredService<ILibraryMemberService>().UpdateAsync(pending))).Succeeded);
+        Assert.False((await MemberOf(fellow.Email))!.IsActive);
+    }
+
     [Fact]
     public async Task Rejected_fellow_cannot_sign_in()
     {
@@ -121,16 +139,16 @@ public class PortalTests(AppFactory app)
             Assert.True((await lending.IssueAsync(new IssueDto { MemberCode = code, AccessionNumber = later })).Succeeded);
         });
         var today = DateOnly.FromDateTime(DateTime.Now);
-        await app.WithServiceAsync(async sp => // the "soon" loan becomes due in 2 days (the default reminder lead)
+        await app.WithServiceAsync(async sp => // due tomorrow: inside the 2-day lead, so a day without a run skips nothing
         {
             var uow = sp.GetRequiredService<IUnitOfWork>();
             var page = await sp.GetRequiredService<ILendingService>().GetPageAsync(new(), LoanFilter.Active, soon);
             var loan = (await uow.Loans.GetForUpdateAsync(page.Items.Single().Id))!;
-            loan.DueDate = today.AddDays(2);
+            loan.DueDate = today.AddDays(1);
             await uow.SaveChangesAsync();
         });
 
-        var targets = await app.WithServiceAsync(sp => sp.GetRequiredService<IUnitOfWork>().Loans.GetReminderTargetsAsync(today.AddDays(2), today));
+        var targets = await app.WithServiceAsync(sp => sp.GetRequiredService<IUnitOfWork>().Loans.GetReminderTargetsAsync(today.AddDays(2)));
         Assert.Contains(targets, t => t.AccessionNumber == soon);
         Assert.DoesNotContain(targets, t => t.AccessionNumber == later); // due in 30 days
         Assert.True(await app.WithServiceAsync(sp => sp.GetRequiredService<IReminderService>().SendDueRemindersAsync()) >= 1);

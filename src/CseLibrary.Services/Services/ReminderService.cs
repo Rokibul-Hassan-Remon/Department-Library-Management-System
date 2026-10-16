@@ -16,14 +16,20 @@ public class ReminderService(IUnitOfWork uow, IEmailSender email, TimeProvider t
     {
         var today = DateOnly.FromDateTime(time.GetLocalNow().DateTime);
         var config = await uow.GeneralConfigs.GetByKeyAsync(LendingConfigKeys.ReminderDaysBefore, ct);
-        var daysBefore = int.TryParse(config?.Value, out var d) && d >= 0 ? d : LendingConfigKeys.DefaultFor(LendingConfigKeys.ReminderDaysBefore);
+        var daysBefore = int.TryParse(config?.Value, out var d) && d >= 0 ? d : LendingConfigKeys.DefaultReminderDaysBefore;
 
-        var sent = 0;
-        foreach (var t in await uow.Loans.GetReminderTargetsAsync(today.AddDays(daysBefore), today, ct))
+        var targets = (await uow.Loans.GetReminderTargetsAsync(today.AddDays(daysBefore), ct)).Select(t =>
         {
             var type = t.DueDate < today ? EmailType.Overdue : EmailType.DueSoon;
-            var key = $"{type}:{t.LoanId}:{t.DueDate:yyyyMMdd}"; // a renewal (new due date) earns a new reminder
-            var log = await uow.EmailNotificationLogs.FindByKeyForUpdateAsync(key, ct);
+            return (t, type, Key: $"{type}:{t.LoanId}:{t.DueDate:yyyyMMdd}"); // a renewal (new due date) earns a new reminder
+        }).ToList();
+        var logs = (await uow.EmailNotificationLogs.FindByKeysForUpdateAsync(targets.Select(x => x.Key).ToList(), ct))
+            .ToDictionary(l => l.IdempotencyKey); // one query for the whole run, not one per email
+
+        var sent = 0;
+        foreach (var (t, type, key) in targets)
+        {
+            var log = logs.GetValueOrDefault(key);
             if (log?.DeliveryStatus == DeliveryStatus.Sent) continue;
             if (log == null)
             {

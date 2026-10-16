@@ -18,6 +18,9 @@ public class RoleReadRepository(ApplicationDbContext db) : IRoleReadRepository
     public async Task<IReadOnlyList<string>> GetNamesAsync(CancellationToken ct = default) =>
         await db.Roles.OrderBy(r => r.Name).Select(r => r.Name!).ToListAsync(ct);
 
+    public Task<string?> FindNameAsync(string normalizedName, CancellationToken ct = default) =>
+        db.Roles.Where(r => r.NormalizedName == normalizedName).Select(r => r.Name).FirstOrDefaultAsync(ct);
+
     public Task<bool> AnyPrivilegedAsync(IReadOnlyCollection<string> normalizedNames, CancellationToken ct = default) =>
         (from r in db.Roles
          where normalizedNames.Contains(r.NormalizedName!)

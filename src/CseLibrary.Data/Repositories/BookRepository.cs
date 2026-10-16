@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces.Repositories;
@@ -36,19 +37,14 @@ public class BookRepository(ApplicationDbContext db) : Repository<Book>(db), IBo
 
     public async Task<BookDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default)
     {
+        var copyDto = BookCopyRepository.ToDto(Db);
         var row = await Db.Books.Where(b => b.Id == id).Select(b => new
         {
             Book = new BookDetailsDto
             {
                 Id = b.Id, Isbn = b.Isbn, Title = b.Title, Publisher = b.Publisher, Edition = b.Edition,
                 PublicationYear = b.PublicationYear, Category = b.Category!.Name, Description = b.Description,
-                Copies = b.Copies.OrderBy(c => c.AccessionNumber).Select(c => new BookCopyDto
-                {
-                    Id = c.Id, BookId = c.BookId, AccessionNumber = c.AccessionNumber, ShelfLocation = c.ShelfLocation,
-                    AcquisitionDate = c.AcquisitionDate, CopyStatus = c.CopyStatus, Notes = c.Notes,
-                    HeldBy = Db.Loans.Where(l => l.BookCopyId == c.Id && l.TransactionStatus == LendingStatus.Issued)
-                        .Select(l => l.LibraryMember.MemberCode + " " + l.LibraryMember.FullName).FirstOrDefault()
-                }).ToList()
+                Copies = b.Copies.AsQueryable().OrderBy(c => c.AccessionNumber).Select(copyDto).ToList()
             },
             Authors = b.BookAuthors.OrderBy(ba => ba.Order).Select(ba => ba.Author.Name).ToList()
         }).FirstOrDefaultAsync(ct);
@@ -69,6 +65,15 @@ public class BookRepository(ApplicationDbContext db) : Repository<Book>(db), IBo
 
 public class BookCopyRepository(ApplicationDbContext db) : Repository<BookCopy>(db), IBookCopyRepository
 {
+    /// <summary>A copy row with its title and the member holding it if issued; shared by book details and the copies report.</summary>
+    internal static Expression<Func<BookCopy, BookCopyDto>> ToDto(ApplicationDbContext db) => c => new BookCopyDto
+    {
+        Id = c.Id, BookId = c.BookId, BookTitle = c.Book.Title, AccessionNumber = c.AccessionNumber, ShelfLocation = c.ShelfLocation,
+        AcquisitionDate = c.AcquisitionDate, CopyStatus = c.CopyStatus, Notes = c.Notes,
+        HeldBy = db.Loans.Where(l => l.BookCopyId == c.Id && l.TransactionStatus == LendingStatus.Issued)
+            .Select(l => l.LibraryMember.MemberCode + " " + l.LibraryMember.FullName).FirstOrDefault()
+    };
+
     public Task<BookCopyDto?> GetDetailsAsync(int id, CancellationToken ct = default) =>
         Db.BookCopies.Where(c => c.Id == id).Select(c => new BookCopyDto
         {
@@ -92,13 +97,7 @@ public class BookCopyRepository(ApplicationDbContext db) : Repository<BookCopy>(
         var total = await copies.CountAsync(ct);
         page = page.ClampTo(total);
         var items = await copies.OrderBy(c => c.AccessionNumber).ThenBy(c => c.Id).Skip(page.Skip).Take(page.PageSize)
-            .Select(c => new BookCopyDto
-            {
-                Id = c.Id, BookId = c.BookId, BookTitle = c.Book.Title, AccessionNumber = c.AccessionNumber, ShelfLocation = c.ShelfLocation,
-                AcquisitionDate = c.AcquisitionDate, CopyStatus = c.CopyStatus, Notes = c.Notes,
-                HeldBy = Db.Loans.Where(l => l.BookCopyId == c.Id && l.TransactionStatus == LendingStatus.Issued)
-                    .Select(l => l.LibraryMember.MemberCode + " " + l.LibraryMember.FullName).FirstOrDefault()
-            }).ToListAsync(ct);
+            .Select(ToDto(Db)).ToListAsync(ct);
         return new PagedResult<BookCopyDto>(items, total, page.Page, page.PageSize);
     }
 
@@ -137,8 +136,8 @@ public class LibraryPolicyRepository(ApplicationDbContext db) : Repository<Libra
 
 public class EmailNotificationLogRepository(ApplicationDbContext db) : Repository<EmailNotificationLog>(db), IEmailNotificationLogRepository
 {
-    public Task<EmailNotificationLog?> FindByKeyForUpdateAsync(string idempotencyKey, CancellationToken ct = default) =>
-        Db.EmailNotificationLogs.FirstOrDefaultAsync(e => e.IdempotencyKey == idempotencyKey, ct);
+    public async Task<IReadOnlyList<EmailNotificationLog>> FindByKeysForUpdateAsync(IReadOnlyCollection<string> idempotencyKeys, CancellationToken ct = default) =>
+        await Db.EmailNotificationLogs.Where(e => idempotencyKeys.Contains(e.IdempotencyKey)).ToListAsync(ct);
 
     public async Task<PagedResult<EmailLogDto>> GetPageAsync(PageRequest page, DeliveryStatus? status, CancellationToken ct = default)
     {

@@ -96,8 +96,8 @@ public class LoanRepository(ApplicationDbContext db) : Repository<Loan>(db), ILo
     public Task<bool> HasActiveAsync(int memberId, CancellationToken ct = default) =>
         Db.Loans.AnyAsync(l => l.LibraryMemberId == memberId && l.TransactionStatus == LendingStatus.Issued, ct);
 
-    public async Task<IReadOnlyList<ReminderTarget>> GetReminderTargetsAsync(DateOnly dueOn, DateOnly today, CancellationToken ct = default) =>
-        await Db.Loans.Where(l => l.TransactionStatus == LendingStatus.Issued && (l.DueDate == dueOn || l.DueDate < today) && l.LibraryMember.Email != null)
+    public async Task<IReadOnlyList<ReminderTarget>> GetReminderTargetsAsync(DateOnly dueOn, CancellationToken ct = default) =>
+        await Db.Loans.Where(l => l.TransactionStatus == LendingStatus.Issued && l.DueDate <= dueOn && l.LibraryMember.Email != null)
             .OrderBy(l => l.Id)
             .Select(l => new ReminderTarget(l.Id, l.LibraryMember.Email!, l.LibraryMember.FullName, l.BookCopy.Book.Title, l.BookCopy.AccessionNumber, l.DueDate))
             .ToListAsync(ct);

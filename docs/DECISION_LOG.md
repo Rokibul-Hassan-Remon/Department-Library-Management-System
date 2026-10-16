@@ -2461,6 +2461,26 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
 - Not built: CSV/Excel export (FR-12 "may be included"), printing more than one page at a time.
 - Evidence: build 0/0; tests 129/129; mutation: removing the date-range filter fails the new test.
 
+### 86. Session 24 — owed reviews and fixes (2026-10-16)
+- Ran `/code-review` and `/ponytail-review` on `5bb43bc..develop` (Gate 3 + Phase 1, migrations excluded);
+  closes the reviews owed since §76. 10 code-review candidates, 6 ponytail findings.
+- User approved fixing all but #1 (registration links an existing member ID with no ownership check — needs a
+  design choice), #6 (soft-deleted copy/member hides its loan history — design question) and deleting
+  `HiLoSpikeTests` (file delete). Fixed on `feature/phase-1-review-fixes`:
+  - #2 Student registration no longer reactivates a member staff deactivated (BR-03).
+  - #3 Renew refuses an inactive member or one with another overdue book, and needs a signed-in user.
+  - #4 Renew extends from the current due date, not from today.
+  - #5 A staff edit cannot make a Pending/Rejected registration Active (D-54: only review does).
+  - #7 Reminders take every loan due on or before today + lead days, so a day without a run skips nothing.
+  - #8 Report dates at the calendar edges no longer overflow (HTTP 500).
+  - #9 Reminder idempotency keys load in one query (was one per email).
+  - #10 Default-role lookup by normalized name (was: all role names).
+  - Ponytail: one `_Pager` partial on Books/Members/Loans/Users; one copy-row projection;
+    `LendingConfigKeys` reduced to two constants.
+- Not changed: a failed SaveChanges still ends a reminder run (retried next day); `CallerIsAdminAsync`
+  duplicate (2 lines) and the Members report table kept — not worth a shared helper.
+- Evidence: build 0/0; tests 131/131; 7 mutations (one per fix) each fail a test.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

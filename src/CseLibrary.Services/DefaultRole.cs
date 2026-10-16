@@ -10,7 +10,8 @@ internal static class DefaultRole
     public static async Task<string?> ResolveAsync(IUnitOfWork uow, ILookupNormalizer normalizer, string? name, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
-        var role = (await uow.Roles.GetNamesAsync(ct)).FirstOrDefault(r => string.Equals(r, name.Trim(), StringComparison.OrdinalIgnoreCase));
-        return role != null && !await uow.Roles.AnyPrivilegedAsync([normalizer.NormalizeName(role)], ct) ? role : null;
+        var normalized = normalizer.NormalizeName(name.Trim());
+        var role = await uow.Roles.FindNameAsync(normalized, ct);
+        return role != null && !await uow.Roles.AnyPrivilegedAsync([normalized], ct) ? role : null;
     }
 }

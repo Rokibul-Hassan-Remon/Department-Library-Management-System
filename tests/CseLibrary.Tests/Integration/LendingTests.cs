@@ -98,8 +98,27 @@ public class LendingTests(AppFactory app)
 
         var lending = (Func<Task<Result>>)(() => app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().RenewAsync(loanId)));
         Assert.True((await lending()).Succeeded);
-        Assert.Equal(1, Assert.Single((await LibraryMember(memberId)).Loans).RenewCount);
+        var renewed = Assert.Single((await LibraryMember(memberId)).Loans);
+        Assert.Equal((1, DateOnly.FromDateTime(DateTime.Now).AddDays(60)), (renewed.RenewCount, renewed.DueDate)); // +30 from the old due date
         Assert.Equal(ErrorCodes.RenewNotAllowed, (await lending()).ErrorCode); // default MaxRenewals 1
+    }
+
+    [Fact] // renewing keeps a book longer, so it has the same member blocks as issuing (BR-03, D-48)
+    public async Task Renew_is_refused_for_an_inactive_member_or_one_with_another_overdue_book()
+    {
+        var (member, memberId, copies) = await Arrange(MemberType.Fellow, 2);
+        foreach (var c in copies) Assert.True((await Issue(member, c)).Succeeded);
+        var loans = (await LibraryMember(memberId)).Loans;
+        await MakeOverdue(loans[0].Id);
+        Task<Result> Renew(int id) => app.WithServiceAsync(sp => sp.GetRequiredService<ILendingService>().RenewAsync(id));
+        Assert.Equal(ErrorCodes.HasOverdue, (await Renew(loans[1].Id)).ErrorCode);
+
+        var other = await Arrange(MemberType.Fellow, 1);
+        Assert.True((await Issue(other.LibraryMember, other.Copies[0])).Succeeded);
+        var dto = await LibraryMember(other.LibraryMemberId);
+        dto.IsActive = false;
+        Assert.True((await app.WithServiceAsync(sp => sp.GetRequiredService<ILibraryMemberService>().UpdateAsync(dto))).Succeeded);
+        Assert.Equal(ErrorCodes.MemberInactive, (await Renew(dto.Loans.Single().Id)).ErrorCode);
     }
 
     [Fact]
@@ -138,7 +157,7 @@ public class LendingTests(AppFactory app)
         {
             Assert.Equal(ErrorCodes.InUse, (await sp.GetRequiredService<ILibraryMemberService>().DeleteAsync(memberId)).ErrorCode);
             var configs = sp.GetRequiredService<IGeneralConfigService>();
-            foreach (var (key, value) in LendingConfigKeys.Defaults) Assert.Equal(value, (await configs.GetByKeyAsync(key))?.Value);
+            Assert.Equal(LendingConfigKeys.DefaultReminderDaysBefore.ToString(), (await configs.GetByKeyAsync(LendingConfigKeys.ReminderDaysBefore))?.Value);
         });
     }
 

@@ -31,17 +31,4 @@
     </tbody>
 </table>
 
-@if (Model.TotalPages > 1)
-{
-    <nav aria-label="Library member pages" class="d-flex justify-content-between align-items-center">
-        <span>Page @Model.Page of @Model.TotalPages (@Model.TotalCount library members)</span>
-        <ul class="pagination mb-0">
-            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
-                <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-search="@search">Previous</a>
-            </li>
-            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
-                <a class="page-link" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-search="@search">Next</a>
-            </li>
-        </ul>
-    </nav>
-}
+<partial name="_Pager" model="(Model.Page, Model.TotalPages, Model.TotalCount)" />

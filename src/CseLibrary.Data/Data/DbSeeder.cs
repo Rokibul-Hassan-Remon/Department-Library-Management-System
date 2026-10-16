@@ -122,7 +122,7 @@ public static class DbSeeder
         [
             new() { Key = "Site.Name", Value = "Default Template", Group = "Site" },
             new() { Key = "Site.SupportEmail", Value = "support@local", Group = "Site" },
-            .. LendingConfigKeys.Defaults.Select(d => new GeneralConfig { Key = d.Key, Value = d.Value, Group = "Lending" }),
+            new() { Key = LendingConfigKeys.ReminderDaysBefore, Value = LendingConfigKeys.DefaultReminderDaysBefore.ToString(), Group = "Lending" },
             .. RegistrationConfigKeys.All.Select(k => new GeneralConfig { Key = k, Group = "Registration", Description = "Role a registered member gets (only Books.View allowed); empty = no role" })
         ];
         var existing = await db.GeneralConfigs.IgnoreQueryFilters().Select(c => c.Key).ToListAsync();

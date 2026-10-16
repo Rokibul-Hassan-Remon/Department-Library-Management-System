@@ -8,6 +8,8 @@ public interface IRoleReadRepository
     Task<IReadOnlyList<RoleDto>> GetListAsync(CancellationToken ct = default);
     Task<RoleDto?> GetDetailsAsync(string id, CancellationToken ct = default);
     Task<IReadOnlyList<string>> GetNamesAsync(CancellationToken ct = default);
+    /// <summary>The stored name of the role with <paramref name="normalizedName"/>, or null.</summary>
+    Task<string?> FindNameAsync(string normalizedName, CancellationToken ct = default);
 
     /// <summary>
     /// True when a role with one of <paramref name="normalizedNames"/> holds a permission that is not deleted.
