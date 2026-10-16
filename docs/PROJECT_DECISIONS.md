@@ -1857,6 +1857,26 @@ bypassing D-56. Extends D-56 (Q-S21-4/8); does not replace it.
 5. **Existing flows must keep working** (tested): sign-in, self-service password change
    (`/Account/ChangePassword`, not routed through `UserService`), Admin password reset.
 
+### D-58 Rename "Member" (the borrower record) to "Library Member" — name and column names **Approved** (user, Session 23); not implemented
+**Source:** user, Session 23 (DECISION_LOG §81). A pasted recommendation proposed "Borrower";
+the user preferred **"Library Member"**. "Member" and "User" are easy to confuse:
+`AspNetUsers` is the login account, `Members` is the library borrower record (0..1 link).
+1. **Name (user's choice):** "Library Member" — entity `LibraryMember`, table `LibraryMembers`,
+   UI label "Library Member(s)". "Borrower" is **Rejected**.
+2. **Column / related names — Approved (user "ok", Session 23; proposed by the assistant):** FKs `MemberId` → `LibraryMemberId`
+   (e.g. `LendingTransactions.LibraryMemberId`); keep `MemberCode` and `MemberType` (already
+   unambiguous inside `LibraryMembers`, smaller change); `LibraryPolicies.MemberCategory` stays;
+   `IdentityUserId` stays.
+3. **Not now.** Order: (a) ~~the user approves item 2~~ done; (b) a separate, separately approved
+   **impact analysis and migration plan**; (c) implementation.
+4. **Known impact for (b)** (not yet analysed in full): 33 C# / Razor files reference the
+   `Member*` names (entities, EF configurations, repositories, services, controllers, views,
+   tests); FKs and indexes on `LendingTransactions`; the `Members.*` permission names (renaming
+   them needs a decision on the existing permission rows and role grants); UI labels;
+   `requirements.md` / `business-rules.md` / the ER diagram use "Member"; D-54 "Member link"
+   wording; error code `MEMBER.INACTIVE` (archive BR-03).
+5. Until approved and implemented, code and docs keep "Member".
+
 ---
 
 ## 9. Open decisions
