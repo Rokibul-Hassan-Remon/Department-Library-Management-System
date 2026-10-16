@@ -5,6 +5,43 @@
 @inject UserManager<ApplicationUser> UserManager
 @functions {
     private Task<bool> Can(string permission) => Authorization.CanAsync(User, permission);
+
+    // Highlights the sidebar link of the current page; action is only needed where one controller has two links.
+    private string Active(string controller, string? action = null) =>
+        string.Equals(ViewContext.RouteData.Values["controller"] as string, controller, StringComparison.OrdinalIgnoreCase)
+        && (action is null || string.Equals(ViewContext.RouteData.Values["action"] as string, action, StringComparison.OrdinalIgnoreCase))
+            ? "active" : "";
+
+    // Portal holds both "My books" and "Registrations", so only there does the action decide.
+    private string ActiveLink(string controller, string action) => Active(controller, controller == "Portal" ? action : null);
+}
+@{
+    var signedIn = SignInManager.IsSignedIn(User);
+
+    // Sidebar groups: only links the user may open, a group only if it has one. The current page's group starts open.
+    var groups = new List<(string Id, string Title, string Icon, List<(string Text, string Icon, string Controller, string Action)> Links)>();
+    if (signedIn)
+    {
+        var library = new List<(string, string, string, string)>();
+        if (await Can(Permissions.Books.View)) library.Add(("Books", "bi-book", "Books", "Index"));
+        if (await Can(Permissions.Lending.View)) library.Add(("Loans", "bi-arrow-left-right", "Loans", "Index"));
+        if (await Can(Permissions.LibraryMembers.View)) library.Add(("Library Members", "bi-person-vcard", "LibraryMembers", "Index"));
+        if (await Can(Permissions.Registrations.Review)) library.Add(("Registrations", "bi-person-check", "Portal", "Pending"));
+        if (await Can(Permissions.Reports.View)) library.Add(("Reports", "bi-bar-chart", "Reports", "Index"));
+
+        var admin = new List<(string, string, string, string)>();
+        if (await Can(Permissions.Users.View)) admin.Add(("Users", "bi-people", "Users", "Index"));
+        if (await Can(Permissions.Roles.View)) admin.Add(("Roles", "bi-shield-lock", "Roles", "Index"));
+        if (await Can(Permissions.PermissionsModule.View)) admin.Add(("Permissions", "bi-key", "Permissions", "Index"));
+        if (await Can(Permissions.GeneralConfig.View))
+        {
+            admin.Add(("Configs", "bi-gear", "GeneralConfig", "Index"));
+            admin.Add(("Policies", "bi-sliders", "Policies", "Index"));
+        }
+
+        if (library.Count > 0) groups.Add(("nav-library", "Library", "bi-collection", library));
+        if (admin.Count > 0) groups.Add(("nav-admin", "Administration", "bi-shield-check", admin));
+    }
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -18,93 +55,88 @@
     <link rel="stylesheet" href="~/CseLibrary.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index"><i class="bi bi-book-half" aria-hidden="true"></i> CSE Library</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
+    <a class="visually-hidden-focusable skip-link" href="#main">Skip to content</a>
+
+    @* Static column on large screens, slide-in offcanvas below (CSS in site.css). *@
+    <aside class="sidebar offcanvas offcanvas-start" id="sidebar" tabindex="-1" aria-label="Main navigation">
+        <div class="sidebar-brand">
+            <a asp-controller="Home" asp-action="Index" title="Home" aria-label="CSE Library home">
+                <span class="brand-mark"><i class="bi bi-book-half" aria-hidden="true"></i></span>
+                <span class="brand-text">CSE Library<small>Department of CSE</small></span>
+            </a>
+            <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" aria-label="Close menu"></button>
+        </div>
+
+        <nav class="sidebar-nav" id="sidebarNav">
+            @if (signedIn)
+            {
+                <a class="nav-link @Active("Portal", "MyLoans")" asp-controller="Portal" asp-action="MyLoans"><i class="bi bi-bookmark" aria-hidden="true"></i> My books</a>
+            }
+
+            @foreach (var g in groups)
+            {
+                var open = g.Links.Any(l => ActiveLink(l.Controller, l.Action) != "");
+                <button class="nav-link nav-group @(open ? "" : "collapsed")" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#@g.Id" aria-expanded="@(open ? "true" : "false")" aria-controls="@g.Id">
+                    <i class="bi @g.Icon" aria-hidden="true"></i> @g.Title
+                    <i class="bi bi-chevron-down nav-caret" aria-hidden="true"></i>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Index"><i class="bi bi-house" aria-hidden="true"></i> Home</a>
-                        </li>
-                        @if (SignInManager.IsSignedIn(User))
+                <div class="collapse @(open ? "show" : "")" id="@g.Id" data-bs-parent="#sidebarNav">
+                    <div class="nav-sub">
+                        @foreach (var l in g.Links)
                         {
-                            @if (await Can(Permissions.Users.View))
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Users" asp-action="Index"><i class="bi bi-people" aria-hidden="true"></i> Users</a></li>
-                            }
-                            @if (await Can(Permissions.Roles.View))
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Roles" asp-action="Index"><i class="bi bi-shield-lock" aria-hidden="true"></i> Roles</a></li>
-                            }
-                            @if (await Can(Permissions.PermissionsModule.View))
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Permissions" asp-action="Index"><i class="bi bi-key" aria-hidden="true"></i> Permissions</a></li>
-                            }
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="MyLoans"><i class="bi bi-bookmark" aria-hidden="true"></i> My books</a></li>
-                            @if (await Can(Permissions.Registrations.Review))
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="Pending"><i class="bi bi-person-check" aria-hidden="true"></i> Registrations</a></li>
-                            }
-                            @if (await Can(Permissions.Lending.View))
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Loans" asp-action="Index"><i class="bi bi-arrow-left-right" aria-hidden="true"></i> Loans</a></li>
-                            }
-                            @if (await Can(Permissions.LibraryMembers.View))
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="LibraryMembers" asp-action="Index"><i class="bi bi-person-vcard" aria-hidden="true"></i> Library Members</a></li>
-                            }
-                            @if (await Can(Permissions.Books.View))
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Books" asp-action="Index"><i class="bi bi-book" aria-hidden="true"></i> Books</a></li>
-                            }
-                            @if (await Can(Permissions.Reports.View))
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Reports" asp-action="Index"><i class="bi bi-bar-chart" aria-hidden="true"></i> Reports</a></li>
-                            }
-                            @if (await Can(Permissions.GeneralConfig.View))
-                            {
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="GeneralConfig" asp-action="Index"><i class="bi bi-gear" aria-hidden="true"></i> Configs</a></li>
-                                <li class="nav-item"><a class="nav-link text-dark" asp-controller="Policies" asp-action="Index"><i class="bi bi-sliders" aria-hidden="true"></i> Policies</a></li>
-                            }
+                            <a class="nav-link @ActiveLink(l.Controller, l.Action)" href="@Url.Action(l.Action, l.Controller)"><i class="bi @l.Icon" aria-hidden="true"></i> @l.Text</a>
                         }
-                    </ul>
-                    <ul class="navbar-nav">
-                        @if (SignInManager.IsSignedIn(User))
-                        {
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Account" asp-action="ChangePassword"><i class="bi bi-person-circle" aria-hidden="true"></i> @User.Identity!.Name</a></li>
-                            <li class="nav-item">
-                                <form asp-controller="Account" asp-action="Logout" method="post" class="form-inline">
-                                    <button type="submit" class="nav-link btn btn-link text-dark"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Logout</button>
+                    </div>
+                </div>
+            }
+        </nav>
+    </aside>
+
+    <div class="app-main">
+        <header class="topbar">
+            <button class="btn btn-icon d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Open menu">
+                <i class="bi bi-list" aria-hidden="true"></i>
+            </button>
+            <a class="topbar-brand d-lg-none" asp-controller="Home" asp-action="Index">CSE Library</a>
+
+            <div class="ms-auto d-flex align-items-center gap-2">
+                @if (signedIn)
+                {
+                    <div class="dropdown">
+                        <button class="btn user-menu dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="avatar" aria-hidden="true">@User.Identity!.Name![..1].ToUpperInvariant()</span>
+                            <span class="d-none d-sm-inline">@User.Identity!.Name</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li><a class="dropdown-item" asp-controller="Account" asp-action="ChangePassword"><i class="bi bi-key" aria-hidden="true"></i> Change password</a></li>
+                            <li><hr class="dropdown-divider" /></li>
+                            <li>
+                                <form asp-controller="Account" asp-action="Logout" method="post">
+                                    <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Logout</button>
                                 </form>
                             </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Account" asp-action="Login"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Login</a></li>
-                            <li class="nav-item"><a class="nav-link text-dark" asp-controller="Portal" asp-action="Register"><i class="bi bi-person-plus" aria-hidden="true"></i> Register</a></li>
-                        }
-                    </ul>
-                </div>
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <a class="btn btn-outline-primary btn-sm" asp-controller="Portal" asp-action="Register"><i class="bi bi-person-plus" aria-hidden="true"></i> Register</a>
+                    <a class="btn btn-primary btn-sm" asp-controller="Account" asp-action="Login"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Login</a>
+                }
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <partial name="_Toasts" />
-        <main role="main" class="pb-3">
+        </header>
+
+        <main role="main" id="main" class="content">
+            <partial name="_Toasts" />
             @RenderBody()
         </main>
+
+        <footer class="app-footer">
+            &copy; @DateTime.Now.Year CSE Department Library
+        </footer>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; @DateTime.Now.Year - CSE Department Library
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
