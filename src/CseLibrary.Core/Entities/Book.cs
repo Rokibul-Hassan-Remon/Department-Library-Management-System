@@ -13,6 +13,8 @@ public class Book : BaseEntity, IAuditable
     public int? CategoryId { get; set; }
     public Category? Category { get; set; }
     public string? Description { get; set; }
+    /// <summary>Relative to the web project, e.g. <c>Uploads/Books/{guid}.jpg</c> (D-59 diagram column).</summary>
+    public string? CoverImagePath { get; set; }
     public ICollection<BookAuthor> BookAuthors { get; set; } = new List<BookAuthor>();
     public ICollection<BookCopy> Copies { get; set; } = new List<BookCopy>();
 }
@@ -25,6 +27,8 @@ public class Category : BaseEntity, IAuditable
 public class Author : BaseEntity, IAuditable
 {
     public string Name { get; set; } = string.Empty;
+    /// <summary>Relative to the web project, e.g. <c>Uploads/Authors/{guid}.jpg</c>.</summary>
+    public string? PhotoPath { get; set; }
 }
 
 /// <summary>Many-to-many join; <see cref="Order"/> keeps the authors in the order they were entered.</summary>

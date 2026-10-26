@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces;
@@ -7,7 +8,7 @@ using CseLibrary.Core.Results;
 
 namespace CseLibrary.Services.Services;
 
-public class AuthorService(IUnitOfWork uow) : IAuthorService
+public class AuthorService(IUnitOfWork uow, IImageStore images) : IAuthorService
 {
     public Task<PagedResult<AuthorListItemDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default) =>
         uow.Authors.GetPageAsync(page, search, ct);
@@ -26,7 +27,7 @@ public class AuthorService(IUnitOfWork uow) : IAuthorService
 
     public async Task<Result<int>> CreateAsync(AuthorFormDto dto, CancellationToken ct = default)
     {
-        var name = dto.Name.Trim();
+        var name = Normalize(dto.Name);
         if (await uow.Authors.NameExistsAsync(name, null, ct)) return Result<int>.Failure(ErrorCodes.Duplicate, NameExists);
 
         var author = new Author { Name = name };
@@ -39,7 +40,7 @@ public class AuthorService(IUnitOfWork uow) : IAuthorService
     {
         var author = await uow.Authors.GetForUpdateAsync(dto.Id, ct);
         if (author == null) return NotFound();
-        var name = dto.Name.Trim();
+        var name = Normalize(dto.Name);
         if (await uow.Authors.NameExistsAsync(name, dto.Id, ct)) return Result.Failure(ErrorCodes.Duplicate, NameExists);
 
         author.Name = name;
@@ -57,6 +58,17 @@ public class AuthorService(IUnitOfWork uow) : IAuthorService
         uow.Authors.Remove(author);
         return await uow.SaveAsync(ct);
     }
+
+    public async Task<Result> SetPhotoAsync(int id, ImageUpload? image, CancellationToken ct = default)
+    {
+        var author = await uow.Authors.GetForUpdateAsync(id, ct);
+        if (author == null) return NotFound();
+        return await ImageAttachment.ReplaceAsync(images, ImageKind.Authors, image,
+            path => { var old = author.PhotoPath; author.PhotoPath = path; return old; }, () => uow.SaveAsync(ct), ct);
+    }
+
+    /// <summary>Trimmed, inner whitespace collapsed: "  Donald   Knuth " and "Donald Knuth" are one author.</summary>
+    private static string Normalize(string name) => Regex.Replace(name.Trim(), @"\s+", " ");
 
     private const string NameExists = "An author with this name already exists.";
     private static Result NotFound() => Result.Failure(ErrorCodes.NotFound, "Author not found");

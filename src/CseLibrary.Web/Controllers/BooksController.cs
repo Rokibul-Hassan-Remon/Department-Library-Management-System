@@ -4,6 +4,7 @@ using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Core.Paging;
 using CseLibrary.Core.Results;
 using CseLibrary.Web.Authorization;
+using CseLibrary.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -31,12 +32,13 @@ public class BooksController(IBookService service) : Controller
     [HttpGet, HasPermission(Permissions.Books.Create)]
     public IActionResult Create() => View("Form", new BookFormDto());
 
-    [HttpPost, HasPermission(Permissions.Books.Create), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(BookFormDto dto)
+    [HttpPost, HasPermission(Permissions.Books.Create), ValidateAntiForgeryToken, RequestSizeLimit(Pictures.RequestLimit)]
+    public async Task<IActionResult> Create(BookFormDto dto, IFormFile? cover, bool removeCover)
     {
         if (!ModelState.IsValid) return View("Form", dto);
         var result = await service.CreateAsync(dto);
         if (!result.Succeeded) return FormError(result, dto);
+        await this.SavePictureAsync(cover, removeCover, image => service.SetCoverAsync(result.Value, image));
         TempData["Success"] = "Book created. Add its copies below.";
         return RedirectToAction(nameof(Details), new { id = result.Value });
     }
@@ -48,12 +50,13 @@ public class BooksController(IBookService service) : Controller
         return book == null ? NotFound() : View("Form", book);
     }
 
-    [HttpPost, HasPermission(Permissions.Books.Edit), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(BookFormDto dto)
+    [HttpPost, HasPermission(Permissions.Books.Edit), ValidateAntiForgeryToken, RequestSizeLimit(Pictures.RequestLimit)]
+    public async Task<IActionResult> Edit(BookFormDto dto, IFormFile? cover, bool removeCover)
     {
         if (!ModelState.IsValid) return View("Form", dto);
         var result = await service.UpdateAsync(dto);
         if (!result.Succeeded) return FormError(result, dto);
+        await this.SavePictureAsync(cover, removeCover, image => service.SetCoverAsync(dto.Id, image));
         TempData["Success"] = "Book updated.";
         return RedirectToAction(nameof(Details), new { id = dto.Id });
     }

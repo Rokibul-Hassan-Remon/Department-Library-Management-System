@@ -3,8 +3,9 @@
 
 <h2>Edit User</h2>
 
-<form asp-action="Edit" method="post">
+<form asp-action="Edit" method="post" enctype="multipart/form-data">
     <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="PhotoPath" />
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="row g-3">
         <div class="col-md-6">
@@ -25,6 +26,9 @@
                 <input asp-for="IsActive" class="form-check-input" />
                 <label asp-for="IsActive" class="form-check-label"></label>
             </div>
+        </div>
+        <div class="col-12">
+            <partial name="_ImageInput" model='("photo", Url.Media(Model.PhotoPath), "Photo", true)' />
         </div>
         <div class="col-12">
             <label class="form-label">Roles</label>

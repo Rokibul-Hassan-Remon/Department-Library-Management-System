@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CseLibrary.Core.Entities;
 using CseLibrary.Core.Interfaces.Services;
+using CseLibrary.Web.Infrastructure;
 using CseLibrary.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -70,6 +71,33 @@ public class AccountController : Controller
 
     [HttpGet, AllowAnonymous]
     public IActionResult AccessDenied() => View();
+
+    /// <summary>The signed-in user's own profile: details and photo.</summary>
+    [HttpGet]
+    public async Task<IActionResult> Profile()
+    {
+        if (User.FindFirstValue(ClaimTypes.NameIdentifier) is not { } userId) return RedirectToAction("Login");
+        var user = await _userService.GetByIdAsync(userId);
+        return user == null ? NotFound() : View(user);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken, RequestSizeLimit(Pictures.RequestLimit)]
+    public async Task<IActionResult> Profile(IFormFile? photo, bool removePhoto)
+    {
+        if (User.FindFirstValue(ClaimTypes.NameIdentifier) is not { } userId) return RedirectToAction("Login");
+        var upload = photo.ToImageUpload();
+        if (upload == null && !removePhoto) return RedirectToAction(nameof(Profile));
+
+        var result = await _userService.SetPhotoAsync(userId, upload);
+        if (!result.Succeeded) TempData["Error"] = result.Error;
+        else
+        {
+            // A new cookie carries the new photo claim, so the top bar shows it at once.
+            if (await _userManager.FindByIdAsync(userId) is { } user) await _signInManager.RefreshSignInAsync(user);
+            TempData["Success"] = upload != null ? "Photo updated." : "Photo removed.";
+        }
+        return RedirectToAction(nameof(Profile));
+    }
 
     [HttpGet]
     public IActionResult ChangePassword() => View(new ChangePasswordViewModel());

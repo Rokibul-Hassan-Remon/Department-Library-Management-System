@@ -16,4 +16,6 @@ public interface IAuthorService
     Task<Result<int>> CreateAsync(AuthorFormDto dto, CancellationToken ct = default);
     Task<Result> UpdateAsync(AuthorFormDto dto, CancellationToken ct = default);
     Task<Result> DeleteAsync(int id, CancellationToken ct = default);
+    /// <summary>Stores a new photo (JPG/PNG/WebP, max 2 MB) or, with null, removes it; the replaced file is deleted.</summary>
+    Task<Result> SetPhotoAsync(int id, ImageUpload? image, CancellationToken ct = default);
 }

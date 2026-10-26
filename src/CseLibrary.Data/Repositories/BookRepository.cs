@@ -29,6 +29,7 @@ public class BookRepository(ApplicationDbContext db) : Repository<Book>(db), IBo
             .Select(b => new BookListItemDto
             {
                 Id = b.Id, Isbn = b.Isbn, Title = b.Title, Category = b.Category!.Name,
+                CoverImagePath = b.CoverImagePath,
                 AuthorNames = b.BookAuthors.OrderBy(ba => ba.Order).Select(ba => ba.Author.Name).ToList(),
                 TotalCopies = b.Copies.Count(),
                 AvailableCopies = b.Copies.Count(c => c.CopyStatus == CopyStatus.Available)
@@ -45,6 +46,7 @@ public class BookRepository(ApplicationDbContext db) : Repository<Book>(db), IBo
             {
                 Id = b.Id, Isbn = b.Isbn, Title = b.Title, Publisher = b.Publisher, Edition = b.Edition,
                 PublicationYear = b.PublicationYear, Category = b.Category!.Name, Description = b.Description,
+                CoverImagePath = b.CoverImagePath,
                 Copies = b.Copies.AsQueryable().OrderBy(c => c.AccessionNumber).Select(copyDto).ToList()
             },
             Authors = b.BookAuthors.OrderBy(ba => ba.Order).Select(ba => new AuthorOptionDto(ba.AuthorId, ba.Author.Name)).ToList()
@@ -126,13 +128,13 @@ public class AuthorRepository(ApplicationDbContext db) : Repository<Author>(db),
         var total = await authors.CountAsync(ct);
         page = page.ClampTo(total);
         var items = await authors.OrderBy(a => a.Name).ThenBy(a => a.Id).Skip(page.Skip).Take(page.PageSize)
-            .Select(a => new AuthorListItemDto(a.Id, a.Name, Db.Books.Count(b => b.BookAuthors.Any(ba => ba.AuthorId == a.Id))))
+            .Select(a => new AuthorListItemDto(a.Id, a.Name, Db.Books.Count(b => b.BookAuthors.Any(ba => ba.AuthorId == a.Id)), a.PhotoPath))
             .ToListAsync(ct);
         return new PagedResult<AuthorListItemDto>(items, total, page.Page, page.PageSize);
     }
 
     public Task<AuthorFormDto?> GetFormAsync(int id, CancellationToken ct = default) =>
-        Db.Authors.Where(a => a.Id == id).Select(a => new AuthorFormDto { Id = a.Id, Name = a.Name }).FirstOrDefaultAsync(ct);
+        Db.Authors.Where(a => a.Id == id).Select(a => new AuthorFormDto { Id = a.Id, Name = a.Name, PhotoPath = a.PhotoPath }).FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<AuthorOptionDto>> SearchAsync(string? term, int take, CancellationToken ct = default)
     {

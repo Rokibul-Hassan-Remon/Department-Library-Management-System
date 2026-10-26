@@ -36,6 +36,8 @@ public class EditUserViewModel
     [Display(Name = "Active")]
     public bool IsActive { get; set; }
 
+    public string? PhotoPath { get; set; } // display only; the upload is a separate form file
+
     public IList<string> SelectedRoles { get; set; } = new List<string>();
     public IList<string> AvailableRoles { get; set; } = new List<string>();
 }

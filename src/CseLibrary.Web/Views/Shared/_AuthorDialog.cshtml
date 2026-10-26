@@ -1,0 +1,41 @@
+@* Register an author without leaving the page (Authors list, book form); behaviour in wwwroot/js/author-dialog.js.
+   Model: "list" (Save & add another, reload after) or "pick" (the new or an existing author is put on the book). *@
+@model string
+<div class="modal fade" id="authorDialog" tabindex="-1" aria-labelledby="authorDialogTitle" aria-hidden="true"
+     data-mode="@Model" data-lookup="@Url.Action("Lookup", "Authors")" data-details="@Url.Action("Details", "Authors")">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" asp-controller="Authors" asp-action="QuickCreate" method="post" novalidate>
+            <input type="hidden" name="notify" value="@(Model == "list" ? "true" : "false")" />
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="icon-badge"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+                    <div>
+                        <h5 class="modal-title" id="authorDialogTitle">Register an author</h5>
+                        <div class="small text-muted">Once registered, any book can name this author.</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <label for="authorName" class="form-label">Full name <span class="text-danger" aria-hidden="true">*</span></label>
+                <input id="authorName" name="Name" class="form-control form-control-lg" maxlength="150" autocomplete="off" required
+                       placeholder="e.g. Donald E. Knuth" aria-describedby="authorNameHelp authorNameError" />
+                <div id="authorNameHelp" class="form-text">Write the name as it is printed on the book.</div>
+                <div id="authorNameError" class="field-error" data-error role="alert" hidden></div>
+                <div class="similar" data-similar hidden>
+                    <div class="similar-title">Already registered — is it one of these?</div>
+                    <ul class="list-unstyled mb-0" data-similar-list></ul>
+                </div>
+                <div class="mt-3">
+                    <partial name="_ImageInput" model='("photo", (string?)null, "Photo (optional)", true)' />
+                </div>
+                <div class="alert alert-success py-2 mt-3 mb-0" data-saved role="status" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link text-muted me-auto" data-bs-dismiss="modal">Cancel</button>
+                @if (Model == "list") { <button type="submit" class="btn btn-outline-primary" data-again><i class="bi bi-plus-lg" aria-hidden="true"></i> Save &amp; add another</button> }
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg" aria-hidden="true"></i> @(Model == "pick" ? "Save & add to book" : "Save")</button>
+            </div>
+        </form>
+    </div>
+</div>

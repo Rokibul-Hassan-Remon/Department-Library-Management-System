@@ -2555,6 +2555,42 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   check → test fails; delete not refused with books → test fails; restored → green. Running app: Authors pages,
   Lookup and the book form HTTP 200, unknown author 404.
 
+### 92. Session 25 — author registration redesigned (2026-10-16)
+- User: "author registration is not so good … act like a pro UI/UX engineer". Review found: a whole page for one
+  field, duplicates only caught on save (near-duplicates never), the book form sent the user to a new tab, a flat
+  list without row actions, Delete failing only after the click.
+- Built: a register dialog (`_AuthorDialog`, `author-dialog.js`) on the list ("Save & add another") and on the book
+  form; while typing it lists registered names that share the longest word (usually the surname) and blocks an
+  exact match; the book form's Select2 offers "Register this author" for an unmatched name and "Use this" for an
+  existing one, and the new author joins the book. Books still never create authors from typed text.
+  `AuthorService` trims and collapses inner spaces. List as a card (search, count, initials avatar, book-count
+  pill, Edit/Delete per row, Delete disabled with the reason while the author has books, empty state); details as
+  a profile card; breadcrumbs. Reusable CSS blocks (page header, card table, empty state).
+- Evidence: tests 128/128; mutation (no whitespace collapse) fails the author test; isolated
+  `CseLibrary_Test_UiSmoke` run: QuickCreate duplicate/empty/no-token refused, user DB untouched.
+
+### 93. Session 25 — book covers, author photos, user photos (2026-10-16)
+- **User decisions (multiple choice + note):** all three pictures; the user photo on every account
+  (`AspNetUsers`); stored as files, **one folder per kind under the web project**, outside `wwwroot`, and the
+  row keeps only the path from the project folder on (`Uploads/Books|Authors|Users/{guid}.{ext}`); JPG/PNG/WebP,
+  max 2 MB, the browser shrinks to 800 px first (also drops phone metadata such as GPS).
+- **D-59 additions approved by this choice:** `Authors.PhotoPath`, `AspNetUsers.PhotoPath` (nvarchar(500), null).
+  `Books.CoverImagePath` was already in the diagram. Migration `AddImagePaths` (additive, three nullable columns).
+- Server: `ImageAttachment` decides the type from the file's first bytes (not the name or content type), checks
+  the real size, stores under a new GUID, and deletes the file no longer referenced (old on success, new on
+  failure, the photo of a failed user create). `MediaController` serves files: covers and author photos to any
+  signed-in user, a user photo only to its owner or Users.View / LibraryMembers.View holders (404 otherwise), no
+  traversal (stored-path pattern). `Uploads/` is git-ignored. The top bar shows the photo from a login claim.
+- UI: `_ImageInput` (preview, choose, remove) on the book form (cover beside the fields), author form and dialog,
+  user create/edit, portal registration (anonymous: size limit, content check, file deleted if registration
+  fails), and a new **My profile** page; covers in the book list and details; photos as avatars.
+- Evidence: build 0/0; tests 132/132 (`PictureTests` ×4, architecture allowlist + `Account.Profile`, `Media.Get`);
+  mutations — user photo open to all, any file accepted, old file kept, failed create keeps photo → each fails a
+  test; restored → green. Real forms on `CseLibrary_Test_UiSmoke`: covers, author photos and the admin photo
+  stored as above; an SVG renamed `.png` refused with a warning; screenshots reviewed.
+- Not applied yet: `AddImagePaths` to the user's `CseLibrary` (needs approval). Not built: server-side resizing
+  (no image library; the browser does it), rate limiting of the anonymous registration upload.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

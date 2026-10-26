@@ -1,3 +1,5 @@
+using CseLibrary.Core.Interfaces;
+
 namespace CseLibrary.Core.DTOs;
 
 public class UserDto
@@ -8,6 +10,7 @@ public class UserDto
     public string? FullName { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? PhotoPath { get; set; }
     public IList<string> Roles { get; set; } = new List<string>();
 }
 
@@ -18,6 +21,7 @@ public class CreateUserDto
     public string? FullName { get; set; }
     public string Password { get; set; } = string.Empty;
     public IList<string> Roles { get; set; } = new List<string>();
+    public ImageUpload? Photo { get; set; } // optional; stored with the user
 }
 
 public class UpdateUserDto

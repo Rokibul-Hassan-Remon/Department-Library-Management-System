@@ -135,6 +135,10 @@ namespace CseLibrary.Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("PhotoPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -243,6 +247,11 @@ namespace CseLibrary.Data.Migrations
                         .HasColumnType("nvarchar(150)")
                         .HasAnnotation("CseLibrary:Audited", true);
 
+                    b.Property<string>("PhotoPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint")
                         .HasAnnotation("CseLibrary:Audited", true);
@@ -278,6 +287,11 @@ namespace CseLibrary.Data.Migrations
 
                     b.Property<int?>("CategoryId")
                         .HasColumnType("int")
+                        .HasAnnotation("CseLibrary:Audited", true);
+
+                    b.Property<string>("CoverImagePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
                         .HasAnnotation("CseLibrary:Audited", true);
 
                     b.Property<DateTime>("CreatedAt")

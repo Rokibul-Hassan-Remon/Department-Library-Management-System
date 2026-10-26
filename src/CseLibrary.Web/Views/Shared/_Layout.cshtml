@@ -55,9 +55,10 @@
     <title>@ViewData["Title"] - CSE Library</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    @* Page library CSS before site.css, so the theme overrides it. *@
+    @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/CseLibrary.Web.styles.css" asp-append-version="true" />
-    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
     <a class="visually-hidden-focusable skip-link" href="#main">Skip to content</a>
@@ -110,10 +111,12 @@
                 {
                     <div class="dropdown">
                         <button class="btn user-menu dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="avatar" aria-hidden="true">@User.Identity!.Name![..1].ToUpperInvariant()</span>
+                            @if (Url.Media(User.FindFirst(AppClaims.Photo)?.Value) is { } photo) { <img class="avatar avatar-photo" src="@photo" alt="" /> }
+                            else { <span class="avatar" aria-hidden="true">@User.Identity!.Name![..1].ToUpperInvariant()</span> }
                             <span class="d-none d-sm-inline">@User.Identity!.Name</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile"><i class="bi bi-person" aria-hidden="true"></i> My profile</a></li>
                             <li><a class="dropdown-item" asp-controller="Account" asp-action="ChangePassword"><i class="bi bi-key" aria-hidden="true"></i> Change password</a></li>
                             <li><hr class="dropdown-divider" /></li>
                             <li>
@@ -145,6 +148,7 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/image-input.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

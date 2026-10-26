@@ -73,6 +73,8 @@ h3, .h3 { font-size: 1.15rem; font-weight: 600; }
   border-color: var(--brand);
 }
 
+.btn-link { color: var(--brand); }
+.btn-link:hover { color: var(--brand-darker); }
 .text-primary { color: var(--brand) !important; }
 .bg-primary { background-color: var(--brand) !important; }
 .border-primary { border-color: var(--brand) !important; }
@@ -131,10 +133,274 @@ h3, .h3 { font-size: 1.15rem; font-weight: 600; }
   border-bottom-color: var(--line);
 }
 
-/* Bootstrap 5.1 draws a 2px currentColor line under the header. */
+/* Bootstrap 5.1 draws a 2px currentColor line under the header (top of the body, bottom of the head row). */
 .table > :not(:first-child) {
   border-top: 1px solid var(--line);
 }
+
+.table > :not(:last-child) > :last-child > * {
+  border-bottom-color: var(--line);
+}
+
+/* Page building blocks (first used on Authors): header, breadcrumb, card tables, empty state. */
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.page-header h2 { margin-bottom: .15rem; }
+
+.page-subtitle {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.breadcrumb {
+  margin-bottom: .35rem;
+  font-size: .82rem;
+}
+
+.breadcrumb-item, .breadcrumb-item.active { color: var(--muted); }
+.breadcrumb a { text-decoration: none; }
+
+.card-table { overflow: hidden; }
+
+.card-table > .card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .85rem 1rem;
+  background: #fff;
+}
+
+.card-table > .card-footer {
+  background: #fff;
+  border-top-color: var(--line);
+}
+
+.card-table .table > :not(caption) > * > * { padding: .7rem 1rem; }
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex: 1 1 280px;
+  max-width: 420px;
+}
+
+.search-box > .bi-search {
+  position: absolute;
+  left: .8rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search-box .form-control { padding-left: 2.25rem; }
+
+.empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-state > .bi {
+  display: block;
+  margin-bottom: .75rem;
+  font-size: 2.5rem;
+  color: var(--accent-soft);
+}
+
+.empty-state h5 { color: #2b2422; }
+
+.name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: .75rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.name-cell:hover span { text-decoration: underline; }
+
+.count-pill {
+  display: inline-block;
+  min-width: 2rem;
+  padding: .15rem .6rem;
+  border-radius: 1rem;
+  background: var(--cream);
+  color: var(--brand-darker);
+  font-weight: 600;
+  font-size: .85rem;
+}
+
+.count-pill.is-zero {
+  background: #f1f1f1;
+  color: var(--muted);
+}
+
+.avatar.avatar-soft {
+  background: var(--cream);
+  color: var(--brand);
+  border: 1px solid var(--accent-soft);
+}
+
+.avatar.avatar-lg {
+  width: 4rem;
+  height: 4rem;
+  font-size: 1.4rem;
+}
+
+.profile-card .card-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.form-card {
+  max-width: 640px;
+}
+
+.form-card .card-body { padding: 1.75rem; }
+
+.icon-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: .6rem;
+  background: var(--cream);
+  color: var(--brand);
+  font-size: 1.2rem;
+}
+
+.field-error {
+  margin-top: .35rem;
+  color: #b02a37;
+  font-size: .875rem;
+}
+
+/* Author dialog: names already registered, so a near-duplicate is noticed before saving. */
+.similar {
+  margin-top: 1rem;
+  padding: .75rem;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  background: var(--page-bg);
+}
+
+.similar-title {
+  margin-bottom: .4rem;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.similar li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .3rem 0;
+}
+
+.similar li + li { border-top: 1px solid var(--line); }
+
+/* Pictures: book covers are portrait (2:3), people are round. object-fit keeps any upload undistorted. */
+.avatar.avatar-photo {
+  display: inline-block;
+  vertical-align: middle;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  background: var(--cream);
+}
+
+.image-input {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.image-preview {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 96px;
+  height: 144px;
+  overflow: hidden;
+  border: 1px dashed var(--accent-soft);
+  border-radius: .5rem;
+  background: var(--cream);
+  color: var(--accent);
+  font-size: 2rem;
+}
+
+.image-input.is-round .image-preview {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.file-button:focus-within {
+  box-shadow: 0 0 0 0.1rem #fff, 0 0 0 0.25rem rgba(141, 42, 42, .35);
+}
+
+.cover-thumb {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 54px;
+  border-radius: .25rem;
+  object-fit: cover;
+  background: var(--cream);
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(60, 20, 20, .15);
+}
+
+.cover-large {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 120px;
+  height: 180px;
+  border-radius: .5rem;
+  object-fit: cover;
+  background: var(--cream);
+  color: var(--accent);
+  font-size: 2.5rem;
+  box-shadow: 0 2px 8px rgba(60, 20, 20, .15);
+}
+
+/* "A, B, C" from separate links: flex drops the markup's whitespace, so no space lands before a comma. */
+.comma-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+
+.comma-list > a + a::before {
+  content: ", ";
+  display: inline-block; /* keeps the link underline off the comma */
+  white-space: pre;
+  color: var(--muted);
+}
+
+/* The summary div is rendered even without errors; only show it when it has some. */
+.validation-summary-valid { display: none; }
 
 /* Select2 (book form author picker): look like a Bootstrap input, chips in the theme colours. */
 .select2-container--default .select2-selection--multiple {

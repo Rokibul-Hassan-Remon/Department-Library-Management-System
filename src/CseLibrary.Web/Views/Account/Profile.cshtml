@@ -1,0 +1,29 @@
+@model UserDto
+@{
+    ViewData["Title"] = "My profile";
+    var name = Model.FullName ?? Model.UserName ?? "?";
+}
+
+<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item active" aria-current="page">My profile</li></ol></nav>
+
+<div class="card profile-card mb-4">
+    <div class="card-body">
+        <partial name="_Avatar" model='(name, Model.PhotoPath, "avatar-lg")' />
+        <div class="flex-grow-1">
+            <h2 class="mb-1">@name</h2>
+            <div class="text-muted"><i class="bi bi-envelope" aria-hidden="true"></i> @Model.Email</div>
+            @if (Model.Roles.Count > 0) { <div class="text-muted small mt-1"><i class="bi bi-shield-check" aria-hidden="true"></i> @string.Join(", ", Model.Roles)</div> }
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="ChangePassword"><i class="bi bi-key" aria-hidden="true"></i> Change password</a>
+    </div>
+</div>
+
+<div class="card form-card">
+    <div class="card-body">
+        <h5 class="mb-3">Profile photo</h5>
+        <form asp-action="Profile" method="post" enctype="multipart/form-data">
+            <partial name="_ImageInput" model='("photo", Url.Media(Model.PhotoPath), "Photo", true)' />
+            <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-check-lg" aria-hidden="true"></i> Save photo</button>
+        </form>
+    </div>
+</div>

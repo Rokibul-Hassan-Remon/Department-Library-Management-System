@@ -10,6 +10,7 @@ public class BookListItemDto
     public string Title { get; set; } = string.Empty;
     public IReadOnlyList<string> AuthorNames { get; set; } = [];
     public string Authors => string.Join(", ", AuthorNames);
+    public string? CoverImagePath { get; set; }
     public string? Category { get; set; }
     public int TotalCopies { get; set; }
     public int AvailableCopies { get; set; }
@@ -38,6 +39,7 @@ public class BookFormDto
     [Range(1000, 9999)] public short? PublicationYear { get; set; }
     [StringLength(100)] public string? Category { get; set; }
     [StringLength(2000)] public string? Description { get; set; }
+    public string? CoverImagePath { get; set; } // read-only: changed through IBookService.SetCoverAsync
 }
 
 public record CategoryDto(int Id, string Name);
@@ -45,13 +47,14 @@ public record CategoryDto(int Id, string Name);
 /// <summary>An author as a select option or a link.</summary>
 public record AuthorOptionDto(int Id, string Name);
 
-public record AuthorListItemDto(int Id, string Name, int BookCount);
+public record AuthorListItemDto(int Id, string Name, int BookCount, string? PhotoPath);
 
 /// <summary>Create (Id = 0) and edit form. Authors are registered here before a book can name them.</summary>
 public class AuthorFormDto
 {
     public int Id { get; set; }
     [Required, StringLength(150)] public string Name { get; set; } = string.Empty;
+    public string? PhotoPath { get; set; } // read-only: changed through IAuthorService.SetPhotoAsync
 }
 
 /// <summary>Create (Id = 0) and edit form for one physical copy.</summary>

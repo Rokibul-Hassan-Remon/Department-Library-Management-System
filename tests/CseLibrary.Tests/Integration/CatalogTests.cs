@@ -42,6 +42,10 @@ public class CatalogTests(AppFactory app)
             var (knuth, coName, category) = (Unique("Knuth "), Unique("Co "), Unique("Algorithms "));
             var knuthId = (await authors.CreateAsync(new AuthorFormDto { Name = " " + knuth + " " })).Value;
             Assert.Equal(ErrorCodes.Duplicate, (await authors.CreateAsync(new AuthorFormDto { Name = knuth.ToUpperInvariant() })).ErrorCode);
+            var spaced = Unique("Ada ");
+            var adaId = (await authors.CreateAsync(new AuthorFormDto { Name = "  " + spaced.Replace(" ", "   ") + " " })).Value;
+            Assert.Equal(spaced, (await authors.GetAsync(adaId))!.Name); // trimmed, inner spaces collapsed
+            Assert.Equal(ErrorCodes.Duplicate, (await authors.CreateAsync(new AuthorFormDto { Name = spaced.ToLowerInvariant() })).ErrorCode);
             var coId = (await authors.CreateAsync(new AuthorFormDto { Name = coName })).Value;
 
             var first = (await books.CreateAsync(new BookFormDto { Title = "TAOCP 1", AuthorIds = [coId, knuthId, coId], Category = category })).Value;

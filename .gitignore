@@ -58,3 +58,6 @@ nunit-*.xml
 
 # IDE-local user settings (D-06 step 0.1)
 *.user
+
+# Uploaded pictures (book covers, author and user photos) are user data, not source.
+src/CseLibrary.Web/Uploads/

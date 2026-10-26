@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CseLibrary.Core.Entities;
+using CseLibrary.Core.Interfaces;
 
 namespace CseLibrary.Core.DTOs;
 
@@ -54,6 +55,7 @@ public class RegisterDto
     [Required, DataType(DataType.Password), Compare(nameof(Password)), Display(Name = "Confirm password")]
     public string ConfirmPassword { get; set; } = string.Empty;
     [Display(Name = "I am a")] public RegistrationType RegistrationType { get; set; } = RegistrationType.Student;
+    public ImageUpload? Photo { get; set; } // optional; set by the controller from the uploaded file, never bound
 }
 
 public class PendingRegistrationDto

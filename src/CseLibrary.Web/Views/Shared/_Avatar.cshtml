@@ -1,0 +1,16 @@
+@* A person's photo, or the initials of the name ("Donald E. Knuth" -> "DK") when there is none.
+   Model: (name, stored photo path or null, size class such as "avatar-lg"). *@
+@model (string Name, string? PhotoPath, string Size)
+@{
+    var url = Url.Media(Model.PhotoPath);
+    var words = Model.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    var initials = words.Length == 0 ? "?" : (words.Length == 1 ? words[0][..1] : words[0][..1] + words[^1][..1]).ToUpperInvariant();
+}
+@if (url != null)
+{
+    <img class="avatar avatar-photo @Model.Size" src="@url" alt="" loading="lazy" />
+}
+else
+{
+    <span class="avatar avatar-soft @Model.Size" aria-hidden="true">@initials</span>
+}

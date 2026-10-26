@@ -4,40 +4,70 @@
     var books = (CseLibrary.Core.Paging.PagedResult<BookListItemDto>)ViewData["Books"]!;
     var canEdit = await Authorization.CanAsync(User, Permissions.Books.Edit);
     var canDelete = await Authorization.CanAsync(User, Permissions.Books.Delete);
+    var canCreateBook = await Authorization.CanAsync(User, Permissions.Books.Create);
 }
 
-<div class="d-flex justify-content-between align-items-start mb-3">
-    <div>
-        <a class="small" asp-action="Index"><i class="bi bi-arrow-left" aria-hidden="true"></i> Authors</a>
-        <h2>@Model.Name</h2>
-    </div>
-    <div>
-        @if (canEdit) { <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a> }
-        @if (canDelete)
-        {
-            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this author?');">
-                <button class="btn btn-outline-danger"><i class="bi bi-trash" aria-hidden="true"></i> Delete</button>
-            </form>
-        }
+<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Library</li><li class="breadcrumb-item"><a asp-action="Index">Authors</a></li><li class="breadcrumb-item active" aria-current="page">@Model.Name</li></ol></nav>
+
+<div class="card profile-card mb-4">
+    <div class="card-body">
+        <partial name="_Avatar" model='(Model.Name, Model.PhotoPath, "avatar-lg")' />
+        <div class="flex-grow-1">
+            <h2 class="mb-1">@Model.Name</h2>
+            <div class="text-muted"><i class="bi bi-book" aria-hidden="true"></i> @books.TotalCount @(books.TotalCount == 1 ? "book" : "books") in the library</div>
+        </div>
+        <div class="text-nowrap">
+            @if (canEdit) { <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a> }
+            @if (canDelete)
+            {
+                @if (books.TotalCount > 0)
+                {
+                    <span class="d-inline-block" tabindex="0" title="Has books, so it cannot be deleted">
+                        <button class="btn btn-outline-danger" disabled><i class="bi bi-trash" aria-hidden="true"></i> Delete</button>
+                    </span>
+                }
+                else
+                {
+                    <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this author?');">
+                        <button class="btn btn-outline-danger"><i class="bi bi-trash" aria-hidden="true"></i> Delete</button>
+                    </form>
+                }
+            }
+        </div>
     </div>
 </div>
 
-<h4>Books <span class="text-muted fs-6">(@books.TotalCount)</span></h4>
-<table class="table table-striped">
-    <thead><tr><th>Title</th><th>Authors</th><th>ISBN</th><th>Category</th><th class="text-end">Available / Total</th></tr></thead>
-    <tbody>
-        @foreach (var b in books.Items)
-        {
-            <tr>
-                <td><a asp-controller="Books" asp-action="Details" asp-route-id="@b.Id">@b.Title</a></td>
-                <td>@b.Authors</td>
-                <td>@b.Isbn</td>
-                <td>@b.Category</td>
-                <td class="text-end">@b.AvailableCopies / @b.TotalCopies</td>
-            </tr>
-        }
-        @if (books.Items.Count == 0) { <tr><td colspan="5" class="text-muted">No books by this author yet.</td></tr> }
-    </tbody>
-</table>
-
-<partial name="_Pager" model="(books.Page, books.TotalPages, books.TotalCount)" />
+<div class="card card-table">
+    <div class="card-header"><h5 class="mb-0">Books by this author</h5></div>
+    @if (books.Items.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-journal-x" aria-hidden="true"></i>
+            <h5>No books name this author yet</h5>
+            <p>Pick the author on a book's form to list the book here.</p>
+            @if (canCreateBook) { <a class="btn btn-outline-primary" asp-controller="Books" asp-action="Create"><i class="bi bi-plus-lg" aria-hidden="true"></i> New Book</a> }
+        </div>
+    }
+    else
+    {
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Title</th><th>Authors</th><th>ISBN</th><th>Category</th><th class="text-end">Available / Total</th></tr></thead>
+            <tbody>
+                @foreach (var b in books.Items)
+                {
+                    <tr>
+                        <td><a asp-controller="Books" asp-action="Details" asp-route-id="@b.Id">@b.Title</a></td>
+                        <td>@b.Authors</td>
+                        <td>@b.Isbn</td>
+                        <td>@b.Category</td>
+                        <td class="text-end">@b.AvailableCopies / @b.TotalCopies</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    @if (books.TotalPages > 1)
+    {
+        <div class="card-footer"><partial name="_Pager" model="(books.Page, books.TotalPages, books.TotalCount)" /></div>
+    }
+</div>

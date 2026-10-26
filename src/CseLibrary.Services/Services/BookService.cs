@@ -7,7 +7,7 @@ using CseLibrary.Core.Results;
 
 namespace CseLibrary.Services.Services;
 
-public class BookService(IUnitOfWork uow) : IBookService
+public class BookService(IUnitOfWork uow, IImageStore images) : IBookService
 {
     public Task<PagedResult<BookListItemDto>> GetPageAsync(PageRequest page, string? search, int? categoryId = null, int? authorId = null, CancellationToken ct = default) =>
         uow.Books.GetPageAsync(page, search, categoryId, authorId, ct);
@@ -52,6 +52,14 @@ public class BookService(IUnitOfWork uow) : IBookService
 
         uow.Books.Remove(book);
         return await uow.SaveAsync(ct);
+    }
+
+    public async Task<Result> SetCoverAsync(int id, ImageUpload? image, CancellationToken ct = default)
+    {
+        var book = await uow.Books.GetForUpdateAsync(id, ct);
+        if (book == null) return BookNotFound();
+        return await ImageAttachment.ReplaceAsync(images, ImageKind.Books, image,
+            path => { var old = book.CoverImagePath; book.CoverImagePath = path; return old; }, () => uow.SaveAsync(ct), ct);
     }
 
     public Task<BookCopyDto?> GetCopyAsync(int id, CancellationToken ct = default) => uow.BookCopies.GetDetailsAsync(id, ct);

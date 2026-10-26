@@ -1,0 +1,24 @@
+@* A picture field: preview, choose, remove. Posts the file as Name and "remove{Name}" = true when cleared.
+   Behaviour (type/size check, shrink to 800px in the browser) in wwwroot/js/image-input.js. The form needs
+   enctype="multipart/form-data". *@
+@model (string Name, string? CurrentUrl, string Label, bool Round)
+@{ var id = "img-" + Model.Name; }
+<div class="image-input @(Model.Round ? "is-round" : "")" data-image-input>
+    <div class="image-preview">
+        <img src="@Model.CurrentUrl" alt="" data-preview hidden="@(Model.CurrentUrl == null)" />
+        <i class="bi @(Model.Round ? "bi-person" : "bi-image")" aria-hidden="true" data-placeholder hidden="@(Model.CurrentUrl != null)"></i>
+    </div>
+    <div class="image-actions">
+        <div class="form-label mb-1" id="@id-label">@Model.Label</div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <label class="btn btn-outline-primary btn-sm mb-0 file-button">
+                <i class="bi bi-upload" aria-hidden="true"></i> Choose picture
+                <input type="file" name="@Model.Name" accept="image/jpeg,image/png,image/webp" class="visually-hidden" aria-labelledby="@id-label" />
+            </label>
+            <button type="button" class="btn btn-link btn-sm text-danger p-0" data-remove hidden="@(Model.CurrentUrl == null)"><i class="bi bi-x-lg" aria-hidden="true"></i> Remove</button>
+        </div>
+        <input type="hidden" name="remove@(Model.Name)" value="false" data-remove-flag />
+        <div class="form-text">JPG, PNG or WebP, up to 2 MB. Large pictures are made smaller before upload.</div>
+        <div class="field-error" data-image-error role="alert" hidden></div>
+    </div>
+</div>

@@ -20,6 +20,7 @@ public class BookConfiguration : IEntityTypeConfiguration<Book>
         builder.Property(b => b.PublicationYear).Audited();
         builder.Property(b => b.CategoryId).Audited();
         builder.Property(b => b.Description).HasMaxLength(2000).Audited();
+        builder.Property(b => b.CoverImagePath).HasMaxLength(500).Audited();
         builder.ClassifyBaseColumns();
         builder.HasIndex(b => b.Isbn).IsUnique().HasFilter(ApplicationDbContext.NotDeletedFilter + " AND [Isbn] IS NOT NULL");
         builder.HasIndex(b => b.Title);
@@ -48,6 +49,7 @@ public class AuthorConfiguration : IEntityTypeConfiguration<Author>
         builder.HasKey(a => a.Id);
         builder.Property(a => a.Id).UseHiLo("Authors_HiLo");
         builder.Property(a => a.Name).IsRequired().HasMaxLength(150).Audited();
+        builder.Property(a => a.PhotoPath).HasMaxLength(500).Audited();
         builder.ClassifyBaseColumns();
         // Unique so find-or-create by name cannot make two "Knuth" rows under concurrency.
         builder.HasIndex(a => a.Name).IsUnique().HasFilter(ApplicationDbContext.NotDeletedFilter);
