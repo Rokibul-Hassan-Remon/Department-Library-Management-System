@@ -3,7 +3,7 @@
 
 <h2>Library registration</h2>
 <p class="text-muted">Students can borrow right after registering. Dept. Fellow registrations are approved by the library first.</p>
-<form asp-action="Register" method="post" class="col-md-6">
+<form asp-action="Register" method="post" enctype="multipart/form-data" class="col-md-6">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="mb-3"><label asp-for="RegistrationType" class="form-label"></label>
         <select asp-for="RegistrationType" class="form-select">
@@ -15,6 +15,7 @@
     <div class="mb-3"><label asp-for="Email" class="form-label"></label><input asp-for="Email" class="form-control" /><span asp-validation-for="Email" class="text-danger"></span></div>
     <div class="mb-3"><label asp-for="Password" class="form-label"></label><input asp-for="Password" class="form-control" /><span asp-validation-for="Password" class="text-danger"></span></div>
     <div class="mb-3"><label asp-for="ConfirmPassword" class="form-label"></label><input asp-for="ConfirmPassword" class="form-control" /><span asp-validation-for="ConfirmPassword" class="text-danger"></span></div>
+    <div class="mb-4"><partial name="_ImageInput" model='("photoFile", (string?)null, "Your photo (optional)", true)' /></div>
     <button type="submit" class="btn btn-primary"><i class="bi bi-person-plus" aria-hidden="true"></i> Register</button>
     <a class="btn btn-link" asp-controller="Account" asp-action="Login">I already have an account</a>
 </form>

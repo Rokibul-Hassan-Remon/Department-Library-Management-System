@@ -3,6 +3,7 @@ using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Core.Paging;
 using CseLibrary.Web.Authorization;
+using CseLibrary.Web.Infrastructure;
 using CseLibrary.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,8 +34,8 @@ public class UsersController : Controller
         });
     }
 
-    [HttpPost, HasPermission(Permissions.Users.Create), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(CreateUserViewModel model)
+    [HttpPost, HasPermission(Permissions.Users.Create), ValidateAntiForgeryToken, RequestSizeLimit(Pictures.RequestLimit)]
+    public async Task<IActionResult> Create(CreateUserViewModel model, IFormFile? photo)
     {
         if (!ModelState.IsValid)
         {
@@ -48,7 +49,8 @@ public class UsersController : Controller
             Email = model.Email,
             FullName = model.FullName,
             Password = model.Password,
-            Roles = model.SelectedRoles
+            Roles = model.SelectedRoles,
+            Photo = photo.ToImageUpload()
         };
         var result = await _userService.CreateAsync(dto);
         if (!result.Succeeded)
@@ -74,13 +76,14 @@ public class UsersController : Controller
             Email = user.Email ?? string.Empty,
             FullName = user.FullName,
             IsActive = user.IsActive,
+            PhotoPath = user.PhotoPath,
             SelectedRoles = user.Roles,
             AvailableRoles = [.. await _roleService.GetNamesAsync()]
         });
     }
 
-    [HttpPost, HasPermission(Permissions.Users.Edit), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(EditUserViewModel model)
+    [HttpPost, HasPermission(Permissions.Users.Edit), ValidateAntiForgeryToken, RequestSizeLimit(Pictures.RequestLimit)]
+    public async Task<IActionResult> Edit(EditUserViewModel model, IFormFile? photo, bool removePhoto)
     {
         if (!ModelState.IsValid)
         {
@@ -103,6 +106,8 @@ public class UsersController : Controller
             model.AvailableRoles = [.. await _roleService.GetNamesAsync()];
             return View(model);
         }
+        // ponytail: an edited user's top-bar photo refreshes at their next security-stamp check (30 min) or login
+        await this.SavePictureAsync(photo, removePhoto, image => _userService.SetPhotoAsync(model.Id, image));
         TempData["Success"] = "User updated.";
         return RedirectToAction(nameof(Index));
     }

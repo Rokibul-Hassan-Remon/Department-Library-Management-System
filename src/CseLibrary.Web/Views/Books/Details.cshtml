@@ -7,10 +7,17 @@
         .Select(s => new SelectListItem(s.ToString(), s.ToString()));
 }
 
-<div class="d-flex justify-content-between align-items-start mb-3">
-    <div>
+<div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+    @if (Url.Media(Model.CoverImagePath) is { } cover) { <img class="cover-large" src="@cover" alt="Cover of @Model.Title" /> }
+    else { <span class="cover-large is-empty" aria-hidden="true"><i class="bi bi-book"></i></span> }
+    <div class="flex-grow-1">
         <h2>@Model.Title</h2>
-        <div class="text-muted">@Model.Authors</div>
+        <div class="comma-list text-muted">
+            @foreach (var a in Model.AuthorList)
+            {
+                <a class="link-secondary" asp-controller="Authors" asp-action="Details" asp-route-id="@a.Id">@a.Name</a>
+            }
+        </div>
     </div>
     <div>
         @if (canEdit) { <a class="btn btn-outline-secondary" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a> }

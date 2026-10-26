@@ -1897,7 +1897,8 @@ the user preferred **"Library Member"**. "Member" and "User" are easy to confuse
    `LibraryMembers` (D-58), `LendingTransactions`, `LibraryPolicies`, `EmailNotificationLogs`.
    Additions beyond the diagram: `LibraryMembers.Approval` (D-54), `RenewCount`,
    `LibraryPolicies.MaxRenewals`. Not built yet: `OutboxMessages` (Phase 4), member subtype
-   tables, `CoverImagePath`.
+   tables. **Session 25 (§93):** `Books.CoverImagePath` built; user-approved additions `Authors.PhotoPath`
+   and `AspNetUsers.PhotoPath` (files under `Uploads/{kind}/`, path relative to the web project).
 3. A deviation from the diagram must be raised with the user before it is built.
    **Session 24 (§87, user-approved, review #6):** a book copy or library member that has any loan is never
    soft-deleted (the query filter would hide its history); retire the copy or set the member Inactive instead.

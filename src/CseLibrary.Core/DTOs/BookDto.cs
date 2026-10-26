@@ -10,6 +10,7 @@ public class BookListItemDto
     public string Title { get; set; } = string.Empty;
     public IReadOnlyList<string> AuthorNames { get; set; } = [];
     public string Authors => string.Join(", ", AuthorNames);
+    public string? CoverImagePath { get; set; }
     public string? Category { get; set; }
     public int TotalCopies { get; set; }
     public int AvailableCopies { get; set; }
@@ -17,27 +18,44 @@ public class BookListItemDto
 
 public class BookDetailsDto : BookFormDto
 {
+    /// <summary>In entry order; <see cref="BookFormDto.AuthorIds"/> holds the same ids for the edit form.</summary>
+    public IReadOnlyList<AuthorOptionDto> AuthorList { get; set; } = [];
+    public string Authors => string.Join(", ", AuthorList.Select(a => a.Name));
     public IReadOnlyList<BookCopyDto> Copies { get; set; } = [];
     public int AvailableCopies => Copies.Count(c => c.CopyStatus == CopyStatus.Available);
     public int IssuedCopies => Copies.Count(c => c.CopyStatus == CopyStatus.Issued);
     public int UnavailableCopies => Copies.Count - AvailableCopies - IssuedCopies;
 }
 
-/// <summary>Create (Id = 0) and edit form. Authors are typed comma separated; Category by name (found or created).</summary>
+/// <summary>Create (Id = 0) and edit form. Authors are chosen from the Authors table, in order; Category by name (found or created).</summary>
 public class BookFormDto
 {
     public int Id { get; set; }
     [StringLength(20)] public string? Isbn { get; set; }
     [Required, StringLength(250)] public string Title { get; set; } = string.Empty;
-    [StringLength(1000)] public string? Authors { get; set; }
+    public List<int> AuthorIds { get; set; } = [];
     [StringLength(200)] public string? Publisher { get; set; }
     [StringLength(50)] public string? Edition { get; set; }
     [Range(1000, 9999)] public short? PublicationYear { get; set; }
     [StringLength(100)] public string? Category { get; set; }
     [StringLength(2000)] public string? Description { get; set; }
+    public string? CoverImagePath { get; set; } // read-only: changed through IBookService.SetCoverAsync
 }
 
 public record CategoryDto(int Id, string Name);
+
+/// <summary>An author as a select option or a link.</summary>
+public record AuthorOptionDto(int Id, string Name);
+
+public record AuthorListItemDto(int Id, string Name, int BookCount, string? PhotoPath);
+
+/// <summary>Create (Id = 0) and edit form. Authors are registered here before a book can name them.</summary>
+public class AuthorFormDto
+{
+    public int Id { get; set; }
+    [Required, StringLength(150)] public string Name { get; set; } = string.Empty;
+    public string? PhotoPath { get; set; } // read-only: changed through IAuthorService.SetPhotoAsync
+}
 
 /// <summary>Create (Id = 0) and edit form for one physical copy.</summary>
 public class BookCopyDto

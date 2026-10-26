@@ -35,6 +35,7 @@ public static class DependencyInjection
                 options.SignIn.RequireConfirmedEmail = false;
             })
             .AddSignInManager<ActiveUserSignInManager>()
+            .AddClaimsPrincipalFactory<PhotoClaimsPrincipalFactory>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 

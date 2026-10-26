@@ -1,0 +1,94 @@
+@model CseLibrary.Core.Paging.PagedResult<AuthorListItemDto>
+@{
+    ViewData["Title"] = "Authors";
+    var search = ViewData["Search"] as string;
+    var canCreate = await Authorization.CanAsync(User, Permissions.Books.Create);
+    var canEdit = await Authorization.CanAsync(User, Permissions.Books.Edit);
+    var canDelete = await Authorization.CanAsync(User, Permissions.Books.Delete);
+}
+
+<div class="page-header">
+    <div>
+        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Library</li><li class="breadcrumb-item active" aria-current="page">Authors</li></ol></nav>
+        <h2>Authors</h2>
+        <p class="page-subtitle">Register an author once; every book then picks the author from this list.</p>
+    </div>
+    @if (canCreate)
+    {
+        <a class="btn btn-primary" asp-action="Create" data-bs-toggle="modal" data-bs-target="#authorDialog"><i class="bi bi-person-plus" aria-hidden="true"></i> New Author</a>
+    }
+</div>
+
+<div class="card card-table">
+    <div class="card-header">
+        <form method="get" class="search-box" role="search">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input name="search" value="@search" class="form-control" placeholder="Search by name" aria-label="Search authors by name" />
+            @if (!string.IsNullOrEmpty(search)) { <a class="btn btn-link btn-sm" asp-action="Index"><i class="bi bi-x-circle" aria-hidden="true"></i> Clear</a> }
+        </form>
+        <span class="text-muted small">@Model.TotalCount @(Model.TotalCount == 1 ? "author" : "authors")</span>
+    </div>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-person-lines-fill" aria-hidden="true"></i>
+            @if (!string.IsNullOrEmpty(search))
+            {
+                <h5>No author matches "@search"</h5>
+                <p>Check the spelling, or register the author if they are new.</p>
+            }
+            else
+            {
+                <h5>No authors registered yet</h5>
+                <p>Register authors first; the book form lets you pick them.</p>
+            }
+            @if (canCreate) { <button type="button" class="btn btn-primary" onclick="authorDialog.open(@Json.Serialize(search ?? ""))"><i class="bi bi-person-plus" aria-hidden="true"></i> Register an author</button> }
+        </div>
+    }
+    else
+    {
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Name</th><th class="text-center">Books</th><th class="text-end"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+                @foreach (var a in Model.Items)
+                {
+                    <tr>
+                        <td>
+                            <a class="name-cell" asp-action="Details" asp-route-id="@a.Id">
+                                <partial name="_Avatar" model="(a.Name, a.PhotoPath, string.Empty)" />
+                                <span>@a.Name</span>
+                            </a>
+                        </td>
+                        <td class="text-center"><span class="count-pill @(a.BookCount == 0 ? "is-zero" : "")">@a.BookCount</span></td>
+                        <td class="text-end text-nowrap">
+                            @if (canEdit) { <a class="btn btn-sm btn-outline-secondary" title="Edit" aria-label="Edit @a.Name" asp-action="Edit" asp-route-id="@a.Id"><i class="bi bi-pencil" aria-hidden="true"></i></a> }
+                            @if (canDelete)
+                            {
+                                @if (a.BookCount > 0)
+                                {
+                                    <span class="d-inline-block" tabindex="0" title="Has books, so it cannot be deleted">
+                                        <button class="btn btn-sm btn-outline-danger" disabled aria-label="@a.Name has books and cannot be deleted"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <form asp-action="Delete" asp-route-id="@a.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this author?');">
+                                        <button class="btn btn-sm btn-outline-danger" title="Delete" aria-label="Delete @a.Name"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                                    </form>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer"><partial name="_Pager" model="(Model.Page, Model.TotalPages, Model.TotalCount)" /></div>
+    }
+</div>
+
+@if (canCreate) { <partial name="_AuthorDialog" model="@("list")" /> }
+@section Scripts { @if (canCreate) { <script src="~/js/author-dialog.js" asp-append-version="true"></script> } }

@@ -7,16 +7,16 @@ using CseLibrary.Core.Results;
 
 namespace CseLibrary.Services.Services;
 
-public class BookService(IUnitOfWork uow) : IBookService
+public class BookService(IUnitOfWork uow, IImageStore images) : IBookService
 {
-    public Task<PagedResult<BookListItemDto>> GetPageAsync(PageRequest page, string? search, int? categoryId = null, CancellationToken ct = default) =>
-        uow.Books.GetPageAsync(page, search, categoryId, ct);
+    public Task<PagedResult<BookListItemDto>> GetPageAsync(PageRequest page, string? search, int? categoryId = null, int? authorId = null, CancellationToken ct = default) =>
+        uow.Books.GetPageAsync(page, search, categoryId, authorId, ct);
 
     public Task<IReadOnlyList<CategoryDto>> GetCategoriesAsync(CancellationToken ct = default) => uow.Categories.GetListAsync(ct);
 
     public Task<BookDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default) => uow.Books.GetDetailsAsync(id, ct);
 
-    // A transaction, because one save may add the book, new authors, a new category and the links.
+    // A transaction, because one save may add the book, a new category and the author links.
     public Task<Result<int>> CreateAsync(BookFormDto dto, CancellationToken ct = default)
     {
         return uow.ExecuteInTransactionAsync(async attemptCt =>
@@ -25,7 +25,7 @@ public class BookService(IUnitOfWork uow) : IBookService
             if (isbn != null && await uow.Books.IsbnExistsAsync(isbn, null, attemptCt)) return Result<int>.Failure(ErrorCodes.Duplicate, IsbnExists);
 
             var book = new Book();
-            await ApplyAsync(book, dto, isbn, attemptCt);
+            if (!await ApplyAsync(book, dto, isbn, attemptCt)) return Result<int>.Failure(ErrorCodes.NotFound, AuthorMissing);
             await uow.Books.AddAsync(book, attemptCt); // HiLo: Id is known here (D-29)
             return Result<int>.Success(book.Id);
         }, ct: ct).OnDuplicate(Result<int>.Failure(ErrorCodes.Duplicate, DuplicateOnSave));
@@ -39,8 +39,7 @@ public class BookService(IUnitOfWork uow) : IBookService
             var isbn = Clean(dto.Isbn);
             if (isbn != null && await uow.Books.IsbnExistsAsync(isbn, dto.Id, attemptCt)) return Result.Failure(ErrorCodes.Duplicate, IsbnExists);
 
-            await ApplyAsync(book, dto, isbn, attemptCt);
-            return Result.Success();
+            return await ApplyAsync(book, dto, isbn, attemptCt) ? Result.Success() : Result.Failure(ErrorCodes.NotFound, AuthorMissing);
         }, ct: ct).OnDuplicate(Result.Failure(ErrorCodes.Duplicate, DuplicateOnSave));
 
     /// <summary>Soft delete; refused while copies exist, so copy (and lending) history keeps its title.</summary>
@@ -53,6 +52,14 @@ public class BookService(IUnitOfWork uow) : IBookService
 
         uow.Books.Remove(book);
         return await uow.SaveAsync(ct);
+    }
+
+    public async Task<Result> SetCoverAsync(int id, ImageUpload? image, CancellationToken ct = default)
+    {
+        var book = await uow.Books.GetForUpdateAsync(id, ct);
+        if (book == null) return BookNotFound();
+        return await ImageAttachment.ReplaceAsync(images, ImageKind.Books, image,
+            path => { var old = book.CoverImagePath; book.CoverImagePath = path; return old; }, () => uow.SaveAsync(ct), ct);
     }
 
     public Task<BookCopyDto?> GetCopyAsync(int id, CancellationToken ct = default) => uow.BookCopies.GetDetailsAsync(id, ct);
@@ -102,7 +109,8 @@ public class BookService(IUnitOfWork uow) : IBookService
         return await uow.SaveAsync(ct).OnConflict(Result.Failure(ErrorCodes.InvalidState, "This copy was just changed. Reload and try again."));
     }
 
-    private async Task ApplyAsync(Book book, BookFormDto dto, string? isbn, CancellationToken ct)
+    /// <summary>False if a chosen author no longer exists (deleted meanwhile); authors are never created here.</summary>
+    private async Task<bool> ApplyAsync(Book book, BookFormDto dto, string? isbn, CancellationToken ct)
     {
         book.Isbn = isbn;
         book.Title = dto.Title.Trim();
@@ -120,23 +128,20 @@ public class BookService(IUnitOfWork uow) : IBookService
             book.CategoryId = category.Id; // HiLo: known before save
         }
 
-        // Authors: split, trim, de-duplicate (case-insensitive), find or create, keep the typed order.
-        var names = (dto.Authors ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Select(n => n.Length > 150 ? n[..150] : n).DistinctBy(n => n.ToUpperInvariant()).ToList();
-        var existing = await uow.Authors.FindByNamesForUpdateAsync(names, ct);
+        // Authors: registered rows only (Authors page), de-duplicated, in the chosen order.
+        var authorIds = dto.AuthorIds.Distinct().ToList();
+        if ((await uow.Authors.GetOptionsAsync(authorIds, ct)).Count != authorIds.Count) return false;
         book.BookAuthors.Clear();
-        for (var i = 0; i < names.Count; i++)
-        {
-            var author = existing.FirstOrDefault(a => string.Equals(a.Name, names[i], StringComparison.OrdinalIgnoreCase));
-            if (author == null) await uow.Authors.AddAsync(author = new Author { Name = names[i] }, ct);
-            book.BookAuthors.Add(new BookAuthor { AuthorId = author.Id, Order = (byte)Math.Min(i, byte.MaxValue) });
-        }
+        for (var i = 0; i < authorIds.Count; i++)
+            book.BookAuthors.Add(new BookAuthor { AuthorId = authorIds[i], Order = (byte)Math.Min(i, byte.MaxValue) });
+        return true;
     }
 
     private static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     private const string IsbnExists = "A book with this ISBN already exists.";
-    private const string DuplicateOnSave = "The ISBN, an author or the category was just added by someone else. Please save again.";
+    private const string DuplicateOnSave = "The ISBN or the category was just added by someone else. Please save again.";
+    private const string AuthorMissing = "A chosen author no longer exists. Choose the authors again.";
     private static Result AccessionExists() => Result.Failure(ErrorCodes.Duplicate, "This accession number is already used.");
     private static Result IssuedByLendingOnly() =>
         Result.Failure(ErrorCodes.InvalidState, "The Issued status is set only by issuing and returning a copy.");

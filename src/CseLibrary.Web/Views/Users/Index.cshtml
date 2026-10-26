@@ -25,7 +25,7 @@
         @foreach (var u in Model.Items)
         {
             <tr>
-                <td>@u.UserName</td>
+                <td><span class="name-cell"><partial name="_Avatar" model='(u.FullName ?? u.UserName ?? "?", u.PhotoPath, string.Empty)' /><span>@u.UserName</span></span></td>
                 <td>@u.Email</td>
                 <td>@u.FullName</td>
                 <td>@string.Join(", ", u.Roles)</td>

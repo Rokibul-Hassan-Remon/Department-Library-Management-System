@@ -6,8 +6,8 @@ namespace CseLibrary.Core.Interfaces.Repositories;
 
 public interface IBookRepository : IRepository<Book>
 {
-    /// <summary>Matches title, an author's name, ISBN or a copy's accession number; optionally one category.</summary>
-    Task<PagedResult<BookListItemDto>> GetPageAsync(PageRequest page, string? search, int? categoryId, CancellationToken ct = default);
+    /// <summary>Matches title, an author's name, ISBN or a copy's accession number; optionally one category and/or one author.</summary>
+    Task<PagedResult<BookListItemDto>> GetPageAsync(PageRequest page, string? search, int? categoryId, int? authorId, CancellationToken ct = default);
     Task<BookDetailsDto?> GetDetailsAsync(int id, CancellationToken ct = default);
     /// <summary>Tracked, with its author links, for an edit.</summary>
     Task<Book?> GetWithAuthorsForUpdateAsync(int id, CancellationToken ct = default);
@@ -35,7 +35,14 @@ public interface ICategoryRepository : IRepository<Category>
 
 public interface IAuthorRepository : IRepository<Author>
 {
-    Task<IReadOnlyList<Author>> FindByNamesForUpdateAsync(IReadOnlyCollection<string> names, CancellationToken ct = default);
+    Task<PagedResult<AuthorListItemDto>> GetPageAsync(PageRequest page, string? search, CancellationToken ct = default);
+    Task<AuthorFormDto?> GetFormAsync(int id, CancellationToken ct = default);
+    /// <summary>Names containing <paramref name="term"/>, alphabetical, at most <paramref name="take"/> (the book form's author picker).</summary>
+    Task<IReadOnlyList<AuthorOptionDto>> SearchAsync(string? term, int take, CancellationToken ct = default);
+    /// <summary>The existing authors among <paramref name="ids"/>, in no particular order.</summary>
+    Task<IReadOnlyList<AuthorOptionDto>> GetOptionsAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default);
+    Task<bool> NameExistsAsync(string name, int? excludeId, CancellationToken ct = default);
+    Task<bool> HasBooksAsync(int id, CancellationToken ct = default);
 }
 
 public interface ILibraryPolicyRepository : IRepository<LibraryPolicy>

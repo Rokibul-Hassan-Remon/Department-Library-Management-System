@@ -1,0 +1,38 @@
+@model AuthorFormDto
+@{ var isNew = Model.Id == 0; ViewData["Title"] = isNew ? "New Author" : "Edit Author"; }
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">Library</li>
+        <li class="breadcrumb-item"><a asp-action="Index">Authors</a></li>
+        @if (!isNew) { <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.Id">@Model.Name</a></li> }
+        <li class="breadcrumb-item active" aria-current="page">@(isNew ? "New" : "Edit")</li>
+    </ol>
+</nav>
+
+<div class="card form-card">
+    <div class="card-body">
+        <h2 class="mb-1">@ViewData["Title"]</h2>
+        <p class="page-subtitle">@(isNew ? "Once registered, any book can name this author." : "The new name shows on every book by this author.")</p>
+        <form asp-action="@(isNew ? "Create" : "Edit")" method="post" enctype="multipart/form-data">
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="PhotoPath" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
+            <div class="mb-4">
+                <label asp-for="Name" class="form-label">Full name <span class="text-danger" aria-hidden="true">*</span></label>
+                <input asp-for="Name" class="form-control form-control-lg" maxlength="150" autocomplete="off" placeholder="e.g. Donald E. Knuth" autofocus />
+                <div class="form-text">Write the name as it is printed on the book.</div>
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="mb-4">
+                <partial name="_ImageInput" model='("photo", Url.Media(Model.PhotoPath), "Photo (optional)", true)' />
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg" aria-hidden="true"></i> Save</button>
+                @if (isNew) { <a class="btn btn-link text-muted" asp-action="Index">Cancel</a> }
+                else { <a class="btn btn-link text-muted" asp-action="Details" asp-route-id="@Model.Id">Cancel</a> }
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

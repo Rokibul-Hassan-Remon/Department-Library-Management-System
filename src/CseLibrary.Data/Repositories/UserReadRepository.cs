@@ -49,6 +49,7 @@ public class UserReadRepository(ApplicationDbContext db) : IUserReadRepository
             FullName = u.FullName,
             IsActive = u.Status == RecordStatus.Active,
             CreatedAt = u.CreatedAt,
+            PhotoPath = u.PhotoPath,
             Roles = (from ur in db.UserRoles
                      join r in db.Roles on ur.RoleId equals r.Id
                      where ur.UserId == u.Id

@@ -13,4 +13,6 @@ public interface IUserService
     Task<Result> DeleteAsync(string id, CancellationToken ct = default);
     Task<Result> ResetPasswordAsync(string id, string newPassword, CancellationToken ct = default);
     Task<Result> ChangeOwnPasswordAsync(string userId, string currentPassword, string newPassword, CancellationToken ct = default);
+    /// <summary>Stores a new photo (JPG/PNG/WebP, max 2 MB) or, with null, removes it; the replaced file is deleted.</summary>
+    Task<Result> SetPhotoAsync(string userId, ImageUpload? image, CancellationToken ct = default);
 }

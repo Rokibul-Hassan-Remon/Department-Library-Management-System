@@ -53,6 +53,8 @@ try
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+    builder.Services.AddSingleton<CseLibrary.Web.Infrastructure.ImageStore>();
+    builder.Services.AddSingleton<CseLibrary.Core.Interfaces.IImageStore>(sp => sp.GetRequiredService<CseLibrary.Web.Infrastructure.ImageStore>());
     builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
     builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 

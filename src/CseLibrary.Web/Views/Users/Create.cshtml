@@ -3,7 +3,7 @@
 
 <h2>Create User</h2>
 
-<form asp-action="Create" method="post">
+<form asp-action="Create" method="post" enctype="multipart/form-data">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="row g-3">
         <div class="col-md-6">
@@ -24,6 +24,9 @@
             <label asp-for="Password" class="form-label"></label>
             <input asp-for="Password" class="form-control" />
             <span asp-validation-for="Password" class="text-danger"></span>
+        </div>
+        <div class="col-12">
+            <partial name="_ImageInput" model='("photo", (string?)null, "Photo (optional)", true)' />
         </div>
         <div class="col-12">
             <label class="form-label">Roles</label>

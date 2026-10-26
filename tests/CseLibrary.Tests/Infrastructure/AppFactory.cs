@@ -38,6 +38,8 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public TestDatabase Database { get; } = new();
     public SqlCommandCounter Commands { get; } = new();
     public CapturingLogSink Logs { get; } = new();
+    /// <summary>Stands in for the web project folder, so test pictures never land in src/CseLibrary.Web/Uploads.</summary>
+    public string UploadsRoot { get; } = Path.Combine(Path.GetTempPath(), "CseLibrary_Test_Uploads_" + Guid.NewGuid().ToString("N"));
 
     public AppFactory()
     {
@@ -49,7 +51,7 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     // Production, so error handling is what users get (B1); appsettings.Development.json is not loaded either.
     protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-        builder.UseEnvironment("Production").ConfigureTestServices(services =>
+        builder.UseEnvironment("Production").UseSetting("Uploads:BasePath", UploadsRoot).ConfigureTestServices(services =>
         {
             GuardDbContext(services, Commands);
             services.AddScoped<ICurrentUser, TestCurrentUser>();
@@ -81,6 +83,7 @@ public class AppFactory : WebApplicationFactory<Program>, IAsyncLifetime
         {
             await base.DisposeAsync();
             Database.Drop();
+            if (Directory.Exists(UploadsRoot)) Directory.Delete(UploadsRoot, recursive: true);
         }
         finally
         {

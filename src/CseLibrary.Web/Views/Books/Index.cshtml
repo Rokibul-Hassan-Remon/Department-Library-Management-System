@@ -25,7 +25,13 @@
         @foreach (var b in Model.Items)
         {
             <tr>
-                <td><a asp-action="Details" asp-route-id="@b.Id">@b.Title</a></td>
+                <td>
+                    <a class="name-cell" asp-action="Details" asp-route-id="@b.Id">
+                        @if (Url.Media(b.CoverImagePath) is { } cover) { <img class="cover-thumb" src="@cover" alt="" loading="lazy" /> }
+                        else { <span class="cover-thumb is-empty" aria-hidden="true"><i class="bi bi-book"></i></span> }
+                        <span>@b.Title</span>
+                    </a>
+                </td>
                 <td>@b.Authors</td>
                 <td>@b.Isbn</td>
                 <td>@b.Category</td>

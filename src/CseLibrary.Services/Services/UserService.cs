@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace CseLibrary.Services.Services;
 
-public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork uow, ICurrentUser currentUser) : IUserService
+public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork uow, ICurrentUser currentUser, IImageStore images) : IUserService
 {
     public Task<PagedResult<UserDto>> GetPageAsync(PageRequest page, CancellationToken ct = default) =>
         uow.Users.GetPageAsync(page, ct);
@@ -21,7 +21,7 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
     public Task<Result> CreateAsync(CreateUserDto dto, CancellationToken ct = default)
     {
         string? userId = null;
-        return uow.ExecuteInTransactionAsync(async attemptCt =>
+        return ImageAttachment.CreateWithAsync(images, ImageKind.Users, dto.Photo, photo => uow.ExecuteInTransactionAsync(async attemptCt =>
         {
             if (await CheckRoleChangeAsync(dto.Roles, attemptCt) is { } denied) return denied;
 
@@ -30,7 +30,8 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
                 UserName = dto.UserName,
                 Email = dto.Email,
                 FullName = dto.FullName,
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                PhotoPath = photo
             };
             userId = user.Id;
             var create = (await userManager.CreateAsync(user, dto.Password)).ToResult();
@@ -39,7 +40,7 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
             await AddEventAsync(user.Id, "UserCreated", new { Roles = dto.Roles }, attemptCt);
             return Result.Success();
         }, verifySucceeded: async c => await uow.Users.GetDetailsAsync(userId!, c) != null, ct: ct)
-        .OnDuplicate(Taken());
+        .OnDuplicate(Taken()), ct);
     }
 
     // Every check runs before the first write, so a refused change leaves nothing to roll back.
@@ -117,6 +118,16 @@ public class UserService(UserManager<ApplicationUser> userManager, IUnitOfWork u
             await AddEventAsync(user.Id, "PasswordChanged", null, attemptCt);
             return (await userManager.ChangePasswordAsync(user, currentPassword, newPassword)).ToResult();
         }, ct: ct);
+
+    // Not a D-57 takeover action, so the permission check in the web layer is enough (self or Users.Edit).
+    public async Task<Result> SetPhotoAsync(string userId, ImageUpload? image, CancellationToken ct = default)
+    {
+        var user = await FindLiveAsync(userId);
+        if (user == null) return NotFound();
+        return await ImageAttachment.ReplaceAsync(images, ImageKind.Users, image,
+            path => { var old = user.PhotoPath; user.PhotoPath = path; return old; },
+            async () => (await userManager.UpdateAsync(user)).ToResult(), ct);
+    }
 
     private Task AddEventAsync(string userId, string action, object? details, CancellationToken ct) =>
         uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, userId, action, details), ct);

@@ -3,6 +3,7 @@ using CseLibrary.Core.DTOs;
 using CseLibrary.Core.Interfaces;
 using CseLibrary.Core.Interfaces.Services;
 using CseLibrary.Web.Authorization;
+using CseLibrary.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,10 +16,12 @@ public class PortalController(IRegistrationService registrations, ILibraryMember
     [HttpGet, AllowAnonymous]
     public IActionResult Register() => View(new RegisterDto());
 
-    [HttpPost, AllowAnonymous, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Register(RegisterDto dto)
+    // Anonymous upload: the size limit, the content check and deleting the file when registration fails keep it bounded.
+    [HttpPost, AllowAnonymous, ValidateAntiForgeryToken, RequestSizeLimit(Pictures.RequestLimit)]
+    public async Task<IActionResult> Register(RegisterDto dto, IFormFile? photoFile)
     {
         if (!ModelState.IsValid) return View(dto);
+        dto.Photo = photoFile.ToImageUpload();
         var result = await registrations.RegisterAsync(dto);
         if (!result.Succeeded)
         {

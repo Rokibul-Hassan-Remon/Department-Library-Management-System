@@ -2525,6 +2525,72 @@ User: "Approve Q-S21-13 to Q-S21-15" — the assistant's recommendations, record
   (`git diff` branch vs `develop`) instead of a rebuild.
 - **Carried to Session 25:** see SESSION_HANDOFF "Open findings without a decision" and "Next action".
 
+### 90. Session 25 — sidebar navigation in the CSE MBSTU colours (2026-10-16)
+- User: move the top navbar to the side, keep login/logout top-right "like other websites", review every UI
+  change "like a 10Y+ UI/UX engineer", colours from https://cse.mbstu.ac.bd/. Its default theme gives maroon
+  `hsl(0 54% 36%)` `#8d2a2a`, copper `hsl(17 44% 45%)` `#a55d40`, tan `#e4b8a0`, cream `#f6eedf` (tokens in
+  `site.css :root`).
+- Built: maroon sidebar (static >= lg, Bootstrap offcanvas below — 5.1 has no `offcanvas-lg`, CSS pins it);
+  top bar with the user menu (Change password, Logout) or Login/Register top-right. User follow-ups: only the
+  core groups show (Library, Administration as collapsible groups, the current page's group open, one at a
+  time), and the Home link was removed (the logo goes home, `title="Home"`).
+- Layout CSS moved from `_Layout.cshtml.css` to `site.css`: scoped CSS does not reach tag-helper `<a>`
+  elements (seen in screenshots) and the §75 scoped-CSS 404 no longer affects the layout.
+- Evidence: build 0/0; tests 128/128; headless-Edge screenshots desktop/mobile (Edge cannot go below ~500px).
+
+### 91. Session 25 — Authors register; the book form picks authors with Select2 (2026-10-16)
+- **User finding:** the `Authors` table existed (§80) but had no screens; authors were typed comma separated
+  on the book form and created on save. **User decision:** authors are registered first (New Author, author
+  index, which author has which books); the book form only chooses registered authors from a Select2 dropdown
+  with suggestions. Books never create authors.
+- Built: `AuthorsController` Index (search, server paging, book count) / Details (the author's books, server
+  paged, via the existing book list query with an `authorId` filter) / Create / Edit / Delete (soft; refused
+  while a non-deleted book names the author) / `Lookup` (Select2 AJAX source, max 20 names). `BookFormDto.Authors`
+  (text) replaced by `AuthorIds` (order kept, de-duplicated; an unknown id is refused). Sidebar: Library →
+  Authors. Book details link each author. No migration (schema unchanged).
+- **Default taken, not asked:** Authors use the `Books.*` permissions (catalog); separate `Authors.*`
+  permissions if the user wants them. A book may still have no author (unchanged).
+- Select2 4.0.13 (MIT, stable; local copy in `wwwroot/lib/select2`, like the other libs), themed in `site.css`.
+- Evidence: build 0/0; tests 128/128 (the catalog author test rewritten); mutations — no registered-author
+  check → test fails; delete not refused with books → test fails; restored → green. Running app: Authors pages,
+  Lookup and the book form HTTP 200, unknown author 404.
+
+### 92. Session 25 — author registration redesigned (2026-10-16)
+- User: "author registration is not so good … act like a pro UI/UX engineer". Review found: a whole page for one
+  field, duplicates only caught on save (near-duplicates never), the book form sent the user to a new tab, a flat
+  list without row actions, Delete failing only after the click.
+- Built: a register dialog (`_AuthorDialog`, `author-dialog.js`) on the list ("Save & add another") and on the book
+  form; while typing it lists registered names that share the longest word (usually the surname) and blocks an
+  exact match; the book form's Select2 offers "Register this author" for an unmatched name and "Use this" for an
+  existing one, and the new author joins the book. Books still never create authors from typed text.
+  `AuthorService` trims and collapses inner spaces. List as a card (search, count, initials avatar, book-count
+  pill, Edit/Delete per row, Delete disabled with the reason while the author has books, empty state); details as
+  a profile card; breadcrumbs. Reusable CSS blocks (page header, card table, empty state).
+- Evidence: tests 128/128; mutation (no whitespace collapse) fails the author test; isolated
+  `CseLibrary_Test_UiSmoke` run: QuickCreate duplicate/empty/no-token refused, user DB untouched.
+
+### 93. Session 25 — book covers, author photos, user photos (2026-10-16)
+- **User decisions (multiple choice + note):** all three pictures; the user photo on every account
+  (`AspNetUsers`); stored as files, **one folder per kind under the web project**, outside `wwwroot`, and the
+  row keeps only the path from the project folder on (`Uploads/Books|Authors|Users/{guid}.{ext}`); JPG/PNG/WebP,
+  max 2 MB, the browser shrinks to 800 px first (also drops phone metadata such as GPS).
+- **D-59 additions approved by this choice:** `Authors.PhotoPath`, `AspNetUsers.PhotoPath` (nvarchar(500), null).
+  `Books.CoverImagePath` was already in the diagram. Migration `AddImagePaths` (additive, three nullable columns).
+- Server: `ImageAttachment` decides the type from the file's first bytes (not the name or content type), checks
+  the real size, stores under a new GUID, and deletes the file no longer referenced (old on success, new on
+  failure, the photo of a failed user create). `MediaController` serves files: covers and author photos to any
+  signed-in user, a user photo only to its owner or Users.View / LibraryMembers.View holders (404 otherwise), no
+  traversal (stored-path pattern). `Uploads/` is git-ignored. The top bar shows the photo from a login claim.
+- UI: `_ImageInput` (preview, choose, remove) on the book form (cover beside the fields), author form and dialog,
+  user create/edit, portal registration (anonymous: size limit, content check, file deleted if registration
+  fails), and a new **My profile** page; covers in the book list and details; photos as avatars.
+- Evidence: build 0/0; tests 132/132 (`PictureTests` ×4, architecture allowlist + `Account.Profile`, `Media.Get`);
+  mutations — user photo open to all, any file accepted, old file kept, failed create keeps photo → each fails a
+  test; restored → green. Real forms on `CseLibrary_Test_UiSmoke`: covers, author photos and the admin photo
+  stored as above; an SVG renamed `.png` refused with a warning; screenshots reviewed.
+- Not applied yet: `AddImagePaths` to the user's `CseLibrary` (needs approval). Not built: server-side resizing
+  (no image library; the browser does it), rate limiting of the anonymous registration upload.
+
 ## Unresolved decisions and why
 
 **Session 13:** rows for D-07, D-07 T1 scope, T1-EOL, T4, step 0.1, D-41 tooling, D-40

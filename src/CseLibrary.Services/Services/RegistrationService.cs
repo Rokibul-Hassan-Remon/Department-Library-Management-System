@@ -13,7 +13,7 @@ namespace CseLibrary.Services.Services;
 /// their type (D-56 Q-S21-1): a Student at registration, a Fellow on approval. The portal itself needs only sign-in.
 /// A Pending or Rejected applicant's account is Inactive, so sign-in refuses it (D-32).
 /// </summary>
-public class RegistrationService(UserManager<ApplicationUser> userManager, ILookupNormalizer normalizer, IUnitOfWork uow) : IRegistrationService
+public class RegistrationService(UserManager<ApplicationUser> userManager, ILookupNormalizer normalizer, IUnitOfWork uow, IImageStore images) : IRegistrationService
 {
     public Task<Result> RegisterAsync(RegisterDto dto, CancellationToken ct = default) =>
         Enum.IsDefined(dto.RegistrationType) // model binding accepts undefined numbers (D-54 Session 21 item 4)
@@ -30,7 +30,7 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, ILook
     private Task<Result> CreateAsync(RegisterDto dto, MemberType type, ApprovalStatus approval, CancellationToken ct)
     {
         string? userId = null;
-        return uow.ExecuteInTransactionAsync(async attemptCt =>
+        return ImageAttachment.CreateWithAsync(images, ImageKind.Users, dto.Photo, photo => uow.ExecuteInTransactionAsync(async attemptCt =>
         {
             var code = dto.MemberCode.Trim();
             var existingId = await uow.LibraryMembers.FindIdByCodeAsync(code, attemptCt);
@@ -47,7 +47,7 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, ILook
             var user = new ApplicationUser
             {
                 UserName = dto.Email.Trim(), Email = dto.Email.Trim(), FullName = dto.FullName.Trim(), EmailConfirmed = true,
-                Status = active ? RecordStatus.Active : RecordStatus.Inactive
+                Status = active ? RecordStatus.Active : RecordStatus.Inactive, PhotoPath = photo
             };
             userId = user.Id;
             var create = (await userManager.CreateAsync(user, dto.Password)).ToResult();
@@ -71,7 +71,7 @@ public class RegistrationService(UserManager<ApplicationUser> userManager, ILook
             await uow.AuditLogs.AddAsync(SecurityEvent.For(SecurityEvent.User, user.Id, "UserRegistered", new { Type = type.ToString(), Approval = decided.ToString(), Role = role, Claim = claim }), attemptCt);
             return Result.Success();
         }, verifySucceeded: async c => await uow.Users.GetDetailsAsync(userId!, c) != null, ct: ct)
-        .OnDuplicate(Result.Failure(ErrorCodes.Duplicate, "This email or ID is already registered."));
+        .OnDuplicate(Result.Failure(ErrorCodes.Duplicate, "This email or ID is already registered.")), ct);
     }
 
     /// <summary>
